@@ -17,23 +17,27 @@ const notifyDelete = (title = '') => {
     });
 }
 const notifyError = (error = '', showStatus) => {
-    let Errormsg
-    const responseError = error?.response?.data?.data?.errors
-    const firstError = responseError ? Object.values(responseError)[0][0] : false
-    if (showStatus) {
-        Errormsg = `Oops! ${error} Error`
-    } 
-    if (firstError) {
-        Errormsg = firstError
-    } 
-    else {
-        Errormsg = "Oops, Something went wrong !"
-    }
-    notify({
-        // if(status){
-        type: 'error',
-        message: Errormsg,
-        // }
+  let Errormsg
+  if (typeof error === 'string' && error.trim()) {
+    Errormsg = error
+  } else {
+  const responseError = error?.response?.data?.data?.errors
+  const firstError = responseError ? Object.values(responseError)[0][0] : false
+  if (showStatus) {
+      Errormsg = `Oops! ${error} Error`
+  } 
+  if (firstError) {
+      Errormsg = firstError
+  } 
+  else {
+      Errormsg = "Oops, Something went wrong !"
+  }
+  }
+  notify({
+      // if(status){
+      type: 'error',
+      message: Errormsg,
+      // }
     });
 }
 

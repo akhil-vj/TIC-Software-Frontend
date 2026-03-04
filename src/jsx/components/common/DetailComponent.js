@@ -4,6 +4,9 @@ import { Table } from "react-bootstrap";
 import { useAsync } from "../../utilis/useAsync";
 import NoData from "./NoData";
 import { ImageGallery } from "./ImageGallery";
+import { getApiBaseUrl } from "../../../services/apiConfig";
+
+const baseUrl = getApiBaseUrl();
 
 export const DetailComponent = ({ title = "", url, array = [] }) => {
   const { id } = useParams();
@@ -24,6 +27,20 @@ export const DetailComponent = ({ title = "", url, array = [] }) => {
       </div>
     );
   };
+  
+  const buildImageUrl = (rawUrl) => {
+    if (!rawUrl) return '';
+    
+    // If already a full URL, return as is
+    if (typeof rawUrl === 'string' && rawUrl.startsWith('http')) {
+      return rawUrl;
+    }
+    
+    // Construct full URL with baseUrl
+    const separator = rawUrl?.startsWith('/') ? '' : '/';
+    return `${baseUrl}${separator}${rawUrl}`;
+  };
+  
   const getValue = (val,data = detailData) => {
     const keys = val;
     // const data = detailData;
@@ -53,8 +70,8 @@ export const DetailComponent = ({ title = "", url, array = [] }) => {
                     <Table responsive className="custom-table-bordered">
                       <thead className="thead-table">
                         <tr>
-                          {item?.table?.map((row)=>(
-                            <th className={row.className}>{row.tableLabel}</th>
+                          {item?.table?.map((row, idx)=>(
+                            <th key={idx} className={row.className}>{row.tableLabel}</th>
                           ))}
                         </tr>
                       </thead>

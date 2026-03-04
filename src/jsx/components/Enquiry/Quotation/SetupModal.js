@@ -6,7 +6,7 @@ import { Formik, useFormik } from "formik";
 import PackageForm from "./PackageForm";
 import PaymentForm from "./PaymentForm";
 import { checkFormValue } from "../../../utilis/check";
-import { axiosPut, filePost } from "../../../../services/AxiosInstance";
+import { filePost, filePut } from "../../../../services/AxiosInstance";
 import { URLS } from "../../../../constants";
 import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
 import { useNavigate, useParams } from "react-router-dom";
@@ -40,10 +40,20 @@ function SetupModal() {
     formValidityDate: date,
     planArr:[],
     planIndex:0,
-    priceOption:{value:'TOTAL',label:'Total Price'},
+    priceOption:{value:'PER',label:'Price Per Traveller'},
     gstOption:{value:1,label:'GST on Total'},
-    priceIn:{id:'INR',name:'INR'},
+    priceIn:{value:'INR',label:'INR'},
+    selectedSubDestinations:[],
+    discount: 0,
+    discount_amount: 0,
   };
+  const mapSubDestinations = (items = []) =>
+    items
+      .map((item) => ({
+        id: item?.id ?? item?.value,
+        name: item?.name ?? item?.label,
+      }))
+      .filter((item) => item.id && item.name);
 
   const handleFormValue = (data) => {
     if(data && data?.id){
@@ -68,12 +78,21 @@ function SetupModal() {
       setFieldValue('priceIn',priceInObj)
       const destinationObj = {label:data.destination.name,value:data.destination.id}
       setFieldValue('destination',checkFormValue(destinationObj))
+      const getSubDestinationOption = (entry) => {
+        const sub =
+          entry.sub_destination ||
+          entry.sub_destination_id && { id: entry.sub_destination_id, name: entry.sub_destination_name } ||
+          entry.subject?.sub_destination ||
+          entry.subject?.sub_destination_id && { id: entry.subject?.sub_destination_id, name: entry.subject?.sub_destination_name };
+        return sub ? { value: sub.id, label: sub.name } : undefined;
+      };
       const sortedArray = data.entries?.reduce((acc, entry) => {
         const existingEntry = acc.find((item) => item.date === entry.date);
         const insertType = entry.entry_type.toLowerCase()
         const transferType = {label:entry.transfer_type,value:entry.transfer_type}
         const hotelOption = {label:entry.option,value:entry.option}
         const image = insertType === 'hotel' ? entry.subject?.document_2[0]?.file_url : entry.subject.image
+        const dayDestination = getSubDestinationOption(entry)
         const obj = {
           insertType:insertType,
           entryId:entry.id,
@@ -103,46 +122,104 @@ function SetupModal() {
           startTime:parseTime(entry.start_time),
           endDate:parseDate(entry.end_date),
           endTime:parseTime(entry.end_time),
+          subDestination: dayDestination,
         }
         if (existingEntry) {
           existingEntry.schedule.push(obj);
+          if(!existingEntry.dayDestination && dayDestination){
+            existingEntry.dayDestination = dayDestination;
+          }
         } else {
-          acc.push({ date: entry.date, schedule: [obj] });
+          acc.push({ date: entry.date, schedule: [obj], dayDestination });
         }
     
         return acc;
       }, []);
       setFieldValue('planArr',checkFormValue(sortedArray))
+      const uniqueSubDests = Array.from(
+        new Map(
+          data.entries
+            ?.map((entry) => getSubDestinationOption(entry))
+            ?.filter(Boolean)
+            .map((sub) => [sub.value, { id: sub.value, name: sub.label }]) || []
+        ).values()
+      );
+      if (uniqueSubDests.length) {
+        setFieldValue('selectedSubDestinations', uniqueSubDests);
+      }
     }
   }
 
   const handleFormClick = async(values) => {
     try {
+      const getDateStr = (dateVal) => {
+        const d = new Date(dateVal);
+        return isNaN(d) ? null : d.toLocaleDateString("en-CA");
+      }
+      const getTimeStr = (timeVal) => {
+        if(!timeVal){return null}
+        return formatTimeToHis(timeVal)
+      }
+      const headerDateStart = getDateStr(values.formStartDate)
+      const headerDateEnd = getDateStr(values.formEndDate)
+      const validityDate = getDateStr(values.formValidityDate)
+      if(!values.packageName){
+        notifyError('Package name is required')
+        return
+      }
+      if(!values.destination?.value){
+        notifyError('Destination is required')
+        return
+      }
+      if(!headerDateStart || !headerDateEnd){
+        notifyError('Start and End dates are required')
+        return
+      }
       const formData = new FormData()
       // formData.append('currency',values.priceIn)
       formData.append('package_name',values.packageName)
       formData.append('enquiry_id',id)
-      formData.append('start_date',checkFormValue(formatDate(values.formStartDate)))
-      formData.append('end_date',checkFormValue(formatDate(values.formEndDate)))
+      formData.append('start_date',checkFormValue(headerDateStart))
+      formData.append('end_date',checkFormValue(headerDateEnd))
       formData.append('adult_count',checkFormValue(values.adult))
       formData.append('child_count',checkFormValue(values.child))
       formData.append('destination_id',checkFormValue(values.destination?.value))
-      formData.append('valid_until',checkFormValue(formatDate(values.formValidityDate)))
+      formData.append('valid_until',checkFormValue(validityDate))
+      const priceMode = values?.priceOption?.value === 'PER' ? 'PER_PERSON' : 'TOTAL_PRICE'
+      formData.append('price_mode',priceMode)
+      const currencyValue = values?.priceIn?.value ?? values?.priceIn?.id
+      formData.append('currency', checkFormValue(currencyValue))
+      // Backend update endpoint uses URL param; no itinerary_id field required
+      const totalEntries = values.planArr?.reduce((acc,{schedule})=>acc + (schedule?.length || 0),0) || 0
+      if(totalEntries === 0){
+        notifyError('Add at least one itinerary item before saving')
+        return
+      }
       let index = 0
-      values.planArr?.flatMap(({ date, schedule },arrInd) =>
+      values.planArr?.flatMap(({ date, schedule, dayDestination },arrInd) =>
       schedule.map((data,ind) => {
           console.log('date',data,index)
         // if(data.isExist){
         //   formData.append(`requirements[id]`,data?.value)
         // }
+        const entryDate = getDateStr(date)
+        const startDateVal = getDateStr(data.startDate || date)
+        const endDateVal = getDateStr(data.endDate || date)
+        const startTimeVal = getTimeStr(data.startTime) || '00:00:00'
+        const endTimeVal = getTimeStr(data.endTime) || '00:00:00'
+        if(!entryDate || !startDateVal || !endDateVal){
+          throw new Error('Invalid or missing dates in itinerary entries')
+        }
         if(data.entryId){
           formData.append(`entries[${index}][id]`,checkFormValue(data.entryId))
         }
+        const personCount = data.person ?? values.adult + values.child;
         formData.append(`entries[${index}][subject_id]`,checkFormValue(data.id))
         formData.append(`entries[${index}][entry_type]`,checkFormValue(data.insertType?.toUpperCase()))
-        formData.append(`entries[${index}][date]`,checkFormValue(formatDate(date)))
-        formData.append(`entries[${index}][no_of_person]`,checkFormValue(data.person,'number'))
-        formData.append('price_mode','TOTAL_PRICE')  
+        formData.append(`entries[${index}][date]`,checkFormValue(entryDate))
+        const subDestValue = dayDestination?.value || data.subDestination?.value;
+        formData.append(`entries[${index}][sub_destination_id]`,checkFormValue(subDestValue))
+        formData.append(`entries[${index}][no_of_person]`,checkFormValue(personCount,'number'))
         if(data.insertType === 'hotel'){
           formData.append(`entries[${index}][option]`,checkFormValue(data.option?.value))
           formData.append(`entries[${index}][room_id]`,checkFormValue(data.roomType?.value))
@@ -164,16 +241,16 @@ function SetupModal() {
           formData.append(`entries[${index}][child_cost]`,checkFormValue(data.childCost,'number'))
         }
 
-        formData.append(`entries[${index}][start_date]`,checkFormValue(formatDate(data.startDate)))
-        formData.append(`entries[${index}][start_time]`,checkFormValue(formatTimeToHis(data.startTime)))
-        formData.append(`entries[${index}][end_date]`,checkFormValue(formatDate(data.endDate)))
-        formData.append(`entries[${index}][end_time]`,checkFormValue(formatTimeToHis(data.endTime)))
+        formData.append(`entries[${index}][start_date]`,checkFormValue(startDateVal))
+        formData.append(`entries[${index}][start_time]`,checkFormValue(startTimeVal))
+        formData.append(`entries[${index}][end_date]`,checkFormValue(endDateVal))
+        formData.append(`entries[${index}][end_time]`,checkFormValue(endTimeVal))
         index = index + 1
       }))
       // formData.append('assigned_to',checkFormValue(values.assigned?.value))
       let response
       const url = URLS.ITINERARY_URL
-      const editUrl = URLS.ITINERARY_UPDATE_URL+'/'+itineraryId
+      const editUrl = `${URLS.ITINERARY_UPDATE_URL}${itineraryId}`
       if(isEdit){
         response = await filePost(editUrl,formData)
       }else{
@@ -193,8 +270,9 @@ function SetupModal() {
       notifyCreate('Quotation',isEdit)
     }
     } catch (error) {
-      console.log('er',error)
-      notifyError(error)
+      // Helpful debugging to surface backend validation errors
+      console.error('itinerary save error', error?.response?.data || error);
+      notifyError(error?.response?.data?.message || error)
     }
    
   }
@@ -223,6 +301,14 @@ function SetupModal() {
       setFieldValue('destination',checkFormValue(destinationObj))
     }
   },[equiryIdData?.id,isEdit])
+  useEffect(() => {
+    if (equiryIdData?.sub_destinations?.length) {
+      const subDestOptions = mapSubDestinations(equiryIdData.sub_destinations);
+      if (subDestOptions.length) {
+        setFieldValue('selectedSubDestinations', subDestOptions);
+      }
+    }
+  }, [equiryIdData?.sub_destinations?.length]);
   
 
   const formSubmit = (e) => {

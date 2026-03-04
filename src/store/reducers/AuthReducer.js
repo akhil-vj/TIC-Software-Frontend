@@ -5,6 +5,7 @@ import {
   LOGOUT_ACTION,
   SIGNUP_CONFIRMED_ACTION,
   SIGNUP_FAILED_ACTION,
+  PROFILE_UPDATED_ACTION,
 } from "../actions/AuthActions";
 
 const initialState = {
@@ -74,5 +75,21 @@ export function AuthReducer(state = initialState, action) {
       showLoading: action.payload,
     };
   }
+
+  if (action.type === PROFILE_UPDATED_ACTION) {
+    // Merge updated profile data
+    return {
+      ...state,
+      auth: {
+        ...state.auth,
+        data: {
+          ...state.auth.data,
+          ...action.payload,
+        },
+      },
+      successMessage: "Profile Updated Successfully",
+    };
+  }
+
   return state;
 }

@@ -5,6 +5,9 @@ export const checkIsFile = (value) => {
 export const checkFormValue = (value, type) => {
   const isNumber = typeof value === "number" || type === "number";
   if (!!isNumber) {
+    if (value === 0) {
+      return 0;
+    }
     if (!!value) {
       return value;
       // formData.append(name,value)

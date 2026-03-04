@@ -12,16 +12,26 @@ import {
 // action
 import { checkAutoLogin, isLogin } from "./services/AuthService";
 import { isAuthenticated } from "./store/selectors/AuthSelectors";
+import { useInactivityDetection } from "./jsx/utilis/useInactivityDetection";
 /// Style
 import "./other/swiper/css/swiper-bundle.min.css";
 import "./other/bootstrap-select/dist/css/bootstrap-select.min.css";
 import "./css/style.css";
 import "./jsx/custom.css";
 
-const SignUp = lazy(() => import("./jsx/pages/Registration"));
+const SignUp = lazy(() => {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(import("./jsx/pages/RegisterPage")), 300);
+  });
+});
 const Login = lazy(() => {
   return new Promise((resolve) => {
-    setTimeout(() => resolve(import("./jsx/pages/Login")), 500);
+    setTimeout(() => resolve(import("./jsx/pages/LoginPage")), 300);
+  });
+});
+const ForgotPassword = lazy(() => {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(import("./jsx/pages/ForgotPassword.jsx")), 300);
   });
 });
 
@@ -40,6 +50,10 @@ function withRouter(Component) {
 function App(props) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  
+  // Initialize inactivity detection for authenticated users
+  useInactivityDetection();
+  
   useEffect(() => {
     checkAutoLogin(dispatch, navigate);
   }, []);
@@ -48,6 +62,8 @@ function App(props) {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/page-register" element={<SignUp />} />
+      <Route path="/page-forgot-password" element={<ForgotPassword />} />
+      <Route path="*" element={<Login />} />
     </Routes>
   );
   if (props.isAuthenticated) {

@@ -34,7 +34,26 @@ export const formatTimeToHis = (timeString) => {
   return formattedTime
 }
 export const parseTime = (time) => {
-  const [hr, min] = time.split(':');
-  const parse = `${hr}:${min}`
-  return parse
+  if (!time) return "";
+  const value = String(time).trim();
+  // Supports "HH:mm", "HH:mm:ss", or already formatted "h:mm AM/PM"
+  const match = value.match(/^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(am|pm)?/i);
+  if (!match) return value;
+
+  const hrNum = Number(match[1]);
+  const minRaw = match[2] ?? "00";
+  const meridian = match[3]?.toUpperCase();
+
+  // If already has AM/PM, normalize hours and return.
+  if (meridian) {
+    const hour12 = ((hrNum + 11) % 12) + 1;
+    const minutes = String(minRaw).padStart(2, "0");
+    return `${hour12}:${minutes} ${meridian}`;
+  }
+
+  if (Number.isNaN(hrNum)) return value;
+  const period = hrNum >= 12 ? "PM" : "AM";
+  const hour12 = ((hrNum + 11) % 12) + 1;
+  const minutes = String(minRaw).padStart(2, "0");
+  return `${hour12}:${minutes} ${period}`;
 };

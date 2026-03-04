@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Badge, Dropdown } from "react-bootstrap";
+import { Dropdown } from "react-bootstrap";
 
-import InvoiceSlider from "../Dashboard/InvoiceSlider";
+import EnquirySlider from "../Dashboard/EnquirySlider";
 import QuestionIcon from "../Dashboard/Ticketing/QuestionIcon";
 import { usePermissionType } from "../../utilis/usePermissionType";
 
@@ -33,6 +33,7 @@ const tableBlog = [
   {
     title: "Talan Siphron",
     mail: "ahmad@mail.com",
+    phone: "+91 7723823348",
     icon: "#1EBA62",
     iconClass: "btn-success",
     icon2: <RightIcon />,
@@ -41,6 +42,7 @@ const tableBlog = [
   {
     title: "Thomas Khun",
     mail: "soap@mail.com",
+    phone: "+91 8823823348",
     icon: "#FF4646",
     iconClass: "btn-primary",
     icon2: <QuestionIcon colorchange="#01A3FF" />,
@@ -49,6 +51,7 @@ const tableBlog = [
   {
     title: "Marilyn Workman",
     mail: "mantha@mail.com",
+    phone: "+91 7723823348",
     icon: "#FF4646",
     iconClass: "btn-pink",
     icon2: <QuestionIcon colorchange="#EB62D0" />,
@@ -57,6 +60,7 @@ const tableBlog = [
   {
     title: "Thomas Khun",
     mail: "hope@mail.com",
+    phone: "+91 9923823348",
     icon: "#FF4646",
     iconClass: "btn-primary",
     icon2: <QuestionIcon colorchange="#01A3FF" />,
@@ -65,6 +69,7 @@ const tableBlog = [
   {
     title: "Talan Siphron",
     mail: "jordan@mail.com",
+    phone: "+91 7723823348",
     icon: "#1EBA62",
     iconClass: "btn-success",
     icon2: <RightIcon />,
@@ -73,6 +78,7 @@ const tableBlog = [
   {
     title: "Marilyn Workman",
     mail: "adja@mail.com",
+    phone: "+91 7723823348",
     icon: "#FF4646",
     iconClass: "btn-pink",
     icon2: <QuestionIcon colorchange="#EB62D0" />,
@@ -81,6 +87,7 @@ const tableBlog = [
   {
     title: "Thomas Khun",
     mail: "soap@mail.com",
+    phone: "+91 7723823348",
     icon: "#FF4646",
     iconClass: "btn-primary",
     icon2: <QuestionIcon colorchange="#01A3FF" />,
@@ -89,6 +96,7 @@ const tableBlog = [
   {
     title: "Talan Siphron",
     mail: "kevin@mail.com",
+    phone: "+91 7723823348",
     icon: "#FF4646",
     iconClass: "btn-pink",
     icon2: <QuestionIcon colorchange="#EB62D0" />,
@@ -97,6 +105,7 @@ const tableBlog = [
   {
     title: "Marilyn Workman",
     mail: "vita@mail.com",
+    phone: "+91 7723823348",
     icon: "#1EBA62",
     iconClass: "btn-success",
     icon2: <RightIcon />,
@@ -106,62 +115,84 @@ const tableBlog = [
 
 const Leads = () => {
   const navigate = useNavigate();
-  const permissionType = usePermissionType('lead')
-  const [data, setData] = useState(
-    document.querySelectorAll("#example2_wrapper tbody tr"),
-  );
-  const sort = 8;
-  const activePag = useRef(0);
-  const chageData = (frist, sec) => {
-    for (var i = 0; i < data.length; ++i) {
-      if (i >= frist && i < sec) {
-        data[i].classList.remove("d-none");
-      } else {
-        data[i].classList.add("d-none");
-      }
-    }
-  };
-  // use effect
+  const permissionType = usePermissionType("lead");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [showCheckboxes, setShowCheckboxes] = useState(false);
+  const pageSize = 8;
+
+  const filteredLeads = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return tableBlog;
+    return tableBlog.filter((item) =>
+      [item.title, item.mail, item.icontext]
+        .filter(Boolean)
+        .some((field) => field.toLowerCase().includes(term)),
+    );
+  }, [search]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+  const paginatedLeads = useMemo(() => {
+    const start = page * pageSize;
+    return filteredLeads.slice(start, start + pageSize);
+  }, [filteredLeads, page]);
+
   useEffect(() => {
-    setData(document.querySelectorAll("#example2_wrapper tbody tr"));
-    //chackboxFun();
-  }, []);
+    setPage(0);
+    setSelectedRows(new Set());
+  }, [search]);
 
-  // Active pagginarion
-  activePag.current === 0 && chageData(0, sort);
-  // paggination
-  let paggination = Array(Math.ceil(data.length / sort))
-    .fill()
-    .map((_, i) => i + 1);
-
-  // Active paggination & chage data
-  const onClick = (i) => {
-    activePag.current = i;
-    chageData(activePag.current * sort, (activePag.current + 1) * sort);
-    //settest(i);
-  };
-
-  const chackbox = document.querySelectorAll(".sorting_1 input");
-  const motherChackBox = document.querySelector(".sorting_asc input");
-  const chackboxFun = (type) => {
-    for (let i = 0; i < chackbox.length; i++) {
-      const element = chackbox[i];
-      if (type === "all") {
-        if (motherChackBox.checked) {
-          element.checked = true;
-        } else {
-          element.checked = false;
-        }
-      } else {
-        if (!element.checked) {
-          motherChackBox.checked = false;
-          break;
-        } else {
-          motherChackBox.checked = true;
-        }
-      }
+  // Hide checkboxes when no rows are selected
+  useEffect(() => {
+    if (selectedRows.size === 0) {
+      setShowCheckboxes(false);
     }
+  }, [selectedRows]);
+
+  const totalEntries = filteredLeads.length;
+  const startEntry = totalEntries === 0 ? 0 : page * pageSize + 1;
+  const endEntry =
+    totalEntries === 0 ? 0 : Math.min((page + 1) * pageSize, totalEntries);
+
+  // Handle select all checkbox
+  const handleSelectAll = (e) => {
+    const newSelected = new Set(selectedRows);
+    if (e.target.checked) {
+      paginatedLeads.forEach((_, ind) => {
+        newSelected.add(page * pageSize + ind);
+      });
+    } else {
+      paginatedLeads.forEach((_, ind) => {
+        newSelected.delete(page * pageSize + ind);
+      });
+    }
+    setSelectedRows(newSelected);
   };
+
+  // Handle individual checkbox
+  const handleSelectRow = (index) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedRows(newSelected);
+  };
+
+  // Handle select from dropdown menu - shows checkboxes
+  const handleSelectFromMenu = (index) => {
+    if (!showCheckboxes) {
+      setShowCheckboxes(true);
+    }
+    handleSelectRow(index);
+  };
+
+  // Check if all current page items are selected
+  const isAllSelected = paginatedLeads.length > 0 &&
+    paginatedLeads.every((_, ind) => selectedRows.has(page * pageSize + ind));
+
   return (
     <>
       <div className="row">
@@ -178,6 +209,8 @@ const Leads = () => {
                       type="text"
                       className="form-control"
                       placeholder="Search here..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
                     />
                     <span className="input-group-text">
                       <Link to={"#"}>
@@ -201,36 +234,38 @@ const Leads = () => {
                       </Link>
                     </span>
                   </div>
-                  {permissionType.write && <div className="invoice-btn">
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => navigate("/add-lead")}
-                    >
-                      New Leads{" "}
-                      <svg
-                        width="22"
-                        height="22"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
+                  {permissionType.write && (
+                    <div className="invoice-btn">
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => navigate("/add-lead")}
                       >
-                        <path
-                          d="M12 3C7.05 3 3 7.05 3 12C3 16.95 7.05 21 12 21C16.95 21 21 16.95 21 12C21 7.05 16.95 3 12 3ZM12 19.125C8.1 19.125 4.875 15.9 4.875 12C4.875 8.1 8.1 4.875 12 4.875C15.9 4.875 19.125 8.1 19.125 12C19.125 15.9 15.9 19.125 12 19.125Z"
-                          fill="#FCFCFC"
-                        />
-                        <path
-                          d="M16.3498 11.0251H12.9748V7.65009C12.9748 7.12509 12.5248 6.67509 11.9998 6.67509C11.4748 6.67509 11.0248 7.12509 11.0248 7.65009V11.0251H7.6498C7.1248 11.0251 6.6748 11.4751 6.6748 12.0001C6.6748 12.5251 7.1248 12.9751 7.6498 12.9751H11.0248V16.3501C11.0248 16.8751 11.4748 17.3251 11.9998 17.3251C12.5248 17.3251 12.9748 16.8751 12.9748 16.3501V12.9751H16.3498C16.8748 12.9751 17.3248 12.5251 17.3248 12.0001C17.3248 11.4751 16.8748 11.0251 16.3498 11.0251Z"
-                          fill="#FCFCFC"
-                        />
-                      </svg>
-                    </button>
-                  </div>}
+                        New Leads{" "}
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M12 3C7.05 3 3 7.05 3 12C3 16.95 7.05 21 12 21C16.95 21 21 16.95 21 12C21 7.05 16.95 3 12 3ZM12 19.125C8.1 19.125 4.875 15.9 4.875 12C4.875 8.1 8.1 4.875 12 4.875C15.9 4.875 19.125 8.1 19.125 12C19.125 15.9 15.9 19.125 12 19.125Z"
+                            fill="#FCFCFC"
+                          />
+                          <path
+                            d="M16.3498 11.0251H12.9748V7.65009C12.9748 7.12509 12.5248 6.67509 11.9998 6.67509C11.4748 6.67509 11.0248 7.12509 11.0248 7.65009V11.0251H7.6498C7.1248 11.0251 6.6748 11.4751 6.6748 12.0001C6.6748 12.5251 7.1248 12.9751 7.6498 12.9751H11.0248V16.3501C11.0248 16.8751 11.4748 17.3251 11.9998 17.3251C12.5248 17.3251 12.9748 16.8751 12.9748 16.3501V12.9751H16.3498C16.8748 12.9751 17.3248 12.5251 17.3248 12.0001C17.3248 11.4751 16.8748 11.0251 16.3498 11.0251Z"
+                            fill="#FCFCFC"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
           {/* swiper */}
-          <InvoiceSlider title="Leads" />
+          <EnquirySlider title="Leads" />
           {/* swiper end */}
 
           <div className="row">
@@ -245,15 +280,17 @@ const Leads = () => {
                 >
                   <thead>
                     <tr>
-                      <th className="sorting_asc ">
-                        <input
-                          type="checkbox"
-                          onClick={() => chackboxFun("all")}
-                          className="form-check-input"
-                          id="checkAll"
-                          required=""
-                        />
-                      </th>
+                      {showCheckboxes && (
+                        <th className="sorting_asc ">
+                          <input
+                            type="checkbox"
+                            onChange={handleSelectAll}
+                            checked={isAllSelected}
+                            className="form-check-input"
+                            id="checkAll"
+                          />
+                        </th>
+                      )}
                       <th>ID</th>
                       <th>Client / Agent</th>
                       <th>Lead Source</th>
@@ -266,141 +303,152 @@ const Leads = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {tableBlog.map((item, ind) => (
-                      <tr key={ind}>
-                        <td className="sorting_1">
-                          <div className="checkbox me-0 align-self-center">
-                            <div className="custom-control custom-checkbox ">
-                              <input
-                                type="checkbox"
-                                className="form-check-input"
-                                id={"customCheckBox2" + ind}
-                                required=""
-                                onClick={() => chackboxFun()}
-                              />
-                              <label
-                                className="custom-control-label"
-                                htmlFor={"customCheckBox2" + ind}
-                              ></label>
+                    {paginatedLeads.map((item, ind) => {
+                      const globalIndex = page * pageSize + ind;
+                      const isSelected = selectedRows.has(globalIndex);
+
+                      return (
+                        <tr key={ind}>
+                          {showCheckboxes && (
+                            <td className="sorting_1">
+                              <div className="checkbox me-0 align-self-center">
+                                <div className="custom-control custom-checkbox ">
+                                  <input
+                                    type="checkbox"
+                                    className="form-check-input"
+                                    id={`customCheckBox2${globalIndex}`}
+                                    checked={isSelected}
+                                    onChange={() => handleSelectRow(globalIndex)}
+                                  />
+                                  <label
+                                    className="custom-control-label"
+                                    htmlFor={`customCheckBox2${globalIndex}`}
+                                  ></label>
+                                </div>
+                              </div>
+                            </td>
+                          )}
+                          <td>{`#J0${globalIndex + 1}`}</td>
+                          <td className="whitesp-no p-0">
+                            <div className="py-sm-3 py-1 ps-3">
+                              <div>
+                                <h6 className="font-w500 fs-15 mb-0">
+                                  {item.title}
+                                </h6>
+                                <span className="fs-14 font-w400">
+                                  <Link to={"app-profile"}>{item.phone || item.mail}</Link>
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td>{"#J01" + ind}</td>
-                        <td className="whitesp-no p-0">
-                          <div className="py-sm-3 py-1 ps-3">
-                            <div>
-                              <h6 className="font-w500 fs-15 mb-0">
-                                Marilyn Workman
-                              </h6>
-                              <span className="fs-14 font-w400">
-                                <Link to={"app-profile"}>+91 7723823348</Link>
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td>Adverisement</td>
-                        <td>Full Package</td>
-                        <td>Dubai, Qatar</td>
-                        <td className="doller">Shanid CA</td>
-                        <td className="whitesp-no fs-14 font-w400">
-                          June 1, 2022, 08:22 AM
-                        </td>
-                        <td className="text-end">
-                          <span
-                            className={`btn light fs-14  btn-sm ${item.iconClass}`}
-                          >
-                            {/* {item.icon2}
-                                                        {" "} */}
-                            {item.icontext}
-                          </span>
-                        </td>
-                        <td>
-                          <Dropdown>
-                            <Dropdown.Toggle
-                              as="div"
-                              className="i-false btn-link btn sharp tp-btn btn-primary pill"
+                          </td>
+                          <td>Adverisement</td>
+                          <td>Full Package</td>
+                          <td>Dubai, Qatar</td>
+                          <td className="doller">Shanid CA</td>
+                          <td className="whitesp-no fs-14 font-w400">
+                            June 1, 2022, 08:22 AM
+                          </td>
+                          <td className="text-end">
+                            <span
+                              className={`btn light fs-14  btn-sm ${item.iconClass}`}
                             >
-                              <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 20 20"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
+                              {item.icontext}
+                            </span>
+                          </td>
+                          <td>
+                            <Dropdown>
+                              <Dropdown.Toggle
+                                as="div"
+                                className="i-false btn-link btn sharp tp-btn btn-primary pill"
                               >
-                                <path
-                                  d="M8.33319 9.99985C8.33319 10.9203 9.07938 11.6665 9.99986 11.6665C10.9203 11.6665 11.6665 10.9203 11.6665 9.99986C11.6665 9.07938 10.9203 8.33319 9.99986 8.33319C9.07938 8.33319 8.33319 9.07938 8.33319 9.99985Z"
-                                  fill="#ffffff"
-                                />
-                                <path
-                                  d="M8.33319 3.33329C8.33319 4.25376 9.07938 4.99995 9.99986 4.99995C10.9203 4.99995 11.6665 4.25376 11.6665 3.33329C11.6665 2.41282 10.9203 1.66663 9.99986 1.66663C9.07938 1.66663 8.33319 2.41282 8.33319 3.33329Z"
-                                  fill="#ffffff"
-                                />
-                                <path
-                                  d="M8.33319 16.6667C8.33319 17.5871 9.07938 18.3333 9.99986 18.3333C10.9203 18.3333 11.6665 17.5871 11.6665 16.6667C11.6665 15.7462 10.9203 15 9.99986 15C9.07938 15 8.33319 15.7462 8.33319 16.6667Z"
-                                  fill="#ffffff"
-                                />
-                              </svg>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu className="dropdown-menu-end">
-                            {permissionType.update && <Dropdown.Item
-                                onClick={() => navigate("/add-lead")}
-                              >
-                                Edit
-                              </Dropdown.Item>}
-                              {permissionType.delete && <Dropdown.Item>Delete</Dropdown.Item>}
-                            </Dropdown.Menu>
-                          </Dropdown>
+                                <svg
+                                  width="20"
+                                  height="20"
+                                  viewBox="0 0 20 20"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M8.33319 9.99985C8.33319 10.9203 9.07938 11.6665 9.99986 11.6665C10.9203 11.6665 11.6665 10.9203 11.6665 9.99986C11.6665 9.07938 10.9203 8.33319 9.99986 8.33319C9.07938 8.33319 8.33319 9.07938 8.33319 9.99985Z"
+                                    fill="#ffffff"
+                                  />
+                                  <path
+                                    d="M8.33319 3.33329C8.33319 4.25376 9.07938 4.99995 9.99986 4.99995C10.9203 4.99995 11.6665 4.25376 11.6665 3.33329C11.6665 2.41282 10.9203 1.66663 9.99986 1.66663C9.07938 1.66663 8.33319 2.41282 8.33319 3.33329Z"
+                                    fill="#ffffff"
+                                  />
+                                  <path
+                                    d="M8.33319 16.6667C8.33319 17.5871 9.07938 18.3333 9.99986 18.3333C10.9203 18.3333 11.6665 17.5871 11.6665 16.6667C11.6665 15.7462 10.9203 15 9.99986 15C9.07938 15 8.33319 15.7462 8.33319 16.6667Z"
+                                    fill="#ffffff"
+                                  />
+                                </svg>
+                              </Dropdown.Toggle>
+                              <Dropdown.Menu className="dropdown-menu-end">
+                                <Dropdown.Item
+                                  onClick={() => handleSelectFromMenu(globalIndex)}
+                                >
+                                  {isSelected ? "Deselect" : "Select"}
+                                </Dropdown.Item>
+                                <Dropdown.Item
+                                  onClick={() => navigate("/add-lead")}
+                                >
+                                  Edit
+                                </Dropdown.Item>
+                                <Dropdown.Item>Delete</Dropdown.Item>
+                              </Dropdown.Menu>
+                            </Dropdown>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {!paginatedLeads.length && (
+                      <tr>
+                        <td colSpan={showCheckboxes ? 10 : 9} className="text-center">
+                          No leads found
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
                 <div className="d-sm-flex text-center justify-content-between align-items-center mt-3 mb-3">
                   <div className="dataTables_info">
-                    Showing {activePag.current * sort + 1} to{" "}
-                    {data.length > (activePag.current + 1) * sort
-                      ? (activePag.current + 1) * sort
-                      : data.length}{" "}
-                    of {data.length} entries
+                    Showing {startEntry} to {endEntry} of {totalEntries} entries
                   </div>
                   <div
                     className="dataTables_paginate paging_simple_numbers mb-0"
                     id="example2_paginate"
                   >
-                    <Link
-                      className="paginate_button previous disabled"
-                      to="/invoice"
-                      onClick={() =>
-                        activePag.current > 0 && onClick(activePag.current - 1)
-                      }
+                    <button
+                      className="paginate_button previous"
+                      type="button"
+                      disabled={page === 0}
+                      onClick={() => page > 0 && setPage(page - 1)}
                     >
                       <i className="fa-solid fa-angle-left"></i>
-                    </Link>
+                    </button>
                     <span>
-                      {paggination.map((number, i) => (
-                        <Link
+                      {Array.from({ length: pageCount }, (_, i) => (
+                        <button
                           key={i}
-                          to="/invoice"
-                          className={`paginate_button  ${
-                            activePag.current === i ? "current" : ""
-                          } `}
-                          onClick={() => onClick(i)}
+                          type="button"
+                          className={`paginate_button  ${page === i ? "current" : ""
+                            } `}
+                          onClick={() => setPage(i)}
                         >
-                          {number}
-                        </Link>
+                          {i + 1}
+                        </button>
                       ))}
                     </span>
 
-                    <Link
+                    <button
                       className="paginate_button next"
-                      to="/invoice"
+                      type="button"
+                      disabled={page + 1 >= pageCount}
                       onClick={() =>
-                        activePag.current + 1 < paggination.length &&
-                        onClick(activePag.current + 1)
+                        page + 1 < pageCount && setPage(page + 1)
                       }
                     >
                       <i className="fa-solid fa-angle-right"></i>
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>

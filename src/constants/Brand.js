@@ -1,3 +1,3 @@
 export const BRAND = {
-  NAME: "TIC",
+  NAME: "",
 };

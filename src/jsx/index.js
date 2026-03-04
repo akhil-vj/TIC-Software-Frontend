@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext } from "react";
 
 /// React router dom
 import { Routes, Route, Outlet } from "react-router-dom";
@@ -10,180 +10,72 @@ import "./step.css";
 
 /// Layout
 import Nav from "./layouts/nav";
-import Nav2 from "./layouts/nav/index2";
 import Footer from "./layouts/Footer";
 import ScrollToTop from "./layouts/ScrollToTop";
-import Main from "./layouts/Main";
-import WalletBar from "./layouts/WalletBar";
+
 /// Dashboard
-import Home from "./components/Dashboard/Home";
+import Dashboard from "./components/Dashboard/Dashboard.jsx";
 import DashboardDark from "./components/Dashboard/DashboardDark";
-import Banking from "./components/Dashboard/Banking";
-import Ticketing from "./components/Dashboard/Ticketing";
-import Crypto from "./components/Dashboard/Crypto";
-import Contact from "./components/Dashboard/Contact";
-import DashInvoice from "./components/Dashboard/DashInvoice";
-import Kanban from "./components/Dashboard/Kanban";
-
-/////Demo
-import Theme1 from "./components/Dashboard/Demo/Theme1";
-import Theme2 from "./components/Dashboard/Demo/Theme2";
-import Theme3 from "./components/Dashboard/Demo/Theme3";
-import Theme4 from "./components/Dashboard/Demo/Theme4";
-import Theme5 from "./components/Dashboard/Demo/Theme5";
-import Theme6 from "./components/Dashboard/Demo/Theme6";
-
-//Course
-import CourseList from "./components/Dashboard/CourseList";
-import CourseDetails from "./components/Dashboard/CourseDetails";
-
-/// File Manager
-import FileManager from "./components/FileManager/FileManager";
-import FUser from "./components/FileManager/User";
-import HomeCalendar from "./components/FileManager/HomeCalendar";
-import FileActivity from "./components/FileManager/Activity";
-import ToDoList from "./components/FileManager/ToDoList";
-import FileChat from "./components/FileManager/FileChat";
-
-//CMS
-import Content from "./components/Cms/Content";
-import Menu from "./components/Cms/Menu";
-import EmailTemplate from "./components/Cms/EmailTemplate";
-import Blog from "./components/Cms/Blog";
-//CMS Linking Pages
-import ContentAdd from "./components/Cms/ContentAdd";
-import AddMail from "./components/Cms/AddMail";
-import AddBlog from "./components/Cms/AddBlog";
-import BlogCategory from "./components/Cms/BlogCategory";
-
-/// App
-import AppProfile from "./components/AppsMenu/AppProfile/AppProfile";
-import EditProfile from "./components/AppsMenu/AppProfile/EditProfile";
-import Compose from "./components/AppsMenu/Email/Compose/Compose";
-import Inbox from "./components/AppsMenu/Email/Inbox/Inbox";
-import Read from "./components/AppsMenu/Email/Read/Read";
-import Calendar from "./components/AppsMenu/Calendar/Calendar";
-import PostDetails from "./components/AppsMenu/AppProfile/PostDetails";
-
-/// Product List
-import ProductGrid from "./components/AppsMenu/Shop/ProductGrid/ProductGrid";
-import ProductList from "./components/AppsMenu/Shop/ProductList/ProductList";
-import ProductDetail from "./components/AppsMenu/Shop/ProductGrid/ProductDetail";
-import Checkout from "./components/AppsMenu/Shop/Checkout/Checkout";
-import Invoice from "./components/AppsMenu/Shop/Invoice/Invoice";
-import ProductOrder from "./components/AppsMenu/Shop/ProductOrder";
-import Customers from "./components/AppsMenu/Shop/Customers/Customers";
-
-/// Charts
-import SparklineChart from "./components/charts/Sparkline";
-import ChartJs from "./components/charts/Chartjs";
-import RechartJs from "./components/charts/rechart";
-import ApexChart from "./components/charts/apexcharts";
-
-/// Bootstrap
-import UiAlert from "./components/bootstrap/Alert";
-import UiAccordion from "./components/bootstrap/Accordion";
-import UiBadge from "./components/bootstrap/Badge";
-import UiButton from "./components/bootstrap/Button";
-import UiModal from "./components/bootstrap/Modal";
-import UiButtonGroup from "./components/bootstrap/ButtonGroup";
-import UiListGroup from "./components/bootstrap/ListGroup";
-import UiCards from "./components/bootstrap/Cards";
-import UiCarousel from "./components/bootstrap/Carousel";
-import UiDropDown from "./components/bootstrap/DropDown";
-import UiPopOver from "./components/bootstrap/PopOver";
-import UiProgressBar from "./components/bootstrap/ProgressBar";
-import UiTab from "./components/bootstrap/Tab";
-import UiPagination from "./components/bootstrap/Pagination";
-import UiGrid from "./components/bootstrap/Grid";
-import UiTypography from "./components/bootstrap/Typography";
-
-/// Plugins
-import Select2 from "./components/PluginsMenu/Select2/Select2";
-import MainNouiSlider from "./components/PluginsMenu/NouiSlider/MainNouiSlider";
-import MainSweetAlert from "./components/PluginsMenu/SweetAlert/SweetAlert";
-import Toastr from "./components/PluginsMenu/Toastr/Toastr";
-import JqvMap from "./components/PluginsMenu/JqvMap/JqvMap";
-import Lightgallery from "./components/PluginsMenu/Lightgallery/Lightgallery";
-
-/// Widget
-import Widget from "./pages/Widget";
-
-/// Table
-import SortingTable from "./components/table/SortingTable/SortingTable";
-import FilteringTable from "./components/table/FilteringTable/FilteringTable";
-import BootstrapTable from "./components/table/BootstrapTable";
-
-/// Form
-import Element from "./components/Forms/Element/Element";
-import Wizard from "./components/Forms/Wizard/Wizard";
-import CkEditor from "./components/Forms/CkEditor/CkEditor";
-import Pickers from "./components/Forms/Pickers/Pickers";
-import FormValidation from "./components/Forms/FormValidation/FormValidation";
+import Tickets from "./components/Tickets/Tickets";
+import QuotationInbox from "./components/Dashboard/QuotationInbox";
+import Notification from "./components/Dashboard/Notification";
 
 /// Pages
-
-import LockScreen from "./pages/LockScreen";
+import LockScreen from "./pages/LockScreen.jsx";
 import Error400 from "./pages/Error400";
 import Error403 from "./pages/Error403";
 import Error404 from "./pages/Error404";
 import Error500 from "./pages/Error500";
 import Error503 from "./pages/Error503";
-import Setting from "./layouts/Setting";
 import { ThemeContext } from "../context/ThemeContext";
+import AppProfile from "./components/AppsMenu/AppProfile/AppProfile";
 
 // Enquiry
-import Enquiry from "./components/Enquiry";
+import Enquiry from "./components/Enquiry/Enquiry";
 import AddEnquiry from "./components/Enquiry/add";
 import Tabs from "./components/common/Tabs";
 import Quotation from "./components/Enquiry/Quotation";
 import FollowUp from "./components/Enquiry/FollowUp";
 
 // Leads
-import Leads from "./components/Leads";
+import Leads from "./components/Leads/Leads";
 
 // Settings
-import Settings from "./components/Settings";
-import Hotels from "./components/Settings/Hotels/index";
-import AddHotel from "./components/Settings/Hotels/AddHotel";
-import User from "./components/Settings/UserManagement/User";
-import UserRole from "./components/Settings/UserManagement/Role";
+import Settings from "./components/Settings/Settings";
+import HotelsPage from "./components/Settings/Hotels/HotelsPage";
+import DayItinerary from "./components/Settings/DayItinerary";
+import MailSettings from "./components/Settings/MailSettings";
+import Currency from "./components/Settings/Currency";
+import Tax from "./components/Settings/Tax";
+import User from "./components/Settings/UserManagement/User.jsx";
 import { ToastContainer } from "react-toastify";
 import SetupModal from "./components/Enquiry/Quotation/SetupModal";
 import Payment from "./components/Enquiry/Payment";
 import MailToSupplier from "./components/Enquiry/Mail";
 import Agent from "./components/Settings/Agent";
 import SupplierPayment from "./components/Enquiry/SupplierPayment";
-import CompanySettings from "./components/Settings/CompanyManagement/CompanySettings";
-import CurrencySettings from "./components/Settings/CompanyManagement/CurrencySettings";
-import Fields from "./components/Settings/CompanyManagement/Fields";
-import Permission from "./components/Settings/UserManagement/Role/Permission";
-import {
-  HotelAmenities,
-  MarketTypes,
-  MealPlan,
-  PropertyCategory,
-  PropertyTypes,
-  RoomAmenities,
-  RoomTypes,
-} from "./components/Settings/Hotels/Fields/HotelFields";
-import Destination from "./components/Settings/Destination";
-import SubDestination from "./components/Settings/SubDestination";
+import CompanySettings from "./components/Settings/CompanyManagement/CompanySettings.jsx";
+import CurrencySettings from "./components/Settings/CompanyManagement/CurrencySettings.jsx";
+import Fields from "./components/Settings/CompanyManagement/Fields.jsx";
+import Permission from "./components/Settings/UserManagement/RolePermission";
+import HotelSettingsPage from "./components/Settings/Hotels/HotelSettingsPage";
+import DestinationManagement from "./components/Settings/DestinationManagement/DestinationManagement.jsx";
 import Transfer from "./components/Settings/Transfer";
 import AddTransfer from "./components/Settings/Transfer/addTransfer";
 import LeadSource from "./components/Settings/LeadSource";
 import Priority from "./components/Settings/Priority";
 import Requirement from "./components/Settings/Requirement";
-import HotelDetail from "./components/Settings/Hotels/detail";
+import Country from "./components/Settings/Country.jsx";
+import Language from "./components/Settings/Language.jsx";
 import Activity from "./components/Settings/Activity";
 import AddActivity from "./components/Settings/Activity/addActivity";
 import DetailActivity from "./components/Settings/Activity/detail";
 import DetailTransfer from "./components/Settings/Transfer/detail";
-import UserDetail from "./components/Settings/UserManagement/User/detail";
-import RoleDetail from "./components/Settings/UserManagement/Role/detail";
+import UserDetail from "./components/Settings/UserManagement/UserDetail";
+import RoleDetail from "./components/Settings/UserManagement/RoleDetail";
 import Supplier from "./components/Settings/Supplier";
 import EnquiryDetail from "./components/Enquiry/detail";
-import PackageTerms from "./components/Settings/PackageTerms";
+import PackageTerms from "./components/Settings/PackageTerms.jsx";
 import PrivateRoute from "./components/privateRoute";
 
 const enquiryMenu = [
@@ -196,95 +88,26 @@ const enquiryMenu = [
   { name: "payments", path: "", component: "" },
   { name: "documents", path: "", component: "" },
 ];
-const hotelMenu = [
-  { name: "hotels", path: "", component: "" },
-  { name: "property category", path: "", component: "" },
-  { name: "property types", path: "", component: "" },
-  { name: "room types", path: "", component: "" },
-  { name: "market types", path: "", component: "" },
-  { name: "room amenities", path: "", component: "" },
-  { name: "hotel amenities", path: "", component: "" },
-  { name: "meal plan", path: "", component: "" },
-];
 
 const Markup = () => {
-  const LeadsProtected = ( ) => (
+  const LeadsProtected = () => (
     <PrivateRoute permission={'leads'}>
-      <Leads/>
+      <Leads />
     </PrivateRoute>
   )
+
   const allRoutes = [
-    { url: "banking", component: <Banking /> },
-    { url: "ticketing", component: <Ticketing /> },
-    { url: "crypto", component: <Crypto /> },
-    { url: "contact", component: <Contact /> },
-    { url: "invoice", component: <DashInvoice /> },
-    { url: "kanban", component: <Kanban /> },
-
-    //File Manager
-    { url: "users", component: <FUser /> },
-    { url: "calendar", component: <HomeCalendar /> },
-    //Cms
-    { url: "content", component: <Content /> },
-    { url: "menu", component: <Menu /> },
-    { url: "email-template", component: <EmailTemplate /> },
-    { url: "blog", component: <Blog /> },
-    { url: "add-content", component: <ContentAdd /> },
-    { url: "add-email", component: <AddMail /> },
-    { url: "add-blog", component: <AddBlog /> },
-    { url: "blog-category", component: <BlogCategory /> },
-
-    /// Apps
-    { url: "app-profile", component: <AppProfile /> },
-    { url: "app-calender", component: <Calendar /> },
-    { url: "post-details", component: <PostDetails /> },
-
-    /// Shop
-    { url: "ecom-product-grid", component: <ProductGrid /> },
-    { url: "ecom-product-list", component: <ProductList /> },
-
-    { url: "ecom-product-order", component: <ProductOrder /> },
-    { url: "ecom-checkout", component: <Checkout /> },
-    { url: "ecom-product-detail", component: <ProductDetail /> },
-    { url: "ecom-customers", component: <Customers /> },
-
-    /// Chart
-    { url: "chart-sparkline", component: <SparklineChart /> },
-    { url: "chart-chartjs", component: <ChartJs /> },
-    { url: "chart-apexchart", component: <ApexChart /> },
-    { url: "chart-rechart", component: <RechartJs /> },
-
-    { url: "ui-typography", component: <UiTypography /> },
-    { url: "ui-grid", component: <UiGrid /> },
-
-    /// Plugin
-    { url: "uc-select2", component: <Select2 /> },
-
-    { url: "uc-noui-slider", component: <MainNouiSlider /> },
-    { url: "map-jqvmap", component: <JqvMap /> },
-    /// Widget
-    { url: "widget", component: <Widget /> },
-
-    /// Form
-    { url: "form-element", component: <Element /> },
-    { url: "form-validation", component: <FormValidation /> },
-
-    /// table
-    { url: "table-filtering", component: <FilteringTable /> },
-    { url: "table-sorting", component: <SortingTable /> },
-    { url: "table-bootstrap-basic", component: <BootstrapTable /> },
+    { url: "tickets", component: <Tickets /> },
+    { url: "quotation-inbox", component: <QuotationInbox /> },
+    { url: "notifications", component: <Notification /> },
 
     // Leads
     { url: "leads", component: <LeadsProtected /> },
-    { url: "add-lead", component: <EditProfile /> },
+
     // Settings
     { url: "settings", component: <Settings /> },
-    {url:'hotels/:id', component: <HotelDetail/>},
-    { url: "hotels/add", component: <AddHotel /> },
-    { url: "hotels/add/:id", component: <AddHotel /> },
     { url: "user", component: <User /> },
     { url: "user/:id", component: <UserDetail /> },
-    { url: "user-role", component: <UserRole /> },
     { url: "user-role/add", component: <Permission /> },
     { url: "user-role/add/:id", component: <Permission /> },
     { url: "user-role/:id", component: <RoleDetail /> },
@@ -292,14 +115,18 @@ const Markup = () => {
     { url: "company-settings", component: <CompanySettings /> },
     { url: "currency-settings", component: <CurrencySettings /> },
     { url: "fields", component: <Fields /> },
-    { url: "destination", component: <Destination /> },
-    { url: "sub-destination", component: <SubDestination /> },
+    { url: "destination", component: <DestinationManagement /> },
+    { url: "sub-destination", component: <DestinationManagement /> },
+    { url: "day-itinerary", component: <DayItinerary /> },
+    { url: "mail-settings", component: <MailSettings /> },
+    { url: "tax", component: <Tax /> },
+    { url: "currency", component: <Currency /> },
     { url: "transfer", component: <Transfer /> },
     { url: "transfer/:id", component: <DetailTransfer /> },
     { url: "transfer/add", component: <AddTransfer /> },
     { url: "transfer/add/:id", component: <AddTransfer /> },
     { url: "activity", component: <Activity /> },
-    { url: "activity/add", component:<AddActivity /> },
+    { url: "activity/add", component: <AddActivity /> },
     { url: "activity/add/:id", component: <AddActivity /> },
     { url: "activity/:id", component: <DetailActivity /> },
     { url: "lead-source", component: <LeadSource /> },
@@ -307,6 +134,8 @@ const Markup = () => {
     { url: "requirement", component: <Requirement /> },
     { url: "supplier", component: <Supplier /> },
     { url: "package-terms", component: <PackageTerms /> },
+    { url: "country", component: <Country /> },
+    { url: "language", component: <Language /> },
 
     // finance
     { url: "follow-ups", component: <FollowUp /> },
@@ -314,18 +143,21 @@ const Markup = () => {
     { url: "supplier-payments", component: <SupplierPayment /> },
 
     // enquiry
-    {url:'enquiry-detail/:id',component:<EnquiryDetail/>}
+    { url: 'enquiry-detail/:id', component: <EnquiryDetail /> }
   ];
+
   const HomeProtected = () => (
     <PrivateRoute permission="dashboard">
-      <Home />
+      <Dashboard />
     </PrivateRoute>
-    )
+  )
+
   const EnquiryProtected = () => (
     <PrivateRoute permission="enquiry">
       <Enquiry />
     </PrivateRoute>
-    )
+  )
+
   return (
     <>
       <Routes>
@@ -336,65 +168,12 @@ const Markup = () => {
         <Route path="/page-error-500" element={<Error500 />} />
         <Route path="/page-error-503" element={<Error503 />} />
         <Route path="/page-lock-screen" element={<LockScreen />} />
+
         <Route element={<Layout7 />}>
-          <Route path="/" exact element={<Home />} />
+          <Route path="/" exact element={<Dashboard />} />
           <Route path="/dashboard" exact element={<HomeProtected />} />
           <Route path="/dashboard-dark" exact element={<DashboardDark />} />
-          <Route path="/header-theme" exact element={<Theme1 />} />
-          <Route path="/sidebar-compact" exact element={<Theme3 />} />
-          <Route path="/horizontal-sidebar" exact element={<Theme4 />} />
-          <Route path="/horizontal-theme" exact element={<Theme5 />} />
-          <Route path="/sidebar-mini" exact element={<Theme6 />} />
-        </Route>
-        <Route element={<Layout2 />}>
-          <Route path="/container-boxed" exact element={<Theme2 />} />
-          <Route path="/course-details" exact element={<CourseDetails />} />
-          <Route path="/course-listing" exact element={<CourseList />} />
-        </Route>
-        <Route element={<Layout3 />}>
-          <Route path="/form-ckeditor" exact element={<CkEditor />} />
-          <Route path="/form-pickers" exact element={<Pickers />} />
-          <Route path="/form-wizard" exact element={<Wizard />} />
-          <Route path="/map-jqvmap" exact element={<JqvMap />} />
-          <Route path="/uc-lightgallery" exact element={<Lightgallery />} />
-          <Route path="/edit-profile" exact element={<EditProfile />} />
-          <Route path="/ecom-invoice" exact element={<Invoice />} />
-          <Route
-            path="/ecom-product-detail"
-            exact
-            element={<ProductDetail />}
-          />
-          <Route path="/uc-sweetalert" exact element={<MainSweetAlert />} />
-          <Route path="/uc-toastr" exact element={<Toastr />} />
-        </Route>
-        <Route element={<Layout4 />}>
-          <Route path="/activitys" exact element={<FileActivity />} />
-          <Route path="/to-do-list" exact element={<ToDoList />} />
-          <Route path="/ui-modal" exact element={<UiModal />} />
-          <Route path="/ui-popover" exact element={<UiPopOver />} />
-        </Route>
-        <Route element={<Layout5 />}>
-          <Route path="/file-manager" exact element={<FileManager />} />
-          <Route path="/chat" exact element={<FileChat />} />
-          <Route path="/email-compose" exact element={<Compose />} />
-          <Route path="/email-inbox" exact element={<Inbox />} />
-          <Route path="/email-read" exact element={<Read />} />
-        </Route>
-        <Route element={<Layout6 />}>
-          <Route path="/ui-accordion" exact element={<UiAccordion />} />
-          <Route path="/ui-alert" exact element={<UiAlert />} />
-          <Route path="/ui-badge" exact element={<UiBadge />} />
-          <Route path="/ui-button" exact element={<UiButton />} />
-          <Route path="/ui-button-group" exact element={<UiButtonGroup />} />
-          <Route path="/ui-list-group" exact element={<UiListGroup />} />
-          <Route path="/ui-card" exact element={<UiCards />} />
-          <Route path="/ui-carousel" exact element={<UiCarousel />} />
-          <Route path="/ui-dropdown" exact element={<UiDropDown />} />
-          <Route path="/ui-progressbar" exact element={<UiProgressBar />} />
-          <Route path="/ui-tab" exact element={<UiTab />} />
-          <Route path="/ui-pagination" exact element={<UiPagination />} />
-        </Route>
-        <Route element={<Layout7 />}>
+
           <Route exact path="/enquiry" element={<EnquiryProtected />} />
           <Route path="/enquiry/:id" element={<Tabs menu={enquiryMenu} />}>
             <Route path="*" element={null} />
@@ -407,18 +186,17 @@ const Markup = () => {
             <Route path="mail-to-supplier" element={<MailToSupplier />} />
             <Route path="supplier-payments" element={<SupplierPayment />} />
           </Route>
-          <Route path="" element={<Tabs menu={hotelMenu} mainPath="/" />}>
-            <Route path="hotels" element={<Hotels />} />
-            <Route path="property-category" element={<PropertyCategory />} />
-            <Route path="property-types" element={<PropertyTypes />} />
-            <Route path="room-types" element={<RoomTypes />} />
-            <Route path="market-types" element={<MarketTypes />} />
-            <Route path="room-amenities" element={<RoomAmenities />} />
-            <Route path="hotel-amenities" element={<HotelAmenities />} />
-            <Route path="meal-plan" element={<MealPlan />} />
-          </Route>
-        </Route>
-        <Route element={<Layout7 />}>
+          <Route path="/app-profile" element={<AppProfile />} />
+          <Route path="hotels" element={<HotelsPage />} />
+          <Route path="hotel-settings" element={<HotelSettingsPage />} />
+          <Route path="property-category" element={<HotelSettingsPage />} />
+          <Route path="property-types" element={<HotelSettingsPage />} />
+          <Route path="room-types" element={<HotelSettingsPage />} />
+          <Route path="market-types" element={<HotelSettingsPage />} />
+          <Route path="room-amenities" element={<HotelSettingsPage />} />
+          <Route path="hotel-amenities" element={<HotelSettingsPage />} />
+          <Route path="meal-plan" element={<HotelSettingsPage />} />
+
           {allRoutes.map((data, i) => (
             <Route
               key={i}
@@ -429,146 +207,18 @@ const Markup = () => {
           ))}
         </Route>
       </Routes>
-      <Setting />
       <ScrollToTop />
     </>
   );
 };
-
-function Layout1() {
-  const { menuToggle, sidebariconHover } = useContext(ThemeContext);
-  return (
-    <div
-      id="main-wrapper"
-      className={`wallet-open active show ${
-        sidebariconHover ? "iconhover-toggle" : ""
-      } ${menuToggle ? "menu-toggle" : ""}`}
-    >
-      <Nav2 />
-      <div
-        className="content-body"
-        style={{ minHeight: window.screen.height + 20 }}
-      >
-        <div className="container-fluid">
-          <Outlet />
-          <Footer />
-        </div>
-      </div>
-      <WalletBar />
-      <div className="wallet-bar-close"></div>
-    </div>
-  );
-}
-
-function Layout2() {
-  const { menuToggle, sidebariconHover } = useContext(ThemeContext);
-  return (
-    <div
-      id="main-wrapper"
-      className={`show ${sidebariconHover ? "iconhover-toggle" : ""} ${
-        menuToggle ? "menu-toggle" : ""
-      }`}
-    >
-      <Nav />
-      <div
-        className="content-body"
-        style={{ minHeight: window.screen.height + 20 }}
-      >
-        <div className="container-fluid">
-          <Outlet />
-        </div>
-      </div>
-      <Footer changeFooter="out-footer" />
-    </div>
-  );
-}
-
-function Layout3() {
-  const { menuToggle, sidebariconHover } = useContext(ThemeContext);
-  return (
-    <div
-      id="main-wrapper"
-      className={`show ${sidebariconHover ? "iconhover-toggle" : ""} ${
-        menuToggle ? "menu-toggle" : ""
-      }`}
-    >
-      <Nav />
-      <div
-        className="content-body"
-        style={{ minHeight: window.screen.height + 20 }}
-      >
-        <div className="container-fluid">
-          <Outlet />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Layout4() {
-  const { menuToggle, sidebariconHover } = useContext(ThemeContext);
-  return (
-    <div
-      id="main-wrapper"
-      className={`show ${sidebariconHover ? "iconhover-toggle" : ""} ${
-        menuToggle ? "menu-toggle" : ""
-      }`}
-    >
-      <Nav />
-      <div className="content-body">
-        <div className="container-fluid">
-          <Outlet />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Layout5() {
-  const { menuToggle, sidebariconHover } = useContext(ThemeContext);
-  return (
-    <div
-      id="main-wrapper"
-      className={`show ${sidebariconHover ? "iconhover-toggle" : ""} ${
-        menuToggle ? "menu-toggle" : ""
-      }`}
-    >
-      <Nav />
-      <div className="content-body message-body mh-auto">
-        <div className="container-fluid mh-auto p-0">
-          <Outlet />
-        </div>
-      </div>
-    </div>
-  );
-}
-function Layout6() {
-  const { menuToggle, sidebariconHover } = useContext(ThemeContext);
-  return (
-    <div
-      id="main-wrapper"
-      className={`show ${sidebariconHover ? "iconhover-toggle" : ""} ${
-        menuToggle ? "menu-toggle" : ""
-      }`}
-    >
-      <Nav />
-      <div className="content-body">
-        <div className="container-fluid">
-          <Outlet />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function Layout7() {
   const { menuToggle, sidebariconHover } = useContext(ThemeContext);
   return (
     <div
       id="main-wrapper"
-      className={`show ${sidebariconHover ? "iconhover-toggle" : ""} ${
-        menuToggle ? "menu-toggle" : ""
-      }`}
+      className={`show ${sidebariconHover ? "iconhover-toggle" : ""} ${menuToggle ? "menu-toggle" : ""
+        }`}
     >
       <Nav />
       <ToastContainer />

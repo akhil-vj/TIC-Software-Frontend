@@ -1,30 +1,25 @@
 import { applyMiddleware, combineReducers, compose, createStore } from "redux";
-import PostsReducer from "./reducers/PostsReducer";
 import thunk from "redux-thunk";
 import { AuthReducer } from "./reducers/AuthReducer";
-import todoReducers from "./reducers/Reducers";
 import itinerarySlice from "./slices/itinerarySlice";
 import roleSlice from "./slices/roleSlice";
 import formSlice from "./slices/formSlice";
 import fetchSlice from "./slices/fetchSlice";
 import userPermissionSlice from "./slices/permissionSlice";
-//import { reducer as reduxFormReducer } from 'redux-form';
+import taxSlice from "./slices/taxSlice";
+
 const middleware = applyMiddleware(thunk);
 
 const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
 
 const reducers = combineReducers({
-  posts: PostsReducer,
   auth: AuthReducer,
-  todoReducers,
   itinerary: itinerarySlice,
   role: roleSlice,
   form: formSlice,
-  fetch:fetchSlice,
+  fetch: fetchSlice,
   userPermission: userPermissionSlice,
-  //form: reduxFormReducer,
+  tax: taxSlice,
 });
-
-//const store = createStore(rootReducers);
 
 export const store = createStore(reducers, composeEnhancers(middleware));

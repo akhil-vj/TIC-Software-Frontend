@@ -84,6 +84,7 @@ const SideBar = () => {
         const permissionSlug = permission.slug;
         // Find the index of the first occurrence of '-read-'
         const indexOfRead = permissionSlug.indexOf("-read-");
+        if (indexOfRead === -1) return false;
 
         // Extract the substring before '-read-'
         const extractedPermission = permissionSlug.substring(0, indexOfRead)

@@ -43,6 +43,13 @@ const mealOptions = [
 ];
 let roomAllotement
 
+const addDays = (date, days = 1) => {
+  if (!date) return date;
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
 const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) => {
   const {itineraryId} = useParams()
   const isItineraryId = !!itineraryId
@@ -56,11 +63,13 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
   const [selectedRoom,setSelectedRoom]=useState(hotelDetailData?.rooms[0])
   const isEdit = !!editId || editId === 0
 
+  const defaultStartDate = new Date(SETUP.TODAY_DATE);
+  const defaultEndDate = addDays(defaultStartDate);
   const initialValues = {
-    startDate: SETUP.TODAY_DATE,
-    startTime: '14:00',
-    endDate: SETUP.TODAY_DATE,
-    endTime: '12:00',
+    startDate: defaultStartDate,
+    startTime: '15:00',
+    endDate: defaultEndDate,
+    endTime: '11:00',
     option:hotelOptions[0],
     insertType:'hotel'
   };
@@ -80,8 +89,9 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
     onClick(values, setShowModal);
   };
   useEffect(()=>{
-    setFieldValue('startDate',data?.showScheduleDate)
-    setFieldValue('endDate',data?.showScheduleDate)
+    const showScheduleDate = data?.showScheduleDate
+    setFieldValue('startDate',showScheduleDate || defaultStartDate)
+    setFieldValue('endDate',showScheduleDate ? addDays(showScheduleDate) : defaultEndDate)
     if(isEdit){
       setValues(data)
     }else{

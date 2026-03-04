@@ -1,166 +1,141 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Badge, Dropdown } from "react-bootstrap";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Dropdown } from "react-bootstrap";
 
-import InvoiceSlider from "../../Dashboard/InvoiceSlider";
-import QuestionIcon from "../../Dashboard/Ticketing/QuestionIcon";
 import AddModal from "./AddModal";
 
-const RightIcon = () => {
-  return (
-    <>
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M5.50912 14.5C5.25012 14.5 4.99413 14.4005 4.80013 14.2065L1.79362 11.2C1.40213 10.809 1.40213 10.174 1.79362 9.78302C2.18512 9.39152 2.81913 9.39152 3.21063 9.78302L5.62812 12.2005L12.9306 7.18802C13.3866 6.87502 14.0106 6.99102 14.3236 7.44702C14.6371 7.90352 14.5211 8.52702 14.0646 8.84052L6.07613 14.324C5.90363 14.442 5.70612 14.5 5.50912 14.5Z"
-          fill="#1EBA62"
-        />
-        <path
-          d="M5.50912 8.98807C5.25012 8.98807 4.99413 8.88857 4.80013 8.69457L1.79362 5.68807C1.40213 5.29657 1.40213 4.66207 1.79362 4.27107C2.18512 3.87957 2.81913 3.87957 3.21063 4.27107L5.62812 6.68857L12.9306 1.67607C13.3866 1.36307 14.0106 1.47907 14.3236 1.93507C14.6371 2.39157 14.5211 3.01507 14.0646 3.32857L6.07613 8.81257C5.90363 8.93057 5.70612 8.98807 5.50912 8.98807Z"
-          fill="#1EBA62"
-        />
-      </svg>
-    </>
-  );
-};
-
-const tableBlog = [
+const suppliers = [
   {
-    title: "Talan Siphron",
-    mail: "ahmad@mail.com",
-    icon: "#1EBA62",
-    iconClass: "btn-success",
-    icon2: <RightIcon />,
-    icontext: "Paid",
+    company: "Company 1",
+    name: "Talan Siphron",
+    email: "ahmad@mail.com",
+    mobile: "1234567890",
+    location: "Kolkata, India",
+    by: "TravlBiz",
+    date: "June 1, 2023",
   },
   {
-    title: "Thomas Khun",
-    mail: "soap@mail.com",
-    icon: "#FF4646",
-    iconClass: "btn-success",
-    icon2: <RightIcon />,
-    icontext: "Paid",
+    company: "Company 2",
+    name: "Thomas Khun",
+    email: "soap@mail.com",
+    mobile: "9876543210",
+    location: "Dubai, UAE",
+    by: "TravlBiz",
+    date: "June 2, 2023",
   },
   {
-    title: "Marilyn Workman",
-    mail: "mantha@mail.com",
-    icon: "#FF4646",
-    iconClass: "btn-pink",
-    icon2: <QuestionIcon colorchange="#EB62D0" />,
-    icontext: "Unpaid",
+    company: "Company 3",
+    name: "Marilyn Workman",
+    email: "mantha@mail.com",
+    mobile: "9988776655",
+    location: "Delhi, India",
+    by: "TravlBiz",
+    date: "June 3, 2023",
   },
   {
-    title: "Thomas Khun",
-    mail: "hope@mail.com",
-    icon: "#FF4646",
-    iconClass: "btn-success",
-    icon2: <RightIcon />,
-    icontext: "Paid",
+    company: "Company 4",
+    name: "Thomas Khun",
+    email: "hope@mail.com",
+    mobile: "8877665544",
+    location: "Doha, Qatar",
+    by: "TravlBiz",
+    date: "June 4, 2023",
   },
   {
-    title: "Talan Siphron",
-    mail: "jordan@mail.com",
-    icon: "#1EBA62",
-    iconClass: "btn-success",
-    icon2: <RightIcon />,
-    icontext: "Paid",
+    company: "Company 5",
+    name: "Talan Siphron",
+    email: "jordan@mail.com",
+    mobile: "7766554433",
+    location: "Mumbai, India",
+    by: "TravlBiz",
+    date: "June 5, 2023",
   },
   {
-    title: "Marilyn Workman",
-    mail: "adja@mail.com",
-    icon: "#FF4646",
-    iconClass: "btn-pink",
-    icon2: <QuestionIcon colorchange="#EB62D0" />,
-    icontext: "Unpaid",
+    company: "Company 6",
+    name: "Marilyn Workman",
+    email: "adja@mail.com",
+    mobile: "6655443322",
+    location: "Kolkata, India",
+    by: "TravlBiz",
+    date: "June 6, 2023",
   },
   {
-    title: "Thomas Khun",
-    mail: "soap@mail.com",
-    icon: "#FF4646",
-    iconClass: "btn-success",
-    icon2: <RightIcon />,
-    icontext: "Paid",
+    company: "Company 7",
+    name: "Thomas Khun",
+    email: "soap@mail.com",
+    mobile: "5544332211",
+    location: "Kochi, India",
+    by: "TravlBiz",
+    date: "June 7, 2023",
   },
   {
-    title: "Talan Siphron",
-    mail: "kevin@mail.com",
-    icon: "#FF4646",
-    iconClass: "btn-pink",
-    icon2: <QuestionIcon colorchange="#EB62D0" />,
-    icontext: "Unpaid",
+    company: "Company 8",
+    name: "Talan Siphron",
+    email: "kevin@mail.com",
+    mobile: "9988442211",
+    location: "Bangalore, India",
+    by: "TravlBiz",
+    date: "June 8, 2023",
   },
-  // {  title:'Marilyn Workman',  mail:'vita@mail.com' , icon:'#1EBA62', iconClass:'btn-success', icon2: <RightIcon />, icontext:'Active' },
 ];
 
 const Supplier = () => {
-  const navigate = useNavigate();
-  const [data, setData] = useState(
-    document.querySelectorAll("#example2_wrapper tbody tr"),
-  );
+  const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [activePag, setActivePag] = useState(0);
   const sort = 8;
-  const activePag = useRef(0);
-  const chageData = (frist, sec) => {
-    for (var i = 0; i < data.length; ++i) {
-      if (i >= frist && i < sec) {
-        data[i].classList.remove("d-none");
-      } else {
-        data[i].classList.add("d-none");
-      }
-    }
-  };
-  // use effect
+
+  const filteredSuppliers = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return suppliers;
+    return suppliers.filter(({ company, name, email, mobile, location, by, date }) =>
+      [company, name, email, mobile, location, by, date].some((value) =>
+        value?.toString().toLowerCase().includes(term),
+      ),
+    );
+  }, [searchTerm]);
+
   useEffect(() => {
-    setData(document.querySelectorAll("#example2_wrapper tbody tr"));
-    //chackboxFun();
-  }, []);
+    setActivePag(0);
+  }, [searchTerm]);
 
-  // Active pagginarion
-  activePag.current === 0 && chageData(0, sort);
-  // paggination
-  let paggination = Array(Math.ceil(data.length / sort))
-    .fill()
-    .map((_, i) => i + 1);
+  const pageCount = Math.ceil(filteredSuppliers.length / sort);
+  const paginatedData = filteredSuppliers.slice(
+    activePag * sort,
+    (activePag + 1) * sort,
+  );
+  const startIndex = filteredSuppliers.length ? activePag * sort + 1 : 0;
+  const endIndex = filteredSuppliers.length
+    ? Math.min((activePag + 1) * sort, filteredSuppliers.length)
+    : 0;
 
-  // Active paggination & chage data
-  const onClick = (i) => {
-    activePag.current = i;
-    chageData(activePag.current * sort, (activePag.current + 1) * sort);
-    //settest(i);
+  useEffect(() => {
+    if (activePag > 0 && activePag >= pageCount) {
+      setActivePag(pageCount > 0 ? pageCount - 1 : 0);
+    }
+  }, [activePag, pageCount]);
+
+  const handlePageChange = (event, pageIndex) => {
+    event.preventDefault();
+    setActivePag(pageIndex);
   };
 
-  const chackbox = document.querySelectorAll(".sorting_1 input");
-  const motherChackBox = document.querySelector(".sorting_asc input");
-  const chackboxFun = (type) => {
-    for (let i = 0; i < chackbox.length; i++) {
-      const element = chackbox[i];
-      if (type === "all") {
-        if (motherChackBox.checked) {
-          element.checked = true;
-        } else {
-          element.checked = false;
-        }
-      } else {
-        if (!element.checked) {
-          motherChackBox.checked = false;
-          break;
-        } else {
-          motherChackBox.checked = true;
-        }
-      }
+  const handlePrev = (event) => {
+    event.preventDefault();
+    if (activePag > 0) {
+      setActivePag(activePag - 1);
     }
   };
-  const sliderArr = [
-    { name: "Total", value: "8000" },
-    { name: "Received", value: "6000" },
-    { name: "Pending", value: "2000" },
-    { name: "Profit", value: "2000" },
-  ];
+
+  const handleNext = (event) => {
+    event.preventDefault();
+    if (activePag + 1 < pageCount) {
+      setActivePag(activePag + 1);
+    }
+  };
+
+  const paggination = Array.from({ length: pageCount }, (_, i) => i + 1);
+
   return (
     <>
       <div className="row">
@@ -177,6 +152,8 @@ const Supplier = () => {
                       type="text"
                       className="form-control"
                       placeholder="Search here..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                     />
                     <span className="input-group-text">
                       <Link to={"#"}>
@@ -205,7 +182,7 @@ const Supplier = () => {
                       onClick={() => setShowModal(true)}
                       className="btn btn-primary"
                     >
-                      New Supplier {" "}
+                      New Supplier{" "}
                       <svg
                         width="22"
                         height="22"
@@ -228,9 +205,6 @@ const Supplier = () => {
               </div>
             </div>
           </div>
-          {/* swiper */}
-          {/* <InvoiceSlider title='Amount' array={sliderArr}/> */}
-          {/* swiper end */}
 
           <div className="row">
             <div className="col-xl-12">
@@ -244,9 +218,6 @@ const Supplier = () => {
                 >
                   <thead>
                     <tr>
-                      {/* <th className="sorting_asc ">
-                                                <input type="checkbox" onClick={() => chackboxFun("all")} className="form-check-input" id="checkAll" required="" />
-                                            </th> */}
                       <th className="text-center">Sl No</th>
                       <th className="text-center">Company</th>
                       <th className="text-center">Name</th>
@@ -254,132 +225,101 @@ const Supplier = () => {
                       <th className="text-center">Mobile</th>
                       <th className="text-center">Location</th>
                       <th className="text-center">By</th>
-
-                      {/* <th className="text-center">Amount</th>
-                      <th className="text-center">Paid Amount</th>
-                      <th className="text-center">Pending</th>
-                      <th className="text-center">Cancellation Date</th> */}
                       <th className="text-center">Date</th>
-                      {/* <th className="text-end">Status</th> */}
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {tableBlog.map((item, ind) => (
-                      <tr key={ind}>
-                        {/* <td className="sorting_1">
-                                                    <div className="checkbox me-0 align-self-center">
-                                                        <div className="custom-control custom-checkbox ">
-                                                            <input type="checkbox" className="form-check-input" id={"customCheckBox2"+ ind} required="" 
-                                                                onClick={() => chackboxFun()} 
-                                                            />
-                                                            <label className="custom-control-label" htmlFor={"customCheckBox2"+ ind} ></label>
-                                                        </div>
-                                                    </div>
-                                                </td> */}
-                        <td className="text-center">{`${ind + 1}`}</td>
-                        <td className="text-center">Company 1</td>
-                        <td className="text-center">Burj Khalifa</td>
-                        <td className="text-center">user@gmail.com</td>
-                        <td className="text-center">1234567890</td>
-                        {/* <td className="whitesp-no p-0">
-                                                    <div className="py-sm-3 py-1 ps-3">
-                                                        <div >
-                                                            <h6 className="font-w500 fs-15 mb-0">Marilyn Workman</h6>
-                                                            <span className="fs-14 font-w400"><Link to={"app-profile"}>marilyn@gmail.com</Link></span>
-                                                        </div>												
-                                                    </div>
-                                                </td> */}
-                        {/* <td>Manager</td> */}
-                        {/* <td>Dubai, Qatar</td>
-                                                <td className= "doller">Shanid CA</td> */}
-                        {/* <td className="whitesp-no font-w400 text-center">
-                          20000
-                        </td> */}
-                        <td className="text-center">Kolkata,India</td>
-                        {/* <td className="text-center font-w400">0</td> */}
-                        <td className="whitesp-no fs-14 font-w400 text-center">
-                          TravlBiz
-                        </td>
-                        <td className="whitesp-no fs-14 font-w400 text-center">
-                          June 1, 2023
-                        </td>
-                        {/* <td className="text-end">
-                          <span
-                            className={`btn light fs-14  btn-sm ${item.iconClass}`}
-                          >
-                           //  {item.icon2}
-                                                        {" "} //
-                            {item.icontext}
-                          </span>
-                        </td> */}
-                        <td>
-                          <Dropdown>
-                            <Dropdown.Toggle
-                              as="div"
-                              className="i-false btn-link btn sharp tp-btn btn-primary pill"
-                            >
-                              <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 20 20"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
+                    {paginatedData.length ? (
+                      paginatedData.map((item, ind) => (
+                        <tr key={`${item.email}-${ind}`}>
+                          <td className="text-center">
+                            {startIndex + ind}
+                          </td>
+                          <td className="text-center">{item.company}</td>
+                          <td className="text-center">{item.name}</td>
+                          <td className="text-center">{item.email}</td>
+                          <td className="text-center">{item.mobile}</td>
+                          <td className="text-center">{item.location}</td>
+                          <td className="whitesp-no fs-14 font-w400 text-center">
+                            {item.by}
+                          </td>
+                          <td className="whitesp-no fs-14 font-w400 text-center">
+                            {item.date}
+                          </td>
+                          <td>
+                            <Dropdown>
+                              <Dropdown.Toggle
+                                as="div"
+                                className="i-false btn-link btn sharp tp-btn btn-primary pill"
                               >
-                                <path
-                                  d="M8.33319 9.99985C8.33319 10.9203 9.07938 11.6665 9.99986 11.6665C10.9203 11.6665 11.6665 10.9203 11.6665 9.99986C11.6665 9.07938 10.9203 8.33319 9.99986 8.33319C9.07938 8.33319 8.33319 9.07938 8.33319 9.99985Z"
-                                  fill="#ffffff"
-                                />
-                                <path
-                                  d="M8.33319 3.33329C8.33319 4.25376 9.07938 4.99995 9.99986 4.99995C10.9203 4.99995 11.6665 4.25376 11.6665 3.33329C11.6665 2.41282 10.9203 1.66663 9.99986 1.66663C9.07938 1.66663 8.33319 2.41282 8.33319 3.33329Z"
-                                  fill="#ffffff"
-                                />
-                                <path
-                                  d="M8.33319 16.6667C8.33319 17.5871 9.07938 18.3333 9.99986 18.3333C10.9203 18.3333 11.6665 17.5871 11.6665 16.6667C11.6665 15.7462 10.9203 15 9.99986 15C9.07938 15 8.33319 15.7462 8.33319 16.6667Z"
-                                  fill="#ffffff"
-                                />
-                              </svg>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu className="dropdown-menu-end">
-                              <Dropdown.Item onClick={() => setShowModal(true)}>Edit</Dropdown.Item>
-                              <Dropdown.Item>Delete</Dropdown.Item>
-                            </Dropdown.Menu>
-                          </Dropdown>
+                                <svg
+                                  width="20"
+                                  height="20"
+                                  viewBox="0 0 20 20"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M8.33319 9.99985C8.33319 10.9203 9.07938 11.6665 9.99986 11.6665C10.9203 11.6665 11.6665 10.9203 11.6665 9.99986C11.6665 9.07938 10.9203 8.33319 9.99986 8.33319C9.07938 8.33319 8.33319 9.07938 8.33319 9.99985Z"
+                                    fill="#ffffff"
+                                  />
+                                  <path
+                                    d="M8.33319 3.33329C8.33319 4.25376 9.07938 4.99995 9.99986 4.99995C10.9203 4.99995 11.6665 4.25376 11.6665 3.33329C11.6665 2.41282 10.9203 1.66663 9.99986 1.66663C9.07938 1.66663 8.33319 2.41282 8.33319 3.33329Z"
+                                    fill="#ffffff"
+                                  />
+                                  <path
+                                    d="M8.33319 16.6667C8.33319 17.5871 9.07938 18.3333 9.99986 18.3333C10.9203 18.3333 11.6665 17.5871 11.6665 16.6667C11.6665 15.7462 10.9203 15 9.99986 15C9.07938 15 8.33319 15.7462 8.33319 16.6667Z"
+                                    fill="#ffffff"
+                                  />
+                                </svg>
+                              </Dropdown.Toggle>
+                              <Dropdown.Menu className="dropdown-menu-end">
+                                <Dropdown.Item onClick={() => setShowModal(true)}>
+                                  Edit
+                                </Dropdown.Item>
+                                <Dropdown.Item>Delete</Dropdown.Item>
+                              </Dropdown.Menu>
+                            </Dropdown>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="text-center" colSpan={9}>
+                          No suppliers found
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
                 <div className="d-sm-flex text-center justify-content-between align-items-center mt-3 mb-3">
                   <div className="dataTables_info">
-                    Showing {activePag.current * sort + 1} to{" "}
-                    {data.length > (activePag.current + 1) * sort
-                      ? (activePag.current + 1) * sort
-                      : data.length}{" "}
-                    of {data.length} entries
+                    Showing {startIndex} to {endIndex} of{" "}
+                    {filteredSuppliers.length} entries
                   </div>
                   <div
                     className="dataTables_paginate paging_simple_numbers mb-0"
                     id="example2_paginate"
                   >
                     <Link
-                      className="paginate_button previous disabled"
-                      to="/invoice"
-                      onClick={() =>
-                        activePag.current > 0 && onClick(activePag.current - 1)
-                      }
+                      className={`paginate_button previous ${
+                        activePag === 0 ? "disabled" : ""
+                      }`}
+                      to="/supplier"
+                      onClick={handlePrev}
                     >
                       <i className="fa-solid fa-angle-left"></i>
                     </Link>
                     <span>
                       {paggination.map((number, i) => (
                         <Link
-                          key={i}
-                          to="/invoice"
+                          key={number}
+                          to="/supplier"
                           className={`paginate_button  ${
-                            activePag.current === i ? "current" : ""
+                            activePag === i ? "current" : ""
                           } `}
-                          onClick={() => onClick(i)}
+                          onClick={(event) => handlePageChange(event, i)}
                         >
                           {number}
                         </Link>
@@ -387,12 +327,11 @@ const Supplier = () => {
                     </span>
 
                     <Link
-                      className="paginate_button next"
-                      to="/invoice"
-                      onClick={() =>
-                        activePag.current + 1 < paggination.length &&
-                        onClick(activePag.current + 1)
-                      }
+                      className={`paginate_button next ${
+                        activePag + 1 >= pageCount ? "disabled" : ""
+                      }`}
+                      to="/supplier"
+                      onClick={handleNext}
                     >
                       <i className="fa-solid fa-angle-right"></i>
                     </Link>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge, Dropdown } from "react-bootstrap";
 
-import InvoiceSlider from "../../Dashboard/InvoiceSlider";
+import EnquirySlider from "../../Dashboard/EnquirySlider";
 import QuestionIcon from "../../Dashboard/Ticketing/QuestionIcon";
 import AddModal from "./AddModal";
 import { usePermissionType } from "../../../utilis/usePermissionType";
@@ -163,7 +163,7 @@ const SupplierPayment = () => {
     { name: "Profit", value: "2000" },
   ];
   const permissionType = usePermissionType('finance')
-  console.log('perrr',permissionType)
+  console.log('perrr', permissionType)
   return (
     <>
       <div className="row">
@@ -232,7 +232,7 @@ const SupplierPayment = () => {
             </div>
           </div>
           {/* swiper */}
-          {/* <InvoiceSlider title='Amount' array={sliderArr}/> */}
+          {/* <EnquirySlider title='Amount' array={sliderArr}/> */}
           {/* swiper end */}
 
           <div className="row">
@@ -398,59 +398,59 @@ const SupplierPayment = () => {
                   </div>
                 </div>
               </div> */}
-              {tableBlog.map((item,ind)=>(
+              {tableBlog.map((item, ind) => (
 
-              <div className="col-12">
-                <div className="payment-card bg-white p-3 mb-2">
-                  <div className="payment-header bg-primary py-1 ps-2">
-                    <h6 className="payment-header-label text-white mb-0">Accommodation</h6>
-                  </div>
-                  <div className="payment-footer mt-3">
-                    <div className="d-flex justify-content-between">
-                      <div className="">
-                        <h6>Hotel 1</h6>
-                        <p>delux - 10-12-2023 to 11-12-2023</p>
+                <div className="col-12">
+                  <div className="payment-card bg-white p-3 mb-2">
+                    <div className="payment-header bg-primary py-1 ps-2">
+                      <h6 className="payment-header-label text-white mb-0">Accommodation</h6>
+                    </div>
+                    <div className="payment-footer mt-3">
+                      <div className="d-flex justify-content-between">
+                        <div className="">
+                          <h6>Hotel 1</h6>
+                          <p>delux - 10-12-2023 to 11-12-2023</p>
+                        </div>
+                        <div className="">
+                          {permissionType.update && <button className="btn btn-outline-primary"
+                            onClick={() => setShowModal(true)}>Edit</button>}
+                          {permissionType.delete && <button className="btn btn-outline-primary ms-2">Delete</button>}
+                        </div>
                       </div>
-                      <div className="">
-                      {permissionType.update && <button className="btn btn-outline-primary" 
-                          onClick={() => setShowModal(true)}>Edit</button>}
-                       {permissionType.delete &&  <button className="btn btn-outline-primary ms-2">Delete</button>}
+                      <div className="payment-detail d-flex justify-content-around">
+                        <div className="payment-detail-cell">
+                          <p className="payment-detail-label fw-bold">Supplier</p>
+                          <p className="payment-detail-value">Supplier 1</p>
+                        </div>
+                        <div className="payment-detail-cell">
+                          <p className="payment-detail-label fw-bold">Status</p>
+                          <Badge bg='success' className="payment-detail-value">Mail Sent</Badge>
+                        </div>
+                        <div className="payment-detail-cell">
+                          <p className="payment-detail-label fw-bold">Payment</p>
+                          <Badge bg='success' className="payment-detail-value">Paid</Badge>
+                        </div>
+                        <div className="payment-detail-cell">
+                          <p className="payment-detail-label fw-bold">Amount</p>
+                          <p className="payment-detail-value">11223</p>
+                        </div>
+                        <div className="payment-detail-cell">
+                          <p className="payment-detail-label fw-bold">Due Date</p>
+                          <p className="payment-detail-value">12/12/23</p>
+                        </div>
+                        <div className="payment-detail-cell">
+                          <p className="payment-detail-label fw-bold">Paid Amount</p>
+                          <p className="payment-detail-value">10000</p>
+                        </div>
+                        <div className="payment-detail-cell">
+                          <p className="payment-detail-label fw-bold">Due Amount</p>
+                          <p className="payment-detail-value">1223</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="payment-detail d-flex justify-content-around">
-                      <div className="payment-detail-cell">
-                        <p className="payment-detail-label fw-bold">Supplier</p>
-                        <p className="payment-detail-value">Supplier 1</p>
-                      </div>
-                      <div className="payment-detail-cell">
-                        <p className="payment-detail-label fw-bold">Status</p>
-                        <Badge bg='success' className="payment-detail-value">Mail Sent</Badge>
-                      </div>
-                      <div className="payment-detail-cell">
-                        <p className="payment-detail-label fw-bold">Payment</p>
-                        <Badge bg='success' className="payment-detail-value">Paid</Badge>
-                      </div>
-                      <div className="payment-detail-cell">
-                        <p className="payment-detail-label fw-bold">Amount</p>
-                        <p className="payment-detail-value">11223</p>
-                      </div>
-                      <div className="payment-detail-cell">
-                        <p className="payment-detail-label fw-bold">Due Date</p>
-                        <p className="payment-detail-value">12/12/23</p>
-                      </div>
-                      <div className="payment-detail-cell">
-                        <p className="payment-detail-label fw-bold">Paid Amount</p>
-                        <p className="payment-detail-value">10000</p>
-                      </div>
-                      <div className="payment-detail-cell">
-                        <p className="payment-detail-label fw-bold">Due Amount</p>
-                        <p className="payment-detail-value">1223</p>
-                      </div>
-                    </div>
-                  </div>
 
+                  </div>
                 </div>
-              </div>
               ))}
             </div>
           </div>

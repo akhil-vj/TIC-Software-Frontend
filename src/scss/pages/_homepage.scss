@@ -1293,28 +1293,46 @@ a.btn.dlab-load-more{
 
     
 .react-datepicker{
-    border: unset;
-    border-radius: 0.625rem;
-    box-shadow: 0 0 16px 0px rgba(0 ,0 ,0 ,0.09);
-    padding: 10px 0px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    padding: 12px 8px;
     font-family : 'poppins', sans-serif;
+    position: relative;
+    z-index: 9999;
+    background-color: #ffffff;
+    min-width: 320px;
+    width: 100%;
+    max-width: 380px;
     &__header{
         border: unset;
-        background-color: #fff;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        margin-bottom: 8px;
         .react-datepicker__day-names{
-            color: #717579;
-            margin-bottom: -20px;
+            color: #5a6c7d;
+            margin-bottom: 0;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
     }
     .react-datepicker__triangle{
+        display: none;
         &:before{
             box-shadow: 0 0 16px 0px rgba(0 ,0 ,0 ,0.09);
             border-bottom-color: transparent;    
         }
     }
     &__navigation{
-        top: 14px;
+        top: 10px;
         line-height: 20px;
+        &-button{
+            &:hover{
+                background-color: #f0f4f8;
+            }
+        }
     }
     &__navigation--previous{
         left: 12px;
@@ -1323,18 +1341,19 @@ a.btn.dlab-load-more{
         right: 12px;
     }
     &__navigation-icon{
+        width: 8px;
+        height: 8px;
         &:before{
-            border-color: #a19c9c;            
+            border-color: #1565c0;
+            border-width: 2px 2px 0 0;
         }
     }
     &__current-month{
-        padding-bottom: 10px;
-        margin: 0 20px;
-        color: #333;
-        font-weight: 500;
-    }
-    .react-datepicker__triangle {
-        display: none;
+        padding: 8px 0;
+        margin: 0;
+        color: #1a202c;
+        font-weight: 600;
+        font-size: 0.95rem;
     }
     .react-datepicker__day--selected,
     .react-datepicker__day--in-selecting-range,
@@ -1348,38 +1367,65 @@ a.btn.dlab-load-more{
     .react-datepicker__year-text--selected,
     .react-datepicker__year-text--in-selecting-range,
     .react-datepicker__year-text--in-range {
-        background-color: $primary;
+        background-color: #1565c0;
         color: #fff;
         position: relative;
-        border-radius: 0.625rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    .react-datepicker__day:hover,
+    .react-datepicker__month-text:hover,
+    .react-datepicker__quarter-text:hover,
+    .react-datepicker__year-text:hover {
+        background-color: #e8f0fe;
+        color: #1565c0;
+        border-radius: 6px;
+        cursor: pointer;
     }
     .react-datepicker__day--selected:before{
-        content: '' !important;
-        display: block;
-        bottom: unset;
-        right: 0;
-        border-radius: 50%;
-        border: none;
-        background-color: #2a353a;
-        width: 12px;
-        height: 12px;
-        border: 2px solid #fff;
-        position: absolute;
+        display: none;
     }
 }
 .react-datepicker__day-name, .react-datepicker__day, .react-datepicker__time-name{
-    width: 42px;
+    width: 40px;
     height: 40px;
     line-height: 40px;
-    font-size: 0.938rem;
+    font-size: 0.875rem;
     font-weight: 500;
-    color: #999;
-    margin: 0;
+    color: #475569;
+    margin: 3px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
 }
 
 .calender-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     .react-datepicker-popper {
         transform: translate(10px, 50px) !important;
+        z-index: 9999 !important;
+    }
+    .form-control {
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.875rem;
+        font-family: 'poppins', sans-serif;
+        background-color: #f9fafb;
+        color: #1f2937;
+        transition: all 0.2s ease;
+        
+        &:focus {
+            background-color: #ffffff;
+            border-color: #1565c0;
+            box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+            outline: none;
+        }
+        
+        &:hover {
+            border-color: #9ca3af;
+        }
     }
 }
 .gpw{

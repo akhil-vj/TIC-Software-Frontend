@@ -1,7 +1,6 @@
 import { useSelector } from "react-redux";
 
 export const usePermissionType = (menu) => {
-  const typeArr = ["write", "update", "delete"];
   const { userPermission } = useSelector((state) => state);
   const existingPermission = userPermission.reduce(
     (accumalator, item) => {
@@ -14,7 +13,9 @@ export const usePermissionType = (menu) => {
       const indexOfUpdateMenu = permissionSlug.indexOf(updateMenu);
       const indexOfDeleteMenu = permissionSlug.indexOf(deleteMenu);
       const isMenuExist =
-        !!indexOfWriteMenu || !!indexOfUpdateMenu || !!indexOfDeleteMenu;
+        indexOfWriteMenu !== -1 ||
+        indexOfUpdateMenu !== -1 ||
+        indexOfDeleteMenu !== -1;
       const getTypeMenu = (type, slug, ind) => {
         if (ind !== -1) {
           const typeVal = permissionSlug.substring(ind + slug.length);

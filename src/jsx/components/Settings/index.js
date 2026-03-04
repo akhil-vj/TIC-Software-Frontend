@@ -1,17 +1,14 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import ModalVideo from "react-modal-video";
 
-import bitcoin from "./../../../images/svg/bitcoin.svg";
-import school from "./../../../images/svg/school.svg";
-import wallet from "./../../../images/svg/cryptowallet.svg";
-import crypto from "./../../../images/svg/cryptocurrency.svg";
-import transfer from "./../../../images/svg/wire-transfer.svg";
+const school = "/images/svg/school.svg";
+const wallet = "/images/svg/dash.svg";
+// import crypto from "./../../../images/svg/cryptocurrency.svg";
+const transfer = "/images/svg/wire-transfer.svg";
 const smallCard = [
-  { image: school, title: "Destinations", path: "/destination" },
-  { image: school, title: "Sub Destinations", path: "/sub-destination" },
+  { image: school, title: "Destination Management", path: "/destination" },
   { image: wallet, title: "Suppliers", path: "/supplier" },
-  { image: crypto, title: "Hotels", path: "/hotels" },
+  { image: wallet, title: "Hotels", path: "/hotels" },
   // { image: transfer, title: "Room Type", path: "/room-type" },
   // { image: school, title: "Meal Plan", path: "/meal-plan" },
   { image: wallet, title: "Activity", path: "/activity" },
@@ -19,9 +16,10 @@ const smallCard = [
   { image: school, title: "Lead Source", path: "/lead-source" },
   { image: school, title: "Priority", path: "/priority" },
   { image: school, title: "Requirement", path: "/requirement" },
-  { image: crypto, title: "Day Itinerary", path: "/day-itinerary" },
+  { image: wallet, title: "Day Itinerary", path: "/day-itinerary" },
   { image: wallet, title: "Mail Settings", path: "/mail-settings" },
-  { image: crypto, title: "Currency", path: "/currency" },
+  { image: wallet, title: "Currency", path: "/currency" },
+  { image: wallet, title: "Tax", path: "/tax" },
   { image: transfer, title: "Agents", path: "/agent" },
 ];
 
@@ -98,13 +96,7 @@ function Settings() {
                 </ul>
             </nav>
         </div> */}
-      <ModalVideo
-        channel="youtube"
-        autoplay
-        isOpen={isOpen}
-        videoId="e6MhFghdQps"
-        onClose={() => setOpen(false)}
-      />
+
     </>
   );
 }

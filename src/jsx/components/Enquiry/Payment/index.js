@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge, Dropdown } from "react-bootstrap";
 
-import InvoiceSlider from "../../Dashboard/InvoiceSlider";
+import EnquirySlider from "../../Dashboard/EnquirySlider";
 import QuestionIcon from "../../Dashboard/Ticketing/QuestionIcon";
 import AddModal from "./AddModal";
 import CustomSlider from "../../common/Slider";
@@ -168,11 +168,11 @@ const Payment = () => {
     { label: "Supplier Pending", value: "2000" },
   ];
   const breakpoints = [
-    { width: 450, slides: 1 }, 
-    { width: 576, slides: 2 }, 
+    { width: 450, slides: 1 },
+    { width: 576, slides: 2 },
     { width: 768, slides: 3 },
-    { width: 992, slides: 4 }, 
-    { width: 1200, slides: 5 }, 
+    { width: 992, slides: 4 },
+    { width: 1200, slides: 5 },
   ]
   return (
     <>
@@ -242,7 +242,7 @@ const Payment = () => {
             </div>
           </div>
           {/* swiper */}
-        <CustomSlider title="Amount" array={sliderArr} slidesPerView={7} breakpoints={breakpoints} />
+          <CustomSlider title="Amount" array={sliderArr} slidesPerView={7} breakpoints={breakpoints} />
           {/* swiper end */}
 
           <div className="row">
@@ -385,9 +385,8 @@ const Payment = () => {
                         <Link
                           key={i}
                           to="/invoice"
-                          className={`paginate_button  ${
-                            activePag.current === i ? "current" : ""
-                          } `}
+                          className={`paginate_button  ${activePag.current === i ? "current" : ""
+                            } `}
                           onClick={() => onClick(i)}
                         >
                           {number}

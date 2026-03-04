@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { checkIsFile } from "../../utilis/check";
+import { getApiBaseUrl } from "../../../services/apiConfig";
+
+const baseUrl = getApiBaseUrl();
 
 export function FileUploader(props) {
   const {
@@ -14,12 +17,40 @@ export function FileUploader(props) {
     labelClassName = "",
     inputClassName = "",
     onChange,
-    required=false,
+    required = false,
     ...restProps
   } = props;
 
   const fileData = values[name];
   const isMulti = !!restProps.isMulti;
+
+  // Debug: Log file data when it changes
+  React.useEffect(() => {
+    console.log(`FileUploader [${name}] - fileData:`, fileData);
+  }, [fileData, name]);
+
+  // Build proper image URL from file_url
+  const buildImageUrl = (image) => {
+    if (!image) return '';
+    
+    // If it's a File object, create blob URL
+    if (image instanceof File) {
+      return URL.createObjectURL(image);
+    }
+    
+    // If it's an API response object with file_url
+    const rawUrl = image?.file_url || image?.file || image?.url || image?.original_url || image?.path || '';
+    if (!rawUrl) return '';
+    
+    // If already a full URL, return as is
+    if (typeof rawUrl === 'string' && rawUrl.startsWith('http')) {
+      return rawUrl;
+    }
+    
+    // Construct full URL with baseUrl
+    const separator = rawUrl.startsWith('/') ? '' : '/';
+    return `${baseUrl}${separator}${rawUrl}`;
+  };
 
   // This function will be triggered when the file field change
   const onFileChange = (e) => {
@@ -35,13 +66,14 @@ export function FileUploader(props) {
   // This function will be triggered when the "Remove This Image" button is clicked
   const handleRemove = (id) => {
     if (isMulti) {
-      const filterData = fileData.filter((data) => data.name !== id);
+      // Handle both File objects (which have .name) and API objects (which have .id)
+      const filterData = fileData.filter((data) => data.name !== id && data.id !== id);
       setFieldValue(name, filterData);
     } else {
       setFieldValue(name, "");
     }
   };
-  const isPreview = isMulti ? !!fileData?.length : !!fileData
+  const isPreview = isMulti ? !!fileData?.length : !!fileData;
 
   return (
     <div className="form-group" key={key}>
@@ -62,59 +94,51 @@ export function FileUploader(props) {
         />
       </div>
       {isPreview && (
-          <div className="row" style={styles.container}>
-            <div className="mb-2">
-              <h3>Preview</h3>
-            </div>
-            <>
-              {isMulti ? (
-                fileData?.map((img, key) => (
-                  <div className="col-md-6 col-lg-4" key={key}>
-                    <div style={styles.preview}>
-                      <img
-                        src={
-                          img?.file_url
-                            ? img.file_url
-                            : URL.createObjectURL(img)
-                        }
-                        style={styles.image}
-                        alt="Thumb"
-                      />
-                      <button
-                        className="bg-danger"
-                        onClick={() => handleRemove(img.name)}
-                        style={styles.delete}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
+        <div className="row" style={styles.container}>
+          <div className="mb-2">
+            <h3>Preview</h3>
+          </div>
+          <>
+            {isMulti ? (
+              fileData?.map((img, key) => (
                 <div className="col-md-6 col-lg-4" key={key}>
                   <div style={styles.preview}>
                     <img
-                      src={
-                        checkIsFile(fileData)
-                          ? URL.createObjectURL(fileData)
-                          : fileData
-                      }
+                      src={buildImageUrl(img)}
                       style={styles.image}
                       alt="Thumb"
                     />
                     <button
                       className="bg-danger"
-                      onClick={() => handleRemove()}
+                      onClick={() => handleRemove(img.name || img.id)}
                       style={styles.delete}
                     >
                       Delete
                     </button>
                   </div>
                 </div>
-              )}
-            </>
-          </div>
-        )}
+              ))
+            ) : (
+              <div className="col-md-6 col-lg-4" key={key}>
+                <div style={styles.preview}>
+                  <img
+                    src={buildImageUrl(fileData)}
+                    style={styles.image}
+                    alt="Thumb"
+                  />
+                  <button
+                    className="bg-danger"
+                    onClick={() => handleRemove()}
+                    style={styles.delete}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        </div>
+      )}
     </div>
   );
 }

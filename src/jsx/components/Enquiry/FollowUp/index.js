@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge, Dropdown } from "react-bootstrap";
 
-import InvoiceSlider from "../../Dashboard/InvoiceSlider";
+import EnquirySlider from "../../Dashboard/EnquirySlider";
 import QuestionIcon from "../../Dashboard/Ticketing/QuestionIcon";
 import AddModal from "./AddModal";
 import { usePermissionType } from "../../../utilis/usePermissionType";
@@ -231,7 +231,7 @@ const FollowUp = () => {
             </div>
           </div>
           {/* swiper */}
-          {/* <InvoiceSlider title='Amount' array={sliderArr}/> */}
+          {/* <EnquirySlider title='Amount' array={sliderArr}/> */}
           {/* swiper end */}
 
           <div className="row">
@@ -331,7 +331,7 @@ const FollowUp = () => {
                               </svg>
                             </Dropdown.Toggle>
                             <Dropdown.Menu className="dropdown-menu-end">
-                            {permissionType.update && <Dropdown.Item>Edit</Dropdown.Item>}
+                              {permissionType.update && <Dropdown.Item>Edit</Dropdown.Item>}
                               {permissionType.delete && <Dropdown.Item>Delete</Dropdown.Item>}
                             </Dropdown.Menu>
                           </Dropdown>
@@ -366,9 +366,8 @@ const FollowUp = () => {
                         <Link
                           key={i}
                           to="/invoice"
-                          className={`paginate_button  ${
-                            activePag.current === i ? "current" : ""
-                          } `}
+                          className={`paginate_button  ${activePag.current === i ? "current" : ""
+                            } `}
                           onClick={() => onClick(i)}
                         >
                           {number}

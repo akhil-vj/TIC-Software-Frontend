@@ -8,8 +8,8 @@ import {
   saveTokenInLocalStorage,
   signUp,
 } from "../../services/AuthService";
+
 import { FormAction } from "../slices/formSlice";
-import { setUserPermission } from "../slices/permissionSlice";
 
 export const SIGNUP_CONFIRMED_ACTION = "[signup action] confirmed signup";
 export const SIGNUP_FAILED_ACTION = "[signup action] failed signup";
@@ -23,18 +23,18 @@ export function signupAction(email, password, navigate) {
     signUp(email, password)
       .then((response) => {
         saveTokenInLocalStorage(response.data);
+
         runLogoutTimer(
           dispatch,
-          response.data.expiresIn * 1000,
-          //history,
+          response.data.expiresIn * 1000
         );
+
         dispatch(confirmedSignupAction(response.data));
         navigate("/dashboard");
-        //history.push('/dashboard');
       })
       .catch((error) => {
-        const errorMessage = formatError(error.response.data);
-        dispatch(signupFailedAction(errorMessage));
+        const msg = formatError(error?.response);
+        dispatch(signupFailedAction(msg));
       });
   };
 }
@@ -42,7 +42,6 @@ export function signupAction(email, password, navigate) {
 export function Logout(navigate) {
   localStorage.removeItem("userDetails");
   navigate("/login");
-  //history.push('/login');
 
   return {
     type: LOGOUT_ACTION,
@@ -54,25 +53,23 @@ export function loginAction(email, password, navigate) {
     login(email, password)
       .then((response) => {
         saveTokenInLocalStorage(response.data);
+
         runLogoutTimer(
           dispatch,
-          process.env.REACT_APP_EXPIRE_IN * 1000,
-          navigate,
+          import.meta.env.REACT_APP_EXPIRE_IN * 1000,
+          navigate
         );
+
         dispatch(loginConfirmedAction(response.data));
-        // dispatch(setUserPermission(response.data?.permissions))
-        //return response.data;
-        //return 'success';
-        //history.push('/dashboard');
         navigate("/dashboard");
       })
       .catch((error) => {
-        //console.log('error');
-        const errorMessage = formatError(error.response);
-        dispatch(loginFailedAction(errorMessage));
-      }).finally(()=>{
-        dispatch(FormAction.setLoading(false))
+        const msg = formatError(error?.response);
+        dispatch(loginFailedAction(msg));
       })
+      .finally(() => {
+        dispatch(FormAction.setLoading(false));
+      });
   };
 }
 
@@ -108,5 +105,14 @@ export function loadingToggleAction(status) {
   return {
     type: LOADING_TOGGLE_ACTION,
     payload: status,
+  };
+}
+
+export const PROFILE_UPDATED_ACTION = "[profile action] updated profile";
+
+export function profileUpdatedAction(data) {
+  return {
+    type: PROFILE_UPDATED_ACTION,
+    payload: data,
   };
 }

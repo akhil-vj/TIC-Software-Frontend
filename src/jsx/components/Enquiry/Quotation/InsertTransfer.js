@@ -84,6 +84,14 @@ const InsertTransfer = ({
       setFieldValue("name", data?.vehicle_name);
       setFieldValue("id", data?.id);
       setFieldValue("image", data?.image);
+      
+      // Get pricing from estimations array (from admin settings)
+      if (data?.estimations && data.estimations.length > 0) {
+        const estimation = data.estimations[0];
+        setFieldValue("cost", estimation?.cost || 0);
+        setFieldValue("adultCost", estimation?.adult_cost || 0);
+        setFieldValue("childCost", estimation?.child_cost || 0);
+      }
     }
   }, [editId, data, showModal]);
   return (
@@ -189,33 +197,30 @@ const InsertTransfer = ({
                   </div>
                   {values.type?.label === "PRIVATE" ? (
                     <div className="col-sm-4">
-                      <InputField
-                        label="Cost"
-                        name="cost"
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        values={values}
-                      />
+                      <div className="form-group mb-3">
+                        <label>Cost</label>
+                        <div className="form-control bg-light">
+                          {values.cost || 'N/A'}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <>
                       <div className="col-sm-4">
-                        <InputField
-                          label="Adult Cost"
-                          name="adultCost"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          values={values}
-                        />
+                        <div className="form-group mb-3">
+                          <label>Adult Cost</label>
+                          <div className="form-control bg-light">
+                            {values.adultCost || 'N/A'}
+                          </div>
+                        </div>
                       </div>
                       <div className="col-sm-4">
-                        <InputField
-                          label="Child Cost"
-                          name="childCost"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          values={values}
-                        />
+                        <div className="form-group mb-3">
+                          <label>Child Cost</label>
+                          <div className="form-control bg-light">
+                            {values.childCost || 'N/A'}
+                          </div>
+                        </div>
                       </div>
                     </>
                   )}

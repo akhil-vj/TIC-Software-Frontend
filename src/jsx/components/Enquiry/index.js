@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge, Dropdown } from "react-bootstrap";
 
-import InvoiceSlider from "../Dashboard/InvoiceSlider";
+import EnquirySlider from "../Dashboard/EnquirySlider";
 import QuestionIcon from "../Dashboard/Ticketing/QuestionIcon";
 import AddEnquiry from "./add";
 import CustomModal from "../../layouts/CustomModal";
@@ -111,10 +111,65 @@ const tableBlog = [
 
 const Enquiry = () => {
   const navigate = useNavigate();
-  const [showModal, setShowModal]=useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [search, setSearch] = useState("");
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const url = URLS.ENQUIRY_URL
   const enquiryData = useAsync(url);
-  const tableData = enquiryData?.data?.data;
+  const tableData = enquiryData?.data?.data || [];
+  const summaryData = useMemo(() => {
+    const getStatus = (item) =>
+      String(
+        item?.status ||
+        item?.enquiry_status ||
+        item?.current_status ||
+        item?.lead_status ||
+        "",
+      ).toLowerCase();
+    const total = tableData.length;
+    const confirmed = tableData.filter((item) =>
+      getStatus(item).includes("confirm"),
+    ).length;
+    const followUp = tableData.filter((item) => {
+      const status = getStatus(item);
+      return (
+        item?.follow_up ||
+        item?.followup ||
+        item?.follow_up_required ||
+        status.includes("follow")
+      );
+    }).length;
+    const sent = tableData.filter((item) => getStatus(item).includes("sent"))
+      .length;
+    return [
+      { name: "Total", value: total },
+      { name: "Confirmed", value: confirmed },
+      { name: "Follow up", value: followUp },
+      { name: "Sent", value: sent },
+    ];
+  }, [tableData]);
+  const filteredData = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return tableData;
+    const matchValue = (val) => {
+      if (val === null || val === undefined) return false;
+      if (Array.isArray(val)) return val.some((v) => matchValue(v));
+      if (typeof val === "object") return Object.values(val).some((v) => matchValue(v));
+      return String(val).toLowerCase().includes(term);
+    };
+    return tableData.filter((item) =>
+      [
+        item?.type,
+        item?.customer?.name,
+        item?.agent?.name,
+        item?.lead_source?.name,
+        item?.assigned_to_user?.first_name,
+        item?.requirements,
+        item?.start_date,
+      ].some((field) => matchValue(field)),
+    );
+  }, [tableData, search]);
   const permissionType = usePermissionType('enquiry')
 
   const onView = (id) => {
@@ -126,19 +181,20 @@ const Enquiry = () => {
   const tableArray = [
     { label: "Sl no", value: "index", className: "text-center" },
     { label: "Type", value: "type" },
-    { label: "Name", value: ["customer", "name"],condition:["agent", "name"] },
+    { label: "Name", value: ["customer", "name"], condition: ["agent", "name"] },
     { label: "Lead Source", value: ["lead_source", "name"] },
     { label: "Requirement", value: ["requirements"] },
     // { label: "Package Details", value: "is_active" },
-    { label: "Assigned To", value: ["assigned_to_user","first_name"] },
+    { label: "Assigned To", value: ["assigned_to_user", "first_name"] },
     { label: "Date", value: "start_date" },
     {
       label: "Actions",
       value: [
         // { menu: "Status",showLabel:'vehicle_name',showValue:"is_active" },
         // { menu: "View", onPress: onView },
+        { menu: "Select" },
         { menu: "Edit", onPress: onEdit },
-        { menu: "Delete",showLabel:'name' },
+        { menu: "Delete", showLabel: 'name' },
       ],
     },
   ];
@@ -213,6 +269,8 @@ const Enquiry = () => {
                       type="text"
                       className="form-control"
                       placeholder="Search here..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
                     />
                     <span className="input-group-text">
                       <Link to={"#"}>
@@ -236,7 +294,7 @@ const Enquiry = () => {
                       </Link>
                     </span>
                   </div>
-                 {permissionType.write &&  <div className="invoice-btn">
+                  {permissionType.write && <div className="invoice-btn">
                     <button
                       onClick={() => setShowModal(true)}
                       className="btn btn-primary"
@@ -265,7 +323,7 @@ const Enquiry = () => {
             </div>
           </div>
           {/* swiper */}
-          <InvoiceSlider />
+          <EnquirySlider array={summaryData} />
           {/* swiper end */}
 
           {/* <div className="row">
@@ -441,14 +499,18 @@ const Enquiry = () => {
               </div>
             </div>
           </div> */}
-           <CustomTable
+          <CustomTable
             tableArray={tableArray}
-            data={tableData}
-            length={tableData?.length}
+            data={filteredData}
+            length={filteredData.length}
             loading={enquiryData?.loading}
             url={url}
             permissionType={permissionType}
-            // url2={patchUrl}
+            selectedRows={selectedRows}
+            setSelectedRows={setSelectedRows}
+            isSelectionMode={isSelectionMode}
+            setIsSelectionMode={setIsSelectionMode}
+          // url2={patchUrl}
           />
         </div>
       </div>

@@ -17,7 +17,7 @@ const StepOne = ({ formik }) => {
 
   const errors = formik.errors
   // console.log(subDestinationUrl, 'data', subDestinationData,)
-  console.log('err',errors)
+  // console.log('err',errors)
   return (
     <section>
       <div className="row">

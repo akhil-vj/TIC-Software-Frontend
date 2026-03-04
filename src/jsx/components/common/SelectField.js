@@ -26,7 +26,7 @@ function SelectField(props) {
     
     if(showLabelValue){
       const value = e.target.value
-      const label = e.target.options[e.target.selectedIndex].text; // Get the selected option's label
+      const label = e.target.options[e.target.selectedIndex].text;
       const obj = {value,label}
       setValue(name,obj)
     }else{
@@ -36,39 +36,59 @@ function SelectField(props) {
   return (
     <div className={`form-group mb-3 ${formClass}`}>
       {!!label && <label className="text-label">{label} {isRequired && !isDisabled && <span>*</span>}</label>}
-      <select
-        {...restProps}
-        // defaultValue={"option"}
-        id="inputState"
-        className={`form-control ${selectClass}`}
-        name={name}
-        value={values && !!values[name] ? values[name] : selected}
-        onChange={handleSelectChange}
-      >
-        {!!options?.length ? (
-          <>
-            <option value="" selected="true" disabled>
-              Choose...
+      <div className="position-relative">
+        <select
+          {...restProps}
+          id="inputState"
+          className={`form-control ${selectClass}`}
+          style={{
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            paddingRight: '35px'
+          }}
+          name={name}
+          value={values && !!values[name] ? values[name] : selected}
+          onChange={handleSelectChange}
+        >
+          {!!options?.length ? (
+            <>
+              
+              {options.map((option, key) => (
+                <option
+                  key={key}
+                  value={optionValue ? option[optionValue] : option}
+                >
+                  {`${suffix} ${optionLabel ? option[optionLabel] : option}`}
+                </option>
+              ))}
+            </>
+          ) : (
+            <option value="option" disabled>
+              Empty !
             </option>
-            {options.map((option, key) => (
-              <option
-                key={key}
-                value={optionValue ? option[optionValue] : option}
-              >
-                {`${suffix} ${optionLabel ? option[optionLabel] : option}`}
-              </option>
-            ))}
-          </>
-        ) : (
-          <option value="option" disabled>
-            Empty !
-          </option>
-        )}
-      </select>
-      {formik?.touched[name] && formik?.errors[name] && (
-            <div
-            className="invalid-feedback animated fadeInUp" style={{ display: "block" }}>{formik.errors[name]}</div>
           )}
+        </select>
+        <i 
+          className="fa fa-chevron-down position-absolute" 
+          style={{
+            right: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            color: '#666',
+            fontSize: '12px'
+          }}
+        ></i>
+      </div>
+      {formik?.touched[name] && formik?.errors[name] && (
+        <div
+          className="invalid-feedback animated fadeInUp" 
+          style={{ display: "block" }}
+        >
+          {formik.errors[name]}
+        </div>
+      )}
     </div>
   );
 }

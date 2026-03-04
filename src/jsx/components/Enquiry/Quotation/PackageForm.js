@@ -2,13 +2,13 @@ import React, { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import SelectField from "../../common/SelectField";
 import Img1 from "../../../../images/course/hotel-1.jpg";
-import DropDownBlog from "../../Dashboard/DropDownBlog";
+import ActionDropdown from "../../Dashboard/ActionDropdown";
 import { useNavigate } from "react-router-dom";
 import notify from "../../common/Notify";
 import InsertActivity from "./InsertActivity";
 import InsertTransfer from "./InsertTransfer";
 import InsertHotel from "./InsertHotel";
-import { notifyCreate } from "../../../utilis/notifyMessage";
+import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
 import { formatDate, parseDate, parseTime } from "../../../utilis/date";
 import { LoadingButton } from "../../common/LoadingBtn";
 import { useAsync } from "../../../utilis/useAsync";
@@ -16,9 +16,10 @@ import { URLS } from "../../../../constants";
 import ShareModal from "./ShareModal";
 import ReactSelect from "../../common/ReactSelect";
 import { ModeBtn } from "../../common/ModeBtn";
-import axiosInstance  from '../../../../services/AxiosInstance'
+import axiosInstance from '../../../../services/AxiosInstance'
 import { ViewerModal } from "../../common/Viewer";
 import pdfFile from '../../../../pdf/diet-sheet.pdf'
+import ItineraryPreview from "./ItineraryPreview";
 
 const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
   const {
@@ -37,12 +38,15 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showViewerModal, setShowViewerModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState(null);
   const [selectedModalData, setSelectedModalData] = useState({});
   const isEdit = !!values.itineraryId;
   const [editId, setEditId] = useState("");
   const [editData, setEditData] = useState({});
   const [datesArray, setDatesArray] = useState([]);
   const [readOnly, setReadOnly] = useState(isEdit);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const dayList = [1, 2, 3, 4];
   const scheduleData = [1, 2];
@@ -61,25 +65,54 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
   const subDestinationUrl = `${URLS.SUB_DESTINATION_URL}?destination_id=${destinationId}`;
   const subDestinationFetchData = useAsync(subDestinationUrl, destinationId);
   const subDestinationData = subDestinationFetchData?.data?.data;
+  const allowedSubDestinationData =
+    values.selectedSubDestinations?.length > 0
+      ? values.selectedSubDestinations
+      : subDestinationData;
+  const selectedSubDestinationId =
+    values.planArr?.[values.planIndex]?.dayDestination?.value;
+  const getItemName = (item = {}) =>
+    (item.name || item.activity_name || item.vehicle_name || "").trim();
   let dataList;
   if (values.categoryOptions === "Hotel") {
-    dataList = hotelData;
+    const filteredHotels = selectedSubDestinationId
+      ? hotelData?.filter(
+        (hotel) =>
+          hotel?.sub_destination_id === selectedSubDestinationId ||
+          hotel?.sub_destination?.id === selectedSubDestinationId
+      )
+      : hotelData;
+    dataList = filteredHotels;
   } else if (values.categoryOptions === "Activity") {
     dataList = activityData;
   } else {
     dataList = transferData;
   }
+  const sortByName = (list = []) =>
+    [...list].sort((a, b) =>
+      getItemName(a).localeCompare(getItemName(b), undefined, {
+        sensitivity: "base",
+      })
+    );
+  dataList = sortByName(dataList);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  if (normalizedSearch) {
+    dataList = dataList?.filter((item) => {
+      const name = getItemName(item);
+      return name.toLowerCase().includes(normalizedSearch);
+    });
+  }
 
-  
+
   const generateDates = () => {
 
     // Step 1: Parse the date strings into Date objects
     const startDate = new Date(values.formStartDate);
     const endDate = new Date(values.formEndDate);
-  
+
     // Set the time component of startDate to midnight (00:00:00)
     startDate.setHours(0, 0, 0, 0);
-  
+
     // Set the time component of endDate to midnight (00:00:00)
     endDate.setHours(0, 0, 0, 0);
 
@@ -91,56 +124,79 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     let currentDay = 1;
     while (currentDate <= endDate) {
       // datesArr.push(new Date(currentDate));
-      const existingPlan = planArrValue.find((item)=> {
+      const existingPlan = planArrValue.find((item) => {
         // console.log(formatDate(currentDate),'item',item)
-       return item.date === formatDate(currentDate)
+        return item.date === formatDate(currentDate)
       }
-        )
-      if(existingPlan){
+      )
+      if (existingPlan) {
         scheduleArray.push(existingPlan);
       }
-      else{
-      const obj = {
-        date: new Date(currentDate),
-        day: currentDay,
-        dayDestination:{label:'',value:''},
-        schedule: [],
-      };
-      scheduleArray.push(obj);
+      else {
+        const obj = {
+          date: new Date(currentDate),
+          day: currentDay,
+          dayDestination: { label: '', value: '' },
+          schedule: [],
+        };
+        scheduleArray.push(obj);
+      }
+      // setFieldValue('planArr',[...values.planArr,obj])
+      currentDate.setDate(currentDate.getDate() + 1);
+      currentDay = currentDay + 1;
     }
-    // setFieldValue('planArr',[...values.planArr,obj])
-    currentDate.setDate(currentDate.getDate() + 1);
-    currentDay = currentDay + 1;
-  }
     setFieldValue("planArr", scheduleArray);
   };
   let initialLoad = true;
   useEffect(() => {
     // if (!isEdit) {
-      generateDates();
-      // console.log('inital generate datae')
+    generateDates();
+    // console.log('inital generate datae')
     // }
     return () => {
       initialLoad = false;
     };
-  }, [values.itineraryId,values.planArr.length]);
+  }, [values.itineraryId, values.planArr.length]);
+
+  // Refetch hotel/activity/transfer data when user returns from new tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Refetch the data by triggering the async hooks
+        hotelFetchData.refetch?.();
+        activityFetchData.refetch?.();
+        transferFetchData.refetch?.();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const handleAddCategory = () => {
+    let addUrl = "";
     if (values.categoryOptions === "Hotel") {
-      navigation("/hotels");
+      addUrl = "/hotels/add";
     }
     if (values.categoryOptions === "Activity") {
-      navigation("/activity");
+      addUrl = "/activity/add";
     }
     if (values.categoryOptions === "Transfer") {
-      navigation("/transfer");
+      addUrl = "/transfer/add";
+    }
+
+    // Open in new tab to preserve quotation context
+    if (addUrl) {
+      window.open(addUrl, "_blank");
     }
   };
   const handleCardAdd = (value = values.categoryOptions, data) => {
     const checkValue = value?.toLowerCase();
     if (data) {
-      const personCount = values.adult + values.child 
-      const value = {...data,showScheduleDate:new Date(showScheduleValue?.date),personCount}
+      const personCount = values.adult + values.child
+      const value = { ...data, showScheduleDate: new Date(showScheduleValue?.date), personCount }
       setEditData(value);
     }
     if (checkValue === "hotel") {
@@ -163,8 +219,8 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     setFieldValue("planIndex", ind);
   };
   const onDayDestination = (ind, data) => {
-    const result = values.planArr.map((item,arrInd) => ind === arrInd ? {...item, dayDestination: data} 
-    : item )
+    const result = values.planArr.map((item, arrInd) => ind === arrInd ? { ...item, dayDestination: data }
+      : item)
     setFieldValue("planArr", result);
   };
   const showScheduleValue = values.planArr[`${values.planIndex}`];
@@ -172,27 +228,29 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     // check is this the insert of already existing data
     const isEdit = !!editId || editId === 0;
     // if(values.categoryOptions !== "Hotel"){
-      const insertSchedule = values.planArr.map((data, key) => {
-      if(!isEdit && value.insertType == 'hotel'){
-        // Step 1: Parse the date strings into Date objects
-      const startDate = new Date(value.startDate);
-      const endDate = new Date(value.endDate);
-      const currentDate = new Date(data.date);
-    
-      // Set the time component of startDate to midnight (00:00:00)
-      startDate.setHours(0, 0, 0, 0);
-    
-      // Set the time component of endDate to midnight (00:00:00)
-      endDate.setHours(0, 0, 0, 0);
-  
-      // Set the time component of currentDate to midnight (00:00:00)
-      currentDate.setHours(0, 0, 0, 0);
-  
-          const dateCondition = startDate <= currentDate && endDate >= currentDate
-        if(dateCondition){
-          const val = { ...data, schedule: [...data.schedule, {...value,startDate:currentDate,endDate:currentDate}] }
+    const insertSchedule = values.planArr.map((data, key) => {
+      if (!isEdit && value.insertType == 'hotel') {
+        // Normalize to date-only for comparisons and include nights (checkout exclusive)
+        const startDate = new Date(value.startDate);
+        const endDate = new Date(value.endDate);
+        const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const rawEndDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        // Treat checkout as exclusive; if checkout is same/earlier than check-in, make it one night
+        const endDayExclusive = rawEndDay > startDay ? rawEndDay : new Date(startDay.getTime() + 24 * 60 * 60 * 1000);
+        const currentDate = new Date(data.date);
+        currentDate.setHours(0, 0, 0, 0);
+        const dateCondition = startDay <= currentDate && currentDate < endDayExclusive;
+
+        if (dateCondition) {
+          const nextDate = new Date(currentDate);
+          nextDate.setDate(nextDate.getDate() + 1);
+          const stayEndDate = nextDate <= endDayExclusive ? nextDate : endDayExclusive;
+          const autoDayDestination = data.dayDestination?.value
+            ? data.dayDestination
+            : value.subDestination || data.dayDestination;
+          const val = { ...data, dayDestination: autoDayDestination, schedule: [...data.schedule, { ...value, startDate: currentDate, endDate: stayEndDate }] }
           return val
-        }else{
+        } else {
           const val = { ...data, schedule: [...data.schedule] }
           return val
         }
@@ -257,16 +315,27 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     setShowModal(true);
     setFormComponent("setupForm");
   };
-  const getPdfPrint = async() => {
+  const handleCloseViewer = () => {
+    if (pdfPreview) {
+      URL.revokeObjectURL(pdfPreview);
+    }
+    setPdfPreview(null);
+    setShowViewerModal(false);
+  }
+
+  const getPdfPrint = async () => {
     try {
-      const url = URLS.PRINT_ITINERARY_URL+values.itineraryId
-      const response = await axiosInstance().get(url);
-      console.log('resss',response)
-      // setData(response.data);
-      // setShowViewerModal(true)
+      const url = URLS.PRINT_ITINERARY_URL + values.itineraryId
+      const response = await axiosInstance().post(url, null, { responseType: 'blob' });
+      if (response?.data) {
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const previewUrl = window.URL.createObjectURL(blob);
+        setPdfPreview(previewUrl);
+        setShowViewerModal(true);
+      }
     } catch (error) {
-      // setError(error);
-      console.log('err',error)
+      console.log('err', error)
+      notifyError(error?.response?.data?.message || 'Failed to generate quotation PDF')
     }
   }
   return (
@@ -282,8 +351,8 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
           >
             <i class="fa fa-arrow-left fa-xl" aria-hidden="true"></i>
           </button>
-          <ModeBtn className="" isEdit={isEdit} 
-              readOnly={readOnly} setReadOnly={setReadOnly}/>
+          <ModeBtn className="" isEdit={isEdit}
+            readOnly={readOnly} setReadOnly={setReadOnly} />
         </div>
         <div className="d-flex justify-content-end mb-3">
           <LoadingButton
@@ -293,16 +362,16 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
             onClick={handleSubmit}
             disabled={readOnly}
           />
-          <LoadingButton label="Quotation" type="button" className="me-2" onClick={getPdfPrint}/>
+          {/* <LoadingButton label="Quotation" type="button" className="me-2" /> */}
           <LoadingButton
             label="Pricing"
             type="button"
             className="me-2"
             onClick={formSubmit}
           />
-          <LoadingButton label="View" type="button" className="me-2" />
-          <LoadingButton label="Export" type="button" className="me-2" />
-          <LoadingButton label="Share" type="button" onClick={()=>setShowShareModal(true)}/>
+          <LoadingButton label="View" type="button" className="me-2" onClick={() => setShowPreviewModal(true)} />
+          <LoadingButton label="Export" type="button" className="me-2" onClick={getPdfPrint} />
+          <LoadingButton label="Share" type="button" onClick={() => setShowShareModal(true)} />
         </div>
         <div className="row package">
           <div className="col-3">
@@ -320,19 +389,19 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                 <div className="col-md-9">
                   <p className="text-center mb-1">{formatDate(item?.date)}</p>
                   <ReactSelect
-                    options={subDestinationData}
+                    options={allowedSubDestinationData}
                     value={item.dayDestination}
-                    onChange={(selected) => onDayDestination(key,selected)}
+                    onChange={(selected) => onDayDestination(key, selected)}
                     optionValue="id"
                     optionLabel="name"
                     chooseLabel='Select SubDestination'
                     formik={formik}
                     onBlur={handleBlur}
-                    // inputId='destination'
-                    // className='custom-input'
-                    // required
-                    // isDisabled={true}
-                    // showBorderOnDisabled={true}
+                  // inputId='destination'
+                  // className='custom-input'
+                  // required
+                  // isDisabled={true}
+                  // showBorderOnDisabled={true}
                   />
                 </div>
               </div>
@@ -364,16 +433,16 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                                 </div>
                               )}
                               <div className="user-details">
-                                <h6 className="user-name">{`${
-                                  item.insertType
-                                } : ${
-                                  item.insertType === "activity"
+                                <h6 className="user-name">{`${item.insertType
+                                  } : ${item.insertType === "activity"
                                     ? item.name
                                     : item.name
-                                }`}</h6>
+                                  }`}</h6>
                                 {item.insertType === "hotel" && (
                                   <>
-                                    <span className="number">10am to 2pm</span>
+                                    <span className="number">{`${parseTime(
+                                      item.startTime
+                                    )} - ${parseTime(item.endTime)}`}</span>
                                     <span className="mail">
                                       Room type : Deluxe
                                     </span>
@@ -403,7 +472,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                                 {/* <span className="mail">jordan@mail.com</span>  */}
                               </div>
                             </div>
-                           {!readOnly && <DropDownBlog
+                            {!readOnly && <ActionDropdown
                               onEdit={() => onEdit(ind, item)}
                               onDelete={() => onDelete(ind)}
                             />}
@@ -447,8 +516,10 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
               <div className="input-group search-area flex-1">
                 <input
                   type="text"
-                  className={`form-control ${false ? "active" : ""} border-0`}
+                  className={`form-control ${searchTerm ? "active" : ""} border-0`}
                   placeholder="Search here..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
                 {/* <span className="input-group-text">
 						<Link to={"#"}>
@@ -489,7 +560,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                       {list.name || list.activity_name || list.vehicle_name}
                     </h6>
                   </div>
-                 {!readOnly &&  <div>
+                  {!readOnly && <div>
                     <button
                       type="button"
                       className="btn btn-white p-3"
@@ -499,7 +570,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                     >
                       <i className="fa-solid fa-plus text-primary"></i>
                     </button>
-                  </div> }
+                  </div>}
                 </div>
               ))}
               <div>
@@ -547,12 +618,17 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
       <ShareModal
         showModal={showShareModal}
         setShowModal={setShowShareModal}
-        // onClick={onInsert}
-        // onClose={onClose}
-        // editId={editId}
-        // data={editData}
+      // onClick={onInsert}
+      // onClose={onClose}
+      // editId={editId}
+      // data={editData}
       />
-      <ViewerModal showModal={showViewerModal} handleClose={()=>setShowViewerModal(false)} file={pdfFile}/>
+      <ViewerModal showModal={showViewerModal} handleClose={handleCloseViewer} file={pdfPreview || pdfFile} />
+      <ItineraryPreview
+        showModal={showPreviewModal}
+        handleClose={() => setShowPreviewModal(false)}
+        values={values}
+      />
     </>
   );
 };

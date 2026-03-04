@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge, Dropdown } from "react-bootstrap";
 
-import InvoiceSlider from "../../Dashboard/InvoiceSlider";
+import EnquirySlider from "../../Dashboard/EnquirySlider";
 import QuestionIcon from "../../Dashboard/Ticketing/QuestionIcon";
-import EditProfile from "../../AppsMenu/AppProfile/EditProfile";
+
 import CustomModal from "../../../layouts/CustomModal";
 import { useAsync } from "../../../utilis/useAsync";
 import { URLS } from "../../../../constants";
@@ -51,15 +51,15 @@ const Activity = () => {
     { label: "Name", value: "activity_name" },
     { label: "Number", value: "contact_number" },
     { label: "Email", value: "contact_email" },
-    { label: "Destination", value: ["destination", "name"],className:'text-center' },
+    { label: "Destination", value: ["destination", "name"], className: 'text-center' },
     { label: "Status", value: "is_active" },
     {
       label: "Actions",
       value: [
-        { menu: "Status",showLabel:'activity_name',showValue:"is_active" },
+        { menu: "Status", showLabel: 'activity_name', showValue: "is_active" },
         { menu: "View", onPress: onView },
         { menu: "Edit", onPress: onEdit },
-        { menu: "Delete",showLabel:'activity_name' },
+        { menu: "Delete", showLabel: 'activity_name' },
       ],
     },
   ];
@@ -122,7 +122,7 @@ const Activity = () => {
       }
     }
   };
-  
+
   return (
     <>
       <div className="row">
@@ -191,7 +191,7 @@ const Activity = () => {
             </div>
           </div>
           {/* swiper */}
-          <InvoiceSlider title="Activity" />
+          <EnquirySlider title="Activity" />
           {/* swiper end */}
 
           {/* <div className="row">
@@ -389,16 +389,7 @@ const Activity = () => {
           />
         </div>
       </div>
-      {/* <CustomModal
-        showModal={showModal}
-        title={"Customer Info"}
-        handleModalClose={() => {
-          setShowModal(false);
-        }}
-        modalClass="insert-modal"
-      >
-        <EditProfile setShowModal={setShowModal} />
-      </CustomModal> */}
+
 
     </>
   );

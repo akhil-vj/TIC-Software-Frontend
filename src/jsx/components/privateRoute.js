@@ -1,13 +1,12 @@
 // PrivateRoute.js
 import React from "react";
-import { Navigate, Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 const PrivateRoute = ({ permission, children }) => {
-  const navigate = useNavigate();
   const { userPermission } = useSelector((state) => state);
   const isAllowed = userPermission.some((p) =>
-    p.slug.indexOf(`${permission}-read-`)
+    (p?.slug || "").includes(`${permission}-read-`)
   );
   // console.log(isAllowed,'permission',userPermission)
 

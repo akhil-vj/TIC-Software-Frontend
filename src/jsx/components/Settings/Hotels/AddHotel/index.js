@@ -76,6 +76,11 @@ const AddHotel = () => {
       // Handle form submission here
       try {
         dispatch(FormAction.setLoading(true))
+        if(!values.addRoom || values.addRoom.length === 0){
+          notifyError('Add at least one room before saving the hotel');
+          dispatch(FormAction.setLoading(false))
+          return;
+        }
         const formData = new FormData();
         formData.append('name',values.name)
         // formData.append('name', values.name);
@@ -90,13 +95,26 @@ const AddHotel = () => {
         formData.append('reservation_no', checkFormValue(values.reservationNumber));
         formData.append('phone_number', values.phoneNumber);
         formData.append('address', values.address);
-        values.addRoom?.forEach((item,ind)=>{
+        for (let [ind,item] of (values.addRoom || []).entries()){
+          const start = new Date(item.roomStartDate);
+          const end = new Date(item.roomEndDate);
+          if(end <= start){
+            notifyError(`Room ${ind+1}: To Date must be after From Date`);
+            dispatch(FormAction.setLoading(false));
+            return;
+          }
+          const invalidMeal = item.mealPlan?.some(mp => !(Number(mp.amount) > 0));
+          if(invalidMeal){
+            notifyError(`Room ${ind+1}: Meal plan amount must be greater than 0`);
+            dispatch(FormAction.setLoading(false));
+            return;
+          }
           if(!!item.roomId){
             formData.append(`rooms[${ind}][id]`,item.roomId)
           }
           formData.append(`rooms[${ind}][market_type_id]`, item.marketType.value);
-          formData.append(`rooms[${ind}][from_date]`, new Date(item.roomStartDate).toLocaleDateString('en-CA'));
-          formData.append(`rooms[${ind}][to_date]`, new Date(item.roomEndDate).toLocaleDateString('en-CA'));
+          formData.append(`rooms[${ind}][from_date]`, start.toLocaleDateString('en-CA'));
+          formData.append(`rooms[${ind}][to_date]`, end.toLocaleDateString('en-CA'));
           formData.append(`rooms[${ind}][room_type_id]`, item.roomType.value);
           formData.append(`rooms[${ind}][single_bed_amount]`, item.singleBed);
           formData.append(`rooms[${ind}][double_bed_amount]`, item.doubleBed);
@@ -125,14 +143,19 @@ const AddHotel = () => {
           // formData.append(`rooms[${ind}][]`, item.availableFrom);
           // formData.append(`rooms[${ind}][]`, item.availableTo);
           formData.append(`rooms[${ind}][allotted_cut_off_days]`, item.cutOff);
-        })
-        values.hotelAmentity?.forEach((item,ind)=>{
-          formData.append(`amenities[${ind}]`, item);
-        })
-        values.hotelImg?.forEach((item,ind)=>{
-        if(checkIsFile(item)){
-          formData.append(`document_2[${ind}]`, item);
         }
+        if(values.hotelAmentity?.length){
+          values.hotelAmentity.forEach((item,ind)=>{
+            formData.append(`amenities[${ind}]`, item);
+          })
+        }else{
+          // keep amenities key present to avoid backend undefined index
+          formData.append('amenities','');
+        }
+        values.hotelImg?.forEach((item,ind)=>{
+          if(checkIsFile(item)){
+            formData.append(`document_2[${ind}]`, item);
+          }
         })
         let response;
         if (isEdit) {
@@ -140,8 +163,10 @@ const AddHotel = () => {
         } else {
           response = await filePost(url, formData);
         }
-        // console.log('response',response)
+        console.log('Hotel save response:', response);
         if (response.success) {
+          // If response includes the hotel data with images, use it to refresh the store
+          // Otherwise, the next page fetch will get the updated data
           dispatch(FormAction.setRefresh());
           // formik.setFieldValue("name", "");
           // setShowModal(false);
@@ -149,13 +174,19 @@ const AddHotel = () => {
             dispatch(FormAction.setEditId())
           }
           notifyCreate('Hotel', isEdit)
-          navigate('/hotels')
+          // Add a small delay to ensure backend has processed images before redirect
+          setTimeout(() => {
+            navigate('/hotels')
+          }, 500);
         }
       } catch (error) {
-        // const errMsg = error.response?.data?.data?.errors
-        // const firstErr = Object.values(errMsg)[0][0]
-        console.log('err',error)
-        notifyError(error)
+        const errObj = error?.response?.data?.data?.errors;
+        const firstErr =
+          errObj && Object.values(errObj)?.flat()?.[0]
+            ? Object.values(errObj).flat()[0]
+            : error?.response?.data?.message || error?.message || 'Save failed';
+        console.log('err', error);
+        notifyError(firstErr);
       }finally{
         dispatch(FormAction.setLoading(false))
       }
@@ -165,6 +196,7 @@ const AddHotel = () => {
   const editValues = editData?.data?.data
   useEffect(()=>{
     if(!!editValues){
+    console.log('Edit Values - document_2:', editValues.document_2);
     const obj = {
       name: editValues.name,
       destination: {label:editValues.destination_name,value:editValues.destination_id},
@@ -278,7 +310,6 @@ const AddHotel = () => {
                 <Stepper
                   className="nav-wizard"
                   activeStep={goSteps}
-                  label={false}
                 >
                   <Step className="nav-link" onClick={() => setGoSteps(0)} />
                   <Step className="nav-link" onClick={() => setGoSteps(1)} />

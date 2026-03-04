@@ -1,11 +1,13 @@
 import axios from "axios";
-import swal from "sweetalert";
+import Swal from "sweetalert2";
 import { loginConfirmedAction, Logout } from "../store/actions/AuthActions";
 import { URLS } from "../constants";
 import { formatDate } from "../jsx/utilis/date";
+import { buildApiUrl } from "./apiConfig";
 
-export function signUp(values,id) {
-  //axios call
+/* ---------------- SIGNUP ---------------- */
+
+export function signUp(values, id) {
   const postData = {
     username: values.username,
     email: values.email,
@@ -21,85 +23,123 @@ export function signUp(values,id) {
     start_date: formatDate(values.fromDate),
     end_date: formatDate(values.toDate),
   };
-  return axios.post(process.env.REACT_APP_API_URL + URLS.REGISTER_URL, postData);
+
+  return axios.post(buildApiUrl(URLS.REGISTER_URL), postData);
 }
+
+/* ---------------- LOGIN ---------------- */
 
 export function login(email, password) {
   const postData = {
     username: email,
     password,
-    // returnSecureToken: true,
   };
-  return axios.post(process.env.REACT_APP_API_URL + URLS.LOGIN_URL, postData);
+
+  return axios.post(buildApiUrl(URLS.LOGIN_URL), postData);
 }
 
+/* ---------------- ERROR HANDLER (FIXED) ---------------- */
+
 export function formatError(errorResponse) {
-  switch (errorResponse.status) {
+  // If backend is unreachable, CORS blocked, DNS error, etc.
+  if (!errorResponse) {
+    Swal.fire(
+      "Network Error",
+      "Unable to reach the server. Please check the API URL or your network connection.",
+      "error"
+    );
+    return "NETWORK_ERROR";
+  }
+
+  const status = errorResponse.status;
+
+  switch (status) {
     case "EMAIL_EXISTS":
-      //return 'Email already exists';
-      swal("Oops", "Email already exists", "error");
-      break;
+      Swal.fire("Oops", "Email already exists", "error");
+      return "EMAIL_EXISTS";
+
     case "EMAIL_NOT_FOUND":
-      //return 'Email not found';
-      swal("Oops", "Email not found", "error", { button: "Try Again!" });
-      break;
+      Swal.fire("Oops", "Email not found", "error", { confirmButtonText: "Try Again!" });
+      return "EMAIL_NOT_FOUND";
+
     case 401:
-      //return 'Invalid Password';
-      swal("Oops", "Invalid Username or Password", "error", {
-        button: "Try Again!",
+      Swal.fire("Oops", "Invalid Username or Password", "error", { // Changed swal to Swal.fire
+        confirmButtonText: "Try Again!",
       });
-      break;
+      return "INVALID_CREDENTIALS";
+
     case "USER_DISABLED":
-      return "User Disabled";
+      Swal.fire("Oops", errorResponse.data.message, "error");
+      return "USER_DISABLED";
 
     default:
-      return "";
+      Swal.fire("Error", "Something went wrong. Please try again.", "error"); // Changed swal to Swal.fire
+      return "UNKNOWN_ERROR";
   }
 }
 
+/* ---------------- TOKEN SAVE ---------------- */
+
 export function saveTokenInLocalStorage(tokenDetails) {
   tokenDetails.authExpireTime = new Date(
-    new Date().getTime() + process.env.REACT_APP_EXPIRE_IN * 1000,
+    new Date().getTime() + import.meta.env.REACT_APP_EXPIRE_IN * 1000
   );
+
   localStorage.setItem("userDetails", JSON.stringify(tokenDetails));
 }
 
+/* ---------------- LOGOUT TIMER ---------------- */
+
 export function runLogoutTimer(dispatch, timer, navigate) {
   setTimeout(() => {
-    //dispatch(Logout(history));
     dispatch(Logout(navigate));
   }, timer);
 }
 
+/* ---------------- AUTO LOGIN ---------------- */
+
 export function checkAutoLogin(dispatch, navigate) {
   const tokenDetailsString = localStorage.getItem("userDetails");
-  let tokenDetails = "";
+
   if (!tokenDetailsString) {
     dispatch(Logout(navigate));
     return;
   }
 
-  tokenDetails = JSON.parse(tokenDetailsString);
-  let authExpireTime = new Date(tokenDetails.authExpireTime);
-  let todaysDate = new Date();
+  const tokenDetails = JSON.parse(tokenDetailsString);
 
-  if (todaysDate > authExpireTime) {
+  const expireTime = new Date(tokenDetails.authExpireTime);
+  const now = new Date();
+
+  if (now > expireTime) {
     dispatch(Logout(navigate));
     return;
   }
 
   dispatch(loginConfirmedAction(tokenDetails));
 
-  const timer = authExpireTime.getTime() - todaysDate.getTime();
-  runLogoutTimer(dispatch, timer, navigate);
+  const remaining = expireTime.getTime() - now.getTime();
+  runLogoutTimer(dispatch, remaining, navigate);
 }
 
-export function isLogin() {
-  const tokenDetailsString = localStorage.getItem("userDetails");
+/* ---------------- CHECK LOGIN ---------------- */
 
-  if (tokenDetailsString) {
-    return true;
-  } else {
-    return false;
-  }
+export function isLogin() {
+  return !!localStorage.getItem("userDetails");
+}
+
+/* ---------------- VERIFY PASSWORD FOR LOCK SCREEN ---------------- */
+
+export function verifyPassword(password) {
+  const token = localStorage.getItem("token");
+  
+  return axios.post(
+    buildApiUrl("/api/verify-password"),
+    { password },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 }

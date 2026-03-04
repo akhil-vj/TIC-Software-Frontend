@@ -4,8 +4,8 @@ import PerfectScrollbar from "react-perfect-scrollbar";
 
 //import PageTitle from "../../../../layouts/PageTitle";
 import { Dropdown } from "react-bootstrap";
-import DropFile from "../../AppsMenu/Email/Compose/DropFile";
-import CkEditorBlog from "../../Forms/CkEditor/CkEditorBlog";
+
+
 
 const MailToSupplier = () => {
   const supplierList = [
@@ -173,14 +173,13 @@ const MailToSupplier = () => {
                               className="textarea_editor"
                             >
                               {/* <h2>Using CKEditor 5 build in React</h2> */}
-                              <CkEditorBlog />
+                              {/* <CkEditor /> */}
+                              <textarea className="form-control" rows="10" placeholder="Type your message..."></textarea>
+                              {/* <textarea className="form-control" rows="10" placeholder="Type your message..."></textarea> */}
                             </div>
                           </div>
                         </form>
-                        <h5 className="my-3">
-                          <i className="fa fa-paperclip me-2"></i> Attatchment
-                        </h5>
-                        <DropFile />
+
                       </div>
                       <div className="text-left mt-4 mb-5">
                         <button
@@ -210,9 +209,8 @@ const MailToSupplier = () => {
                     <div className="input-group search-area">
                       <input
                         type="text"
-                        className={`form-control ${
-                          false ? "active" : ""
-                        } border-0`}
+                        className={`form-control ${false ? "active" : ""
+                          } border-0`}
                         placeholder="Search here..."
                       />
                       <span className="input-group-text">
@@ -259,9 +257,8 @@ const MailToSupplier = () => {
                         </div>
                         <div className="ms-2">
                           <h6>Burj khalifa</h6>
-                          <p className="text-neutral">{`Supplier ${
-                            key + 1
-                          } - supplier${key + 1}@gmail.com`}</p>
+                          <p className="text-neutral">{`Supplier ${key + 1
+                            } - supplier${key + 1}@gmail.com`}</p>
                         </div>
                       </div>
                     ))}

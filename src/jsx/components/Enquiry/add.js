@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useFormik } from "formik";
@@ -12,12 +12,10 @@ import { axiosPut, filePost } from "../../../services/AxiosInstance";
 import CustomDatePicker from "../common/CustomDatePicker";
 import { formatDate, parseDate } from "../../utilis/date";
 import { checkFormValue } from "../../utilis/check";
-import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { FetchAction } from "../../../store/slices/fetchSlice";
-import CustomSlider from "../common/Slider";
 import { ModeBtn } from "../common/ModeBtn";
-import ProfileSlider from "../AppsMenu/AppProfile/Slider";
+
 import { FormAction } from "../../../store/slices/formSlice";
 
 const initialValues = {
@@ -28,6 +26,7 @@ const initialValues = {
   adult: 0,
   child: 0,
   infant: 0,
+  refNo: "",
 };
 const TypeOptions = [
   { label: "B2B", value: "B2B" },
@@ -89,11 +88,11 @@ const requirementOptions = [
   { value: "Transport", label: "Transport" },
 ];
 const suggestionArr = [
-  {name:'Package 1', description:'description of package 1',cost:'10000'},
-  {name:'Package 2', description:'description of package 2',cost:'20000'},
-  {name:'Package 3', description:'description of package 3',cost:'30000'},
-  {name:'Package 4', description:'description of package 4',cost:'40000'},
-  {name:'Package 5', description:'description of package 5',cost:'40000'},
+  { name: 'Package 1', description: 'description of package 1', cost: '10000' },
+  { name: 'Package 2', description: 'description of package 2', cost: '20000' },
+  { name: 'Package 3', description: 'description of package 3', cost: '30000' },
+  { name: 'Package 4', description: 'description of package 4', cost: '40000' },
+  { name: 'Package 5', description: 'description of package 5', cost: '40000' },
 ]
 
 const EditProfile = ({ setShowModal }) => {
@@ -115,8 +114,15 @@ const EditProfile = ({ setShowModal }) => {
   const editUrl = `${url}/${id}`;
   const { data } = useAsync(editUrl, !!isEdit);
   const editData = data?.data;
+  const itineraryByEnquiryUrl = `${URLS.ITINERARY_URL}?enquiry_id=${id}`;
+  const { data: itineraryData } = useAsync(itineraryByEnquiryUrl, !!isEdit);
   const selectedTypeValue = values.typeValue;
   const isB2b = values.type.value === "B2B";
+  const itineraries = useMemo(() => {
+    if (Array.isArray(itineraryData?.data)) return itineraryData.data;
+    if (Array.isArray(itineraryData?.data?.data)) return itineraryData.data.data;
+    return [];
+  }, [itineraryData]);
 
   const agentData = useAsync(URLS.AGENT_URL);
   const agentDataOptions = agentData?.data?.data;
@@ -146,6 +152,35 @@ const EditProfile = ({ setShowModal }) => {
   const requirementDataOptions = requirementData?.data?.data;
   const staffData = useAsync(URLS.USER_GET_URL);
   const staffDataOptions = staffData?.data?.data?.data;
+  const quoteSummary = useMemo(() => {
+    const totalQuotes = itineraries.length;
+    const totalQuoteAmount = itineraries.reduce(
+      (sum, itinerary) => sum + (Number(itinerary?.net_amount) || 0),
+      0
+    );
+    const currency = itineraries.find((item) => item?.currency)?.currency;
+    return { totalQuotes, totalQuoteAmount, currency };
+  }, [itineraries]);
+  const profileInfo = useMemo(() => {
+    if (!editData) return {};
+    const contact = editData.type === "B2B" ? editData.agent : editData.customer;
+    const locationArr = [];
+    if (editData.destination?.name) locationArr.push(editData.destination.name);
+    if (editData.sub_destinations?.length) {
+      const subDestinations = editData.sub_destinations
+        .map((item) => item?.name)
+        .filter(Boolean)
+        .join(", ");
+      if (subDestinations) {
+        locationArr.push(subDestinations);
+      }
+    }
+    return {
+      name: contact?.name,
+      email: contact?.email,
+      location: locationArr.join(", "),
+    };
+  }, [editData]);
 
   const handleClick = async () => {
     try {
@@ -155,24 +190,24 @@ const EditProfile = ({ setShowModal }) => {
         formData.append("agent_id", values.typeValue?.value);
       } else {
         formData.append("customer_id", values.typeValue?.value);
-        formData.append("name", checkFormValue(values.name));
-        formData.append("email", checkFormValue(values.email));
-        formData.append("mobile", checkFormValue(values.mobile));
-        formData.append("salute", checkFormValue(values.salute));
       }
+      formData.append("name", checkFormValue(values.name));
+      formData.append("email", checkFormValue(values.email));
+      formData.append("mobile", checkFormValue(values.mobile));
+      formData.append("salute", checkFormValue(values.salute));
       formData.append(
         "destination_id",
         checkFormValue(values.destination?.value)
       );
-    //   formData.append(
-    //     "sub_destination_id",
-    //     checkFormValue(values.subDestination?.value)
-    //   );     
-      values.subDestination.forEach((data,ind)=>{
+      //   formData.append(
+      //     "sub_destination_id",
+      //     checkFormValue(values.subDestination?.value)
+      //   );     
+      values.subDestination.forEach((data, ind) => {
         formData.append(
-            `sub_destinations[${ind}]`,
-            checkFormValue(data?.value)
-          )
+          `sub_destinations[${ind}]`,
+          checkFormValue(data?.value)
+        )
       })
       formData.append("start_date", formatDate(values.startDate));
       formData.append("end_date", formatDate(values.endDate));
@@ -188,6 +223,7 @@ const EditProfile = ({ setShowModal }) => {
         formData.append(`requirements[${ind}]`, data?.value);
       });
       formData.append("assigned_to", checkFormValue(values.assigned?.value));
+      formData.append("ref_no", checkFormValue(values.refNo));
       let response;
       if (isEdit) {
         response = await axiosPut(editUrl, formData);
@@ -248,6 +284,7 @@ const EditProfile = ({ setShowModal }) => {
         value: editData.assigned_to_user?.id,
         label: editData.assigned_to_user?.first_name,
       });
+      setFieldValue("refNo", checkFormValue(editData.ref_no));
       const subDestinationArr = editData.sub_destinations.map((data) => {
         const val = { label: data.name, value: data.id, isExist: true };
         return val;
@@ -271,90 +308,49 @@ const EditProfile = ({ setShowModal }) => {
   }
   useEffect(() => {
     // setfield work only on editmode
-    if(!readOnly){
-    if (!!values.typeValue?.label && selectedTypeData) {
-      setFieldValue("name", checkFormValue(selectedTypeData.name));
-      setFieldValue("email", checkFormValue(selectedTypeData.email));
-      if (!isB2b) {
-        setFieldValue("salute", checkFormValue(selectedTypeData.salute));
-        setFieldValue("mobile", checkFormValue(selectedTypeData.mobile));
+    if (!readOnly) {
+      if (!!values.typeValue?.label && selectedTypeData) {
+        setFieldValue("name", checkFormValue(selectedTypeData.name));
+        setFieldValue("email", checkFormValue(selectedTypeData.email));
+        if (!isB2b) {
+          setFieldValue("salute", checkFormValue(selectedTypeData.salute));
+          setFieldValue("mobile", checkFormValue(selectedTypeData.mobile));
+        } else {
+          setFieldValue("mobile", checkFormValue(selectedTypeData.phone));
+        }
       } else {
-        setFieldValue("mobile", checkFormValue(selectedTypeData.phone));
+        setFieldValue("name", '');
+        setFieldValue("email", '');
+        setFieldValue("mobile", '');
+        setFieldValue("salute", '');
       }
-    }else{
-      setFieldValue("name", '');
-      setFieldValue("email", '');
-      setFieldValue("mobile", '');
-      setFieldValue("salute", '');
     }
-  }
-  }, [selectedTypeValue?.id, selectedTypeData?.id,values.typeValue?.label]);
+  }, [selectedTypeValue?.id, selectedTypeData?.id, values.typeValue?.label]);
 
   return (
     <>
       <div className="row">
-        {isFormPage && 
-          <ProfileSlider/>
-        }
 
-        {/* <div className="col-xl-3 col-lg-4">
-                    <div className="clearfix">
-                        <div className="card card-bx profile-card author-profile m-b30">
-                            <div className="card-body">
-                                <div className="p-5">
-                                    <div className="author-profile">
-                                        <div className="author-media">
-                                            <img src={user} alt="" />
-                                            <div className="upload-link" title="" data-toggle="tooltip" data-placement="right" data-original-title="update">
-                                                <input type="file" className="update-flie" />
-                                                <i className="fa fa-camera"></i>
-                                            </div>
-                                        </div>
-                                        <div className="author-info">
-                                            <h6 className="title">Nella Vita</h6>
-                                            <span>Developer</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="info-list">
-                                    <ul>
-                                        <li><a href="app-profile.html">Models</a><span>36</span></li>
-                                        <li><a href="uc-lightgallery.html">Gallery</a><span>3</span></li>
-                                        <li><a href="app-profile.html">Lessons</a><span>1</span></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div className="card-footer">
-                                <div className="input-group mb-3">
-                                    <div className="form-control rounded text-center bg-white">Portfolio</div>
-                                </div>
-                                <div className="input-group">
-                                    <a href="https://www.dexignlab.com/" className="form-control text-primary rounded text-start bg-white">https://www.dexignlab.com/</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div> */}
-        <div className={`col-${isFormPage?'8':'12'}`}>
+
+
+        <div className={`col-${isFormPage ? '8' : '12'}`}>
           <div className="card profile-card card-bx m-b30 border-0">
-            {/* <div className="card-header">
-              <h6 className="title">Customer Info</h6>
-            </div> */}
+
             <form className="profile-form">
               <div className="card-body">
                 <div className="row">
-                  <ModeBtn className="col-sm-12 d-flex justify-content-end" isEdit={isFormPage} 
-                     readOnly={readOnly} setReadOnly={setReadOnly}/>
-                  <div className="col-sm-6">
+                  <ModeBtn className="col-sm-12 d-flex justify-content-end" isEdit={isFormPage}
+                    readOnly={readOnly} setReadOnly={setReadOnly} />
+                  <div className="col-sm-4">
                     <ReactSelect
                       label="Type"
                       onChange={(selected) => {
-                        if(selected.label === 'B2B'){
+                        if (selected.label === 'B2B') {
                           setDisabled(true);
-                        }else{
+                        } else {
                           setDisabled(false);
                         }
-                        setFieldValue("typeValue",{label:'',value:''});
+                        setFieldValue("typeValue", { label: '', value: '' });
                         setFieldValue("name", '');
                         setFieldValue("email", '');
                         setFieldValue("mobile", '');
@@ -369,7 +365,7 @@ const EditProfile = ({ setShowModal }) => {
                       isDisabled={readOnly}
                     />
                   </div>
-                  <div className="col-sm-6">
+                  <div className="col-sm-4">
                     <ReactSelect
                       label={isB2b ? "Agent" : "Customer"}
                       onChange={(selected) => {
@@ -380,8 +376,19 @@ const EditProfile = ({ setShowModal }) => {
                       value={values.typeValue}
                       options={isB2b ? agentDataOptions : customerDataOptions}
                       optionValue="id"
-                      optionLabel={isB2b ? "name" : "mobile"}
+                      optionLabel={isB2b ? "name" : "name"}
                       isDisabled={readOnly}
+                    />
+                  </div>
+                  <div className="col-sm-4">
+                    <InputField
+                      label="Ref No."
+                      name="refNo"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      values={values}
+                      disabled={readOnly}
+                      placeholder="e.g., H/56789"
                     />
                   </div>
                   {!isB2b && (
@@ -398,24 +405,12 @@ const EditProfile = ({ setShowModal }) => {
                         required
                         disabled={disabled || readOnly}
                       />
-                      {/* <Dropdown className="profile-btn">
-                                            <Dropdown.Toggle as="div" className="i-false profile-btn-toggle">{selectOption} <i className="fa-solid fa-angle-down"></i></Dropdown.Toggle>
-                                            <Dropdown.Menu> 
-                                                <Dropdown.Item onClick={()=>setSelectOption("Male")}>Male</Dropdown.Item>
-                                                <Dropdown.Item onClick={()=>setSelectOption("Female")}>Female</Dropdown.Item>
-                                                <Dropdown.Item onClick={()=>setSelectOption("Other")}>Other</Dropdown.Item>
-                                            </Dropdown.Menu>
-                                        </Dropdown> */}
+
                     </div>
                   )}
                   {inputOptions.map((item, ind) => (
                     <div className="col-sm-6" key={ind}>
-                      {/* <label className="form-label">{item.label}</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        defaultValue={item.value}
-                      /> */}
+
                       <InputField
                         label={item.label}
                         name={item.name}
@@ -423,42 +418,13 @@ const EditProfile = ({ setShowModal }) => {
                         onBlur={handleBlur}
                         values={values}
                         disabled={disabled || readOnly}
-                        required
+                        required={item.name === 'name' || isB2b}
                       />
                     </div>
                   ))}
-                  {/* <div className="col-sm-6 m-b30">
-                                        <label className="form-label">Birth</label>
-                                        <input type="text" className="form-control" placeholder="dd. mm .yyyy" />
-                                    </div>
-                                    <div className="col-sm-6 m-b30">
-                                        <label className="form-label">Phone</label>
-                                        <input type="text" className="form-control" defaultValue="+123456789" />
-                                    </div>
-                                    <div className="col-sm-6 m-b30">
-                                        <label className="form-label">Email address</label>
-                                        <input type="text" className="form-control" defaultValue="demo@gmail.com" />
-                                    </div> */}
+
                   <div className="col-sm-6">
-                    {/* <label className="form-label">Destination</label>
-                    <Select
-                      // closeMenuOnSelect={false}
-                      // components={{ ClearIndicator }}
-                      // styles={{ clearIndicator: ClearIndicatorStyles }}
-                      // defaultValue={[colourOptions[4], colourOptions[5]]}
-                      isMulti
-                      options={destinationOptions}
-                    /> */}
-                    {/* <SelectField
-                        label="Destination"
-                        name={"destination"}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        values={values}
-                        options={destinationOptions}
-                        optionValue='value'
-                        optionLabel='label'
-                      /> */}
+
                     <ReactSelect
                       label="Destination"
                       onChange={(selected) =>
@@ -474,15 +440,7 @@ const EditProfile = ({ setShowModal }) => {
                     />
                   </div>
                   <div className="col-sm-6">
-                    {/* <label className="form-label">Sub Destination</label>
-                    <Select
-                      // closeMenuOnSelect={false}
-                      // components={{ ClearIndicator }}
-                      // styles={{ clearIndicator: ClearIndicatorStyles }}
-                      // defaultValue={[colourOptions[4], colourOptions[5]]}
-                      isMulti
-                      options={destinationOptions}
-                    /> */}
+
                     <ReactSelect
                       label="Sub Destination"
                       onChange={(selected) =>
@@ -493,7 +451,7 @@ const EditProfile = ({ setShowModal }) => {
                       options={subDestinationData?.data?.data}
                       optionValue="id"
                       optionLabel="name"
-                      required
+                      required={false}
                       isDisabled={readOnly}
                       isMulti
                     />
@@ -516,7 +474,7 @@ const EditProfile = ({ setShowModal }) => {
                       disabled={readOnly}
                     />
                   </div>
-                  <div className="col-sm-6">
+                  <div className="col-sm-4">
                     <InputField
                       label="Adult"
                       name="adult"
@@ -527,7 +485,7 @@ const EditProfile = ({ setShowModal }) => {
                       disabled={readOnly}
                     />
                   </div>
-                  <div className="col-sm-6">
+                  <div className="col-sm-4">
                     <InputField
                       label="Child"
                       name="child"
@@ -538,7 +496,7 @@ const EditProfile = ({ setShowModal }) => {
                       disabled={readOnly}
                     />
                   </div>
-                  <div className="col-sm-6">
+                  <div className="col-sm-4">
                     <InputField
                       label="Infant"
                       name="infant"
@@ -559,7 +517,6 @@ const EditProfile = ({ setShowModal }) => {
                       options={leadDataOptions}
                       optionValue="id"
                       optionLabel="name"
-                      required
                       disabled={readOnly}
                     />
                   </div>
@@ -573,7 +530,6 @@ const EditProfile = ({ setShowModal }) => {
                       options={priorityDataOptions}
                       optionValue="id"
                       optionLabel="name"
-                      required
                       disabled={readOnly}
                     />
                   </div>
@@ -589,7 +545,6 @@ const EditProfile = ({ setShowModal }) => {
                       options={requirementDataOptions}
                       optionValue="id"
                       optionLabel="name"
-                      required
                       isDisabled={readOnly}
                     />
                   </div>
@@ -607,29 +562,20 @@ const EditProfile = ({ setShowModal }) => {
                       isDisabled={readOnly}
                     />
                   </div>
-                  {/* <div className="col-sm-6 m-b30">
-                                        <label className="form-label">City</label>
-                                        <select defaultValue={"option"} className="form-control">
-                                            <option>Krasnodar</option>
-                                            <option>Tyumen</option>
-                                            <option>Chelyabinsk</option>
-                                            <option>Moscow</option>
-                                        </select>
-                                       
-                                    </div> */}
-               
-             
-              <div className="card-footer border-0 pt-0 pb-3">
-                <button
-                  className="btn btn-primary"
-                  type="button"
-                  onClick={handleClick}
-                >
-                  UPDATE
-                </button>
-                {/* <Link to={"#"} className="btn-link">Forgot your password?</Link> */}
-              </div>
-              </div>
+
+
+
+                  <div className="card-footer border-0 pt-0 pb-3">
+                    <button
+                      className="btn btn-primary"
+                      type="button"
+                      onClick={handleClick}
+                    >
+                      UPDATE
+                    </button>
+                    {/* <Link to={"#"} className="btn-link">Forgot your password?</Link> */}
+                  </div>
+                </div>
               </div>
 
             </form>
@@ -637,33 +583,33 @@ const EditProfile = ({ setShowModal }) => {
         </div>
         {isFormPage && <div className="col-4">
           <div className="bg-white p-3 rounded">
+            <div>
+              <InputField
+                label={'Description'}
+                name={'description'}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                values={values}
+              // disabled={disabled || readOnly}
+              // required
+              />
+            </div>
+            <div className="">
+              <h6 className="my-4">Package Suggestion</h6>
+              {suggestionArr.map((item, ind) => (
+                <div className="d-flex border suggestion-card p-2 rounded mb-2" key={ind}>
                   <div>
-                  <InputField
-                        label={'Description'}
-                        name={'description'}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        values={values}
-                        // disabled={disabled || readOnly}
-                        // required
-                      />
+                    <h6>{item.name}</h6>
+                    <p>{item.description}</p>
                   </div>
-                  <div className="">
-                    <h6 className="my-4">Package Suggestion</h6>
-                    {suggestionArr.map((item,ind)=>(
-                      <div className="d-flex border suggestion-card p-2 rounded mb-2" key={ind}>
-                        <div>
-                          <h6>{item.name}</h6>
-                          <p>{item.description}</p>
-                      </div>
-                        <div>
-                          <h6>{item.cost} Rs</h6>
-                      </div>
-                      </div>
-                    ))}
+                  <div>
+                    <h6>{item.cost} Rs</h6>
                   </div>
-                  </div>
-              </div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>}
       </div>
     </>
   );

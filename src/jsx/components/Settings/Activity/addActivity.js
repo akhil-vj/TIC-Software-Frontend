@@ -52,15 +52,16 @@ const AddActivity = () => {
   const formSchema = Yup.object().shape({
     name: Yup.string()
       .min(3, "Your name must consist of at least 3 characters ")
-      .max(50, "Your name must consist of at limit 50 characters ")
       .required("Please enter a name"),
     phoneNumber: Yup.string()
+      .transform((value) => (value === "" || value === null ? undefined : value))
       .min(5, "Your phone number must be at least 5 characters long")
       .max(15, "Your phone number must be at limit 15 characters long")
-      .required("Please provide a phone number"),
+      .notRequired(),
     email: Yup.string()
+      .transform((value) => (value === "" || value === null ? undefined : value))
       .email( "not a valid email")
-      .required("Please provide a emai"),
+      .notRequired(),
   });
   const handleClick = async(values) => {
     try {
@@ -69,8 +70,8 @@ const AddActivity = () => {
       const formData = new FormData()
       // const values = formik.values
       formData.append('activity_name',values.name)
-      formData.append('contact_number',values.phoneNumber)
-      formData.append('contact_email',values.email)
+      formData.append('contact_number',checkFormValue(values.phoneNumber))
+      formData.append('contact_email',checkFormValue(values.email))
       formData.append('destination_id',checkFormValue(values.destination?.value))
       formData.append('sub_destination_id',checkFormValue(values.subDestination?.value))
       formData.append('description',checkFormValue(values.description))
@@ -260,7 +261,6 @@ const AddActivity = () => {
                         onBlur={formik.handleBlur}
                         values={formik.values}
                         formik={formik}
-                        required
                       />
                     </div>
                   </div>
@@ -273,7 +273,6 @@ const AddActivity = () => {
                         onBlur={formik.handleBlur}
                         values={formik.values}
                         formik={formik}
-                        required
                       />
                     </div>
                   </div>

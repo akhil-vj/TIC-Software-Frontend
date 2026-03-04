@@ -2,6 +2,8 @@ import React,{useState} from "react";
 import NoData from "./NoData";
 import { Dropdown } from "react-bootstrap";
 import DeleteModal from "./DeleteModal";
+import { axiosDelete } from "../../../services/AxiosInstance";
+import { notifyDelete, notifyError } from "../../utilis/notifyMessage";
 
 const initialType = {write:true,update:true,delete:true}
 export const CustomTable = ({
@@ -13,7 +15,11 @@ export const CustomTable = ({
   loading,
   url,
   url2,
-  permissionType = initialType
+  permissionType = initialType,
+  selectedRows = [],
+  setSelectedRows = () => {},
+  isSelectionMode = false,
+  setIsSelectionMode = () => {}
 }) => {
   // const tableData = data;
   // Initialize variables for body1 and body2 children
@@ -115,10 +121,61 @@ export const CustomTable = ({
     setShowConfirmationModal(true)
   }
 
+  const handleSelectRow = (id) => {
+    setSelectedRows(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(rowId => rowId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  }
+
+  const handleSelectAll = () => {
+    if (selectedRows.length === data.length) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(data.map(item => item.id));
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedRows.length === 0) {
+      notifyError("Please select at least one enquiry to delete");
+      return;
+    }
+
+    try {
+      // Delete each selected row
+      await Promise.all(
+        selectedRows.map(id => axiosDelete(`${url}/${id}`))
+      );
+      notifyDelete("Selected Enquiries");
+      setSelectedRows([]);
+      setIsSelectionMode(false);
+      // Refresh the data
+      window.location.reload();
+    } catch (error) {
+      console.log("Error deleting enquiries:", error);
+      notifyError(error);
+    }
+  }
+
   return (
     <>
     <div className="row">
       <div className="col-xl-12">
+        {isSelectionMode && selectedRows.length > 0 && (
+          <div className="alert alert-info mb-3 d-flex justify-content-between align-items-center">
+            <span>{selectedRows.length} enquiries selected</span>
+            <button 
+              className="btn btn-danger btn-sm"
+              onClick={handleBulkDelete}
+            >
+              Delete Selected
+            </button>
+          </div>
+        )}
         <div
           className="table-responsive  full-data dataTables_wrapper"
           id="example2_wrapper"
@@ -129,6 +186,16 @@ export const CustomTable = ({
           >
             <thead>
               <tr>
+                {isSelectionMode && (
+                  <th className="text-center" style={{width: '40px'}}>
+                    <input
+                      type="checkbox"
+                      onChange={handleSelectAll}
+                      checked={selectedRows.length === data.length && data.length > 0}
+                      className="form-check-input"
+                    />
+                  </th>
+                )}
                 {/* {tHead} */}
                 {tableArray?.map((item, key) => (
                   <th
@@ -145,7 +212,17 @@ export const CustomTable = ({
                 <NoData isLoading={loading} />
               ) : (
                 tableData.map((item, index) => (
-                  <tr key={index}>
+                  <tr key={index} className={selectedRows.includes(item.id) ? 'table-active' : ''}>
+                    {isSelectionMode && (
+                      <td className="text-center">
+                        <input
+                          type="checkbox"
+                          onChange={() => handleSelectRow(item.id)}
+                          checked={selectedRows.includes(item.id)}
+                          className="form-check-input"
+                        />
+                      </td>
+                    )}
                     {/* {tBody} */}
                     {tableArray?.map((arrValue, key) => {
                       // console.log('arrvalue',item?.[arrValue?.value])
@@ -194,7 +271,14 @@ export const CustomTable = ({
                             <Dropdown.Menu className="dropdown-menu-end">
                               {arrValue?.value.map((dropItem,key)=>(
                                 <React.Fragment key={key}>
-                                  {dropItem.menu === 'Status'?
+                                  {dropItem.menu === 'Select' && permissionType.delete?
+                                  <Dropdown.Item
+                                    onClick={() => setIsSelectionMode(!isSelectionMode)}
+                                  >
+                                    {isSelectionMode ? 'Cancel Selection' : 'Select'}
+                                  </Dropdown.Item>
+                                  :
+                                  dropItem.menu === 'Status'?
                                   
                               <Dropdown.Item
                                 onClick={() => onConfirmation(item?.id,item[dropItem.showLabel],'status',item[dropItem.showValue] === 1 ? 0:1)}

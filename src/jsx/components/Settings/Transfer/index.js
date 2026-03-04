@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge, Dropdown } from "react-bootstrap";
 
-import InvoiceSlider from "../../Dashboard/InvoiceSlider";
+import EnquirySlider from "../../Dashboard/EnquirySlider";
 import QuestionIcon from "../../Dashboard/Ticketing/QuestionIcon";
 import { URLS } from "../../../../constants";
 import { useAsync } from "../../../utilis/useAsync";
@@ -41,14 +41,14 @@ const Transfer = () => {
   const [deleteName, setDeleteName] = useState("");
   const onStatus = (id) => {
     console.log("handle Status", id);
-    };
+  };
   const onView = (id) => {
     navigate(`${id}`)
   };
   const onEdit = (id) => {
     navigate(`add/${id}`)
   };
-  const onDelete = (id,name) => {
+  const onDelete = (id, name) => {
     setDeleteUrl(`${url}/${id}`)
     setDeleteName(name)
     setShowDeleteModal(true)
@@ -63,10 +63,10 @@ const Transfer = () => {
     {
       label: "Actions",
       value: [
-        { menu: "Status",showLabel:'vehicle_name',showValue:"is_active" },
+        { menu: "Status", showLabel: 'vehicle_name', showValue: "is_active" },
         { menu: "View", onPress: onView },
         { menu: "Edit", onPress: onEdit },
-        { menu: "Delete",showLabel:'vehicle_name' },
+        { menu: "Delete", showLabel: 'vehicle_name' },
       ],
     },
   ];
@@ -202,7 +202,7 @@ const Transfer = () => {
             </div>
           </div>
           {/* swiper */}
-          <InvoiceSlider title="Transfer" />
+          <EnquirySlider title="Transfer" />
           {/* swiper end */}
 
           {/* <div className="row">

@@ -10,6 +10,7 @@ import { SETUP, URLS } from "../../../../../constants";
 import { useAsync } from "../../../../utilis/useAsync";
 import { CheckBoxField } from "../../../common/CheckBoxField";
 import { FileUploader } from "../../../common/FileUploader";
+import { notifyError } from "../../../../utilis/notifyMessage";
 
 const SelectInputComponent = ({
   label,
@@ -69,6 +70,7 @@ const StepTwo = ({ formik: parentFormik }) => {
     marketType: "",
     roomType: "",
     roomImg: [],
+    roomAmentity: [],
     mealPlan: [],
     alloment: false,
     cutOff: 0,
@@ -101,6 +103,11 @@ const StepTwo = ({ formik: parentFormik }) => {
   const formatDate = (date) => {
     const localDate = new Date(date).toLocaleDateString();
     return localDate;
+  };
+  const addDays = (date, days = 1) => {
+    const d = new Date(date);
+    d.setDate(d.getDate() + days);
+    return d;
   };
   const handleEdit = (id, value, setValue, name = 'addRoom') => {
     const filteredVal = value.filter((val, i) => i == id);
@@ -157,7 +164,12 @@ const StepTwo = ({ formik: parentFormik }) => {
                 dateFormat="yyyy-MM-dd"
                   className="form-control"
                   selected={new Date(values.roomStartDate)}
-                  onChange={(date) => setFieldValue("roomStartDate", date)}
+                  onChange={(date) => {
+                    setFieldValue("roomStartDate", date)
+                    if(new Date(values.roomEndDate) <= new Date(date)){
+                      setFieldValue("roomEndDate", addDays(date,1))
+                    }
+                  }}
                 />
               </div>
               <div className="col-6 col-sm-4 col-md-3 col-lg-2 m-b30">
@@ -166,7 +178,14 @@ const StepTwo = ({ formik: parentFormik }) => {
                 dateFormat="yyyy-MM-dd"
                   className="form-control"
                   selected={new Date(values.roomEndDate)}
-                  onChange={(date) => setFieldValue("roomEndDate", date)}
+                  onChange={(date) => {
+                    if(new Date(date) <= new Date(values.roomStartDate)){
+                      notifyError('To Date must be after From Date');
+                      setFieldValue("roomEndDate", addDays(values.roomStartDate,1))
+                    }else{
+                      setFieldValue("roomEndDate", date)
+                    }
+                  }}
                 />
               </div>
               <div className="col-6 col-sm-4 col-md-3 col-lg-2 mb-2">
@@ -350,16 +369,25 @@ const StepTwo = ({ formik: parentFormik }) => {
                       <Button
                         className="me-2"
                         variant="primary"
-                        onClick={() =>
+                        onClick={() => {
+                          const amountVal = Number(values.mealAmount);
+                          if(!values.mealType?.value){
+                            notifyError('Select a meal plan');
+                            return;
+                          }
+                          if(!(amountVal > 0)){
+                            notifyError('Meal plan amount must be greater than 0');
+                            return;
+                          }
                           setFieldValue("mealPlan", [
                             ...values.mealPlan,
                             {
                               id: values.mealType.value,
                               name: values.mealType.label,
-                              amount: values.mealAmount,
+                              amount: amountVal,
                             },
                           ])
-                        }
+                        }}
                       >
                         <i className="fa-brands fa-plus fa-lg me-2" />
                         Add
@@ -494,6 +522,10 @@ const StepTwo = ({ formik: parentFormik }) => {
                         className="me-0"
                         variant="primary"
                         onClick={() => {
+                          if(!values.roomAmentity?.length){
+                            notifyError('Select at least one room amenity');
+                            return;
+                          }
                           if(values.editRoom === -1){
                           parentFormik.setFieldValue("addRoom", [
                             ...tableData,

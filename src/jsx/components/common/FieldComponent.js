@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge, Dropdown, Tab, Tabs } from "react-bootstrap";
 
-import InvoiceSlider from "../Dashboard/InvoiceSlider";
+import EnquirySlider from "../Dashboard/EnquirySlider";
 import QuestionIcon from "../Dashboard/Ticketing/QuestionIcon";
 import SelectField from "./SelectField";
 import AddModal from "./FieldAddModal";
@@ -220,7 +220,7 @@ const FieldComponent = (props) => {
     setShowModal(true);
     setEditId(id);
   };
-  const onDelete = (id,name) => {
+  const onDelete = (id, name) => {
     setDeleteUrl(`${url}/${id}`)
     setDeleteName(name)
     setShowDeleteModal(true)
@@ -316,7 +316,7 @@ const FieldComponent = (props) => {
             </div>
           </div>
           {/* swiper */}
-          {/* <InvoiceSlider title='Amount' array={sliderArr}/> */}
+          {/* <EnquirySlider title='Amount' array={sliderArr}/> */}
           {/* swiper end */}
 
           <div className="row">
@@ -456,7 +456,7 @@ const FieldComponent = (props) => {
         {...props}
       />
       <DeleteModal
-       showModal={showDeleteModal} setShowModal={setShowDeleteModal} name={deleteName} url={deleteUrl} />
+        showModal={showDeleteModal} setShowModal={setShowDeleteModal} name={deleteName} url={deleteUrl} />
     </>
   );
 };

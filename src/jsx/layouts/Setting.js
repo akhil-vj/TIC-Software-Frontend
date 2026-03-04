@@ -294,20 +294,7 @@ const Setting = () => {
               </Tab.Pane>
             </Tab.Content>
           </Tab.Container>
-          {isDevelopement && (
-            <div className="note-text">
-              <span className="text-danger">*Note :</span>
-              This theme switcher is not part of product. It is only for demo.
-              you will get all guideline in documentation. please check{" "}
-              <a
-                href="https://finlab.dexignlab.com/react/doc"
-                target="_blank"
-                className="text-primary"
-              >
-                documentation.
-              </a>
-            </div>
-          )}
+
         </div>
       </div>
 
