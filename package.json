@@ -1,0 +1,75 @@
+{
+  "name": "tictours-admin",
+  "version": "0.1.0",
+  "private": true,
+  "proxy": "http://127.0.0.1:3000",
+  "dependencies": {
+    "@ckeditor/ckeditor5-build-classic": "^35.3.2",
+    "@ckeditor/ckeditor5-react": "^5.0.3",
+    "@loadable/component": "^5.15.2",
+    "@n8tb1t/use-scroll-position": "^2.0.3",
+    "@reduxjs/toolkit": "^1.9.5",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.8.4",
+    "formik": "^2.4.9",
+    "framer-motion": "^8.0.2",
+    "p-min-delay": "^4.0.1",
+    "react": "^18.2.0",
+    "react-apexcharts": "^1.4.0",
+    "react-bootstrap": "^2.10.10",
+    "react-bootstrap-daterangepicker": "^8.0.0",
+    "react-calendar": "^4.8.0",
+    "react-color": "^2.19.3",
+    "react-datepicker": "^4.11.0",
+    "react-dom": "^18.2.0",
+    "react-form-stepper": "^2.0.3",
+    "react-pdf": "^7.7.0",
+    "react-perfect-scrollbar": "^1.5.8",
+    "react-redux": "^8.0.5",
+    "react-router-dom": "^6.11.1",
+    "react-scroll": "^1.8.9",
+    "react-select": "^5.9.0",
+    "react-table": "^7.8.0",
+    "react-time-picker": "^6.0.4",
+    "react-toastify": "^9.1.2",
+    "recharts": "^2.15.3",
+    "redux": "^4.2.1",
+    "redux-thunk": "^2.4.2",
+    "sass": "^1.83.4",
+    "sweetalert2": "^11.26.18",
+    "swiper": "^8.4.7",
+    "web-vitals": "^2.1.4",
+    "yup": "^0.32.11"
+  },
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "sass": "sass --watch src/scss/main.scss src/css/style.css"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.4",
+    "vite": "^7.3.1"
+  }
+}

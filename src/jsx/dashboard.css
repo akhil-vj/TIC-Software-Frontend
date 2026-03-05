@@ -1,0 +1,83 @@
+/* ── KPI icon background gradients ── */
+.bg-light-primary { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
+.bg-light-success  { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); }
+.bg-light-warning  { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); }
+.bg-light-danger   { background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); }
+
+/* ── Global card reset ── */
+.card {
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07) !important;
+}
+
+/* ── Metric cards hover lift ── */
+.card.counter {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.card.counter:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+  transform: translateY(-2px);
+}
+
+/* ── Remove default card header border ── */
+.card-header {
+  border-bottom: none !important;
+  background: #fff !important;
+}
+
+/* ── DatePicker input fix ── */
+.dz-calender input.form-control,
+.react-datepicker__input-container input {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  font-size: 0.87rem !important;
+  width: 115px !important;
+  outline: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  color: #333;
+}
+
+/* ── Table ── */
+.table thead th {
+  background: #fafafa !important;
+  color: #999 !important;
+  font-weight: 600 !important;
+  font-size: 0.77rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 11px 14px !important;
+  border-top: none !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  white-space: nowrap;
+}
+.table tbody td {
+  padding: 13px 14px !important;
+  vertical-align: middle !important;
+  border-color: #f5f5f5 !important;
+  font-size: 0.87rem;
+  color: #333;
+}
+.table-hover tbody tr:hover {
+  background-color: #fafcff !important;
+}
+
+/* ── Dropdown arrow hide ── */
+.dropdown-toggle::after { display: none !important; }
+
+/* ── Action pill button ── */
+.tp-btn.btn-primary.pill {
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 992px) {
+  .card-body { padding: 1rem !important; }
+  .table thead th { font-size: 0.72rem !important; }
+}
+@media (max-width: 576px) {
+  .page-titles.style1 { flex-direction: column; align-items: flex-start !important; gap: 12px; }
+}

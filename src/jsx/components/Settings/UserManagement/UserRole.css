@@ -1,0 +1,184 @@
+.user-role-modal .modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.user-role-modal .modal-header {
+    border-bottom: 1px solid #eef2f6;
+    padding: 1.5rem 1.5rem;
+    align-items: flex-start;
+}
+
+.user-role-modal .modal-title {
+    width: 100%;
+}
+
+.user-role-modal .modal-header .btn-close {
+    margin: 0;
+    margin-top: 0.5rem;
+    padding: 0;
+    font-size: 1rem;
+    opacity: 0.5;
+}
+
+.user-role-modal .modal-body {
+    padding: 0;
+}
+
+.user-role-table-container {
+    padding: 0;
+}
+
+.user-role-table {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.user-role-table th {
+    color: #6c757d;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eef2f6;
+    white-space: nowrap;
+}
+
+.user-role-table td {
+    padding: 1.25rem 1.5rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #eef2f6;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.user-role-table tr:last-child td {
+    /* Don't remove border if we want it to look like the image, the footer has logic */
+}
+
+/* Status Toggle */
+.status-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toggle-switch-wrapper {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background-color: #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.toggle-switch-wrapper.active {
+    background-color: #1eba62;
+}
+
+.toggle-switch-circle {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-switch-wrapper.active .toggle-switch-circle {
+    transform: translateX(20px);
+}
+
+.status-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-label.active {
+    color: #1eba62;
+}
+
+.status-label.inactive {
+    color: #94a3b8;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-badge.active {
+    background-color: #eefdf4;
+    color: #1eba62;
+}
+
+.status-badge.inactive {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background-color: #f4f5f9;
+    color: #64748b;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.action-btn:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+
+.action-btn.delete-btn:hover {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+/* Empty State */
+.user-role-empty {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 1.5rem;
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.empty-circle {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid #cbd5e1;
+}
+
+.new-role-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+}
