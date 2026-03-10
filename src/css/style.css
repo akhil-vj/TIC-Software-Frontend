@@ -12036,7 +12036,7 @@ label {
   padding-right: 0rem;
   align-items: center;
   display: flex;
-  left: 16.2rem;
+  left: 166.22rem;
   position: unset;
   top: 0;
   width: calc(100% - var(--width));
@@ -13020,7 +13020,7 @@ svg.pulse-svg .third-circle {
   }
 }
 :root {
-  --width:18.75rem;
+  --width:17rem;
 }
 :root [data-sidebar-style=mini] {
   --width:6.25rem;
