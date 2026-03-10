@@ -40,8 +40,7 @@ const Header = ({ onNote }) => {
     () => [
       { label: "Dashboard", path: "/dashboard", tags: ["home"] },
       { label: "Dashboard Dark", path: "/dashboard-dark", tags: [] },
-      { label: "Ticketing", path: "/ticketing", tags: ["support", "tickets"] },
-      { label: "Tickets", path: "/tickets", tags: ["support"] },
+      { label: "Reports", path: "/reports", tags: ["reports", "analytics"] },
       { label: "Enquiry", path: "/enquiry", tags: ["enquiry list"] },
       { label: "Enquiry Detail", path: "/enquiry-detail", tags: ["detail"] },
       { label: "Quotation", path: "/quotation", tags: ["itinerary"] },

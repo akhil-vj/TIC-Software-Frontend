@@ -13,8 +13,11 @@
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.8.4",
+    "file-saver": "^2.0.5",
     "formik": "^2.4.9",
     "framer-motion": "^8.0.2",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "p-min-delay": "^4.0.1",
     "react": "^18.2.0",
     "react-apexcharts": "^1.4.0",
@@ -41,6 +44,7 @@
     "sweetalert2": "^11.26.18",
     "swiper": "^8.4.7",
     "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5",
     "yup": "^0.32.11"
   },
   "scripts": {

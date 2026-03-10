@@ -20,7 +20,7 @@ import { useAsync } from "../../utilis/useAsync";
 import { formatDate, parseDate } from "../../utilis/date";
 import { checkFormValue } from "../../utilis/check";
 import { notifyCreate, notifyError } from "../../utilis/notifyMessage";
-import { axiosPut, filePost } from "../../../services/AxiosInstance";
+import { axiosPut, axiosPatch, filePost } from "../../../services/AxiosInstance";
 
 // Constants & Redux
 import { SETUP, URLS } from "../../../constants";
@@ -40,20 +40,11 @@ const RightIcon = () => (
 );
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DATA - Mock Lead List
+// DATA - Real Enquiry List
 // ═══════════════════════════════════════════════════════════════════════════
 
-const tableBlog = [
-  { title: "Talan Siphron", mail: "ahmad@mail.com", phone: "+917723823348", icon: "#1EBA62", iconClass: "btn-success", icon2: <RightIcon />, icontext: "Confirmed", source: "Google Ads", assignedTo: "Shanid CA", date: "2024-02-15", requirement: "Premium Plus", packageDetails: "Dubai, UAE - 7 Days" },
-  { title: "Thomas Khun", mail: "soap@mail.com", phone: "+918823823348", icon: "#FF4646", iconClass: "btn-primary", icon2: <QuestionIcon colorchange="#01A3FF" />, icontext: "Pending", source: "Facebook", assignedTo: "John Smith", date: "2024-02-10", requirement: "Standard Package", packageDetails: "Maldives - 5 Days" },
-  { title: "Marilyn Workman", mail: "mantha@mail.com", phone: "+917723823348", icon: "#FF4646", iconClass: "btn-pink", icon2: <QuestionIcon colorchange="#EB62D0" />, icontext: "W. Approval", source: "Direct", assignedTo: "Sarah Wilson", date: "2024-02-05", requirement: "Family Bundle", packageDetails: "Singapore - 4 Days" },
-  { title: "Thomas Khun", mail: "hope@mail.com", phone: "+919923823348", icon: "#FF4646", iconClass: "btn-primary", icon2: <QuestionIcon colorchange="#01A3FF" />, icontext: "Pending", source: "Email Marketing", assignedTo: "Shanid CA", date: "2024-02-12", requirement: "Basic Tier", packageDetails: "Thailand - 6 Days" },
-  { title: "Talan Siphron", mail: "jordan@mail.com", phone: "+917723823348", icon: "#1EBA62", iconClass: "btn-success", icon2: <RightIcon />, icontext: "Complete", source: "Referral", assignedTo: "Mike Johnson", date: "2024-01-28", requirement: "Luxury Package", packageDetails: "Paris & London - 10 Days" },
-  { title: "Marilyn Workman", mail: "adja@mail.com", phone: "+917723823348", icon: "#FF4646", iconClass: "btn-pink", icon2: <QuestionIcon colorchange="#EB62D0" />, icontext: "W. Approval", source: "LinkedIn", assignedTo: "Sarah Wilson", date: "2024-02-08", requirement: "Group Tour", packageDetails: "Bali & Lombok - 8 Days" },
-  { title: "Thomas Khun", mail: "soap@mail.com", phone: "+917723823348", icon: "#FF4646", iconClass: "btn-primary", icon2: <QuestionIcon colorchange="#01A3FF" />, icontext: "Pending", source: "Google Ads", assignedTo: "John Smith", date: "2024-02-14", requirement: "Honeymoon Special", packageDetails: "Santorini - 5 Days" },
-  { title: "Talan Siphron", mail: "kevin@mail.com", phone: "+917723823348", icon: "#FF4646", iconClass: "btn-pink", icon2: <QuestionIcon colorchange="#EB62D0" />, icontext: "W. Approval", source: "Direct", assignedTo: "Shanid CA", date: "2024-02-06", requirement: "Adventure Tour", packageDetails: "Nepal & Bhutan - 9 Days" },
-  { title: "Marilyn Workman", mail: "vita@mail.com", phone: "+917723823348", icon: "#1EBA62", iconClass: "btn-success", icon2: <RightIcon />, icontext: "Complete", source: "Facebook", assignedTo: "Mike Johnson", date: "2024-01-30", requirement: "Corporate Retreat", packageDetails: "Goa - 3 Days" },
-];
+// tableBlog mock data has been removed. Data comes from Enquiry API now.
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // FORM CONFIGURATION
@@ -291,13 +282,13 @@ const Leads = ({ setShowModal }) => {
   const [filterEndDate, setFilterEndDate] = useState(null);
   const [filterAssigned, setFilterAssigned] = useState(null);
   const [page, setPage] = useState(0);
-  const [selectedRows, setSelectedRows] = useState(new Set());
-  const [showCheckboxes, setShowCheckboxes] = useState(false);
+  const [statusOverrides, setStatusOverrides] = useState({});
   const [showFilters, setShowFilters] = useState(false);
   const [showKpiCards, setShowKpiCards] = useState(true);
   const [hoveredRow, setHoveredRow] = useState(null);
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(id && id !== "add" ? true : false);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   // ─ Form Management
   const isEdit = id && id !== "add";
@@ -310,8 +301,11 @@ const Leads = ({ setShowModal }) => {
   const editUrl = `${url}/${id}`;
 
   // ─ Fetch Data
-  const { data } = useAsync(editUrl, !!isEdit);
-  const editData = data?.data;
+  const { data: enquiryListData } = useAsync(url);
+  const tableData = enquiryListData?.data || [];
+
+  const { data: detailData } = useAsync(editUrl, !!isEdit);
+  const editData = detailData?.data;
 
   const itineraryByEnquiryUrl = `${URLS.ITINERARY_URL}?enquiry_id=${id}`;
   const { data: itineraryData } = useAsync(itineraryByEnquiryUrl, !!isEdit);
@@ -350,28 +344,98 @@ const Leads = ({ setShowModal }) => {
 
   // ─ Pagination
   const pageSize = 8;
+
+  const summaryData = useMemo(() => {
+    const total = tableData.length;
+    let confirmed = 0, cancelled = 0, pending = 0;
+    tableData.forEach((item) => {
+      const s = (statusOverrides[item?.id] || item?.status || item?.enquiry_status || item?.current_status || item?.lead_status || "Pending").toLowerCase();
+      if (s === "confirmed") confirmed++;
+      else if (s === "cancelled") cancelled++;
+      else pending++;
+    });
+    return [
+      { name: "Total", value: total },
+      { name: "Confirmed", value: confirmed },
+      { name: "Pending", value: pending },
+      { name: "Cancelled", value: cancelled },
+    ];
+  }, [tableData, statusOverrides]);
+
   const filteredLeads = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return tableBlog.filter((item) => {
-      const matchesSearch = !term || [item.title, item.mail, item.icontext].filter(Boolean).some((f) => f.toLowerCase().includes(term));
-      const matchesSource = !filterSource || item.source === filterSource.value;
-      const matchesStatus = !filterStatus || item.icontext === filterStatus.value;
-      const itemDate = new Date(item.date);
-      const matchesDateRange = (!filterStartDate || itemDate >= filterStartDate) && (!filterEndDate || itemDate <= filterEndDate);
-      const matchesAssigned = !filterAssigned || item.assignedTo === filterAssigned.value;
+    return tableData.filter((item) => {
+      const customerName = item?.customer?.name || item?.agent?.name || "";
+      const leadSource = item?.lead_source?.name || "";
+      const assignedName = item?.assigned_to_user?.first_name || "";
+      const status = statusOverrides[item?.id] || item?.status || item?.enquiry_status || item?.current_status || item?.lead_status || "Pending";
+
+      const matchesSearch = !term || [
+        customerName,
+        item?.customer?.email || item?.agent?.email || "",
+        status
+      ].filter(Boolean).some((f) => f.toLowerCase().includes(term));
+
+      const matchesSource = !filterSource || leadSource === filterSource.value;
+      const matchesStatus = !filterStatus || status === filterStatus.value;
+      const itemDate = item.start_date ? new Date(item.start_date) : null;
+      const matchesDateRange = (!filterStartDate || (itemDate && itemDate >= filterStartDate)) && (!filterEndDate || (itemDate && itemDate <= filterEndDate));
+      const matchesAssigned = !filterAssigned || assignedName === filterAssigned.value;
+
       return matchesSearch && matchesSource && matchesStatus && matchesDateRange && matchesAssigned;
     });
-  }, [search, filterSource, filterStatus, filterStartDate, filterEndDate, filterAssigned]);
+  }, [tableData, search, filterSource, filterStatus, filterStartDate, filterEndDate, filterAssigned]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+  const sortedLeads = useMemo(() => {
+    let sortableItems = [...filteredLeads];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = "";
+        let bValue = "";
+
+        const getVal = (item, key) => {
+          if (key === 'title') return item?.customer?.name || item?.agent?.name || "";
+          if (key === 'source') return item?.lead_source?.name || "";
+          if (key === 'requirement') return Array.isArray(item?.requirements) ? item.requirements.map(r => r?.name || r).join(", ") : (item?.requirements || "");
+          if (key === 'packageDetails') return item?.sub_destinations?.map(d => d.name).join(", ") || "";
+          if (key === 'assignedTo') return item?.assigned_to_user?.first_name || "";
+          if (key === 'date') return item?.start_date || "";
+          if (key === 'icontext') return item?.status || item?.enquiry_status || item?.current_status || item?.lead_status || "Pending";
+          return "";
+        };
+
+        aValue = getVal(a, sortConfig.key);
+        bValue = getVal(b, sortConfig.key);
+
+        if (sortConfig.key === "date") {
+          aValue = aValue ? new Date(aValue).getTime() : 0;
+          bValue = bValue ? new Date(bValue).getTime() : 0;
+        } else if (typeof aValue === "string") {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === "asc" ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === "asc" ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredLeads, sortConfig]);
+
+  const pageCount = Math.max(1, Math.ceil(sortedLeads.length / pageSize));
   const paginatedLeads = useMemo(() => {
     const start = page * pageSize;
-    return filteredLeads.slice(start, start + pageSize);
-  }, [filteredLeads, page]);
+    return sortedLeads.slice(start, start + pageSize);
+  }, [sortedLeads, page]);
 
-  const sourceOptions = useMemo(() => [...new Set(tableBlog.map((i) => i.source))].map((s) => ({ label: s, value: s })), []);
-  const statusOptions = useMemo(() => [...new Set(tableBlog.map((i) => i.icontext))].map((s) => ({ label: s, value: s })), []);
-  const assignedOptions = useMemo(() => [...new Set(tableBlog.map((i) => i.assignedTo))].map((a) => ({ label: a, value: a })), []);
+  const sourceOptions = useMemo(() => [...new Set(tableData.map(i => i?.lead_source?.name).filter(Boolean))].map(s => ({ label: s, value: s })), [tableData]);
+  const statusOptions = useMemo(() => [...new Set(tableData.map(i => i?.status || i?.enquiry_status || i?.current_status || i?.lead_status || "Pending").filter(Boolean))].map((s) => ({ label: s, value: s })), [tableData]);
+  const assignedOptions = useMemo(() => [...new Set(tableData.map((i) => i?.assigned_to_user?.first_name).filter(Boolean))].map((a) => ({ label: a, value: a })), [tableData]);
 
   const hasActiveFilters = () => filterSource || filterStatus || filterStartDate || filterEndDate || filterAssigned || search;
 
@@ -382,31 +446,52 @@ const Leads = ({ setShowModal }) => {
     setFilterEndDate(null);
     setFilterAssigned(null);
     setSearch("");
+    setSortConfig({ key: null, direction: 'asc' });
   };
 
-  useEffect(() => { setPage(0); setSelectedRows(new Set()); }, [search, filterSource, filterStatus, filterStartDate, filterEndDate, filterAssigned]);
-  useEffect(() => { if (selectedRows.size === 0) setShowCheckboxes(false); }, [selectedRows]);
+  useEffect(() => { setPage(0); }, [search, filterSource, filterStatus, filterStartDate, filterEndDate, filterAssigned]);
 
-  const handleSelectAll = (e) => {
-    const newSelected = new Set(selectedRows);
-    if (e.target.checked) paginatedLeads.forEach((_, ind) => newSelected.add(page * pageSize + ind));
-    else paginatedLeads.forEach((_, ind) => newSelected.delete(page * pageSize + ind));
-    setSelectedRows(newSelected);
+  // ── Status Update Handler (frontend-only until backend adds status endpoint) ──
+  const handleStatusUpdate = async (itemId, newStatus) => {
+    try {
+      // TODO: Once backend adds PATCH /api/enquiry-status-update/:id endpoint,
+      // uncomment this line and remove the localStorage approach:
+      // await axiosPatch(`${URLS.ENQUIRY_STATUS_URL}/${itemId}`, { status: newStatus });
+
+      // Frontend-only status tracking
+      const updated = { ...statusOverrides, [itemId]: newStatus };
+      setStatusOverrides(updated);
+      localStorage.setItem('leadStatusOverrides', JSON.stringify(updated));
+    } catch (err) {
+      console.error('Status update failed:', err);
+      notifyError('Failed to update status');
+    }
   };
 
-  const handleSelectRow = (index) => {
-    const newSelected = new Set(selectedRows);
-    if (newSelected.has(index)) newSelected.delete(index);
-    else newSelected.add(index);
-    setSelectedRows(newSelected);
+  // Load persisted status overrides on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('leadStatusOverrides');
+      if (saved) setStatusOverrides(JSON.parse(saved));
+    } catch (e) { /* ignore parse errors */ }
+  }, []);
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
   };
 
-  const handleSelectFromMenu = (index) => {
-    if (!showCheckboxes) setShowCheckboxes(true);
-    handleSelectRow(index);
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) {
+      return <span style={{ opacity: 0.3, marginLeft: '4px' }}>↕</span>;
+    }
+    return sortConfig.direction === 'asc' ? <span style={{ marginLeft: '4px' }}>↑</span> : <span style={{ marginLeft: '4px' }}>↓</span>;
   };
 
-  const isAllSelected = paginatedLeads.length > 0 && paginatedLeads.every((_, ind) => selectedRows.has(page * pageSize + ind));
+
 
   const totalEntries = filteredLeads.length;
   const startEntry = totalEntries === 0 ? 0 : page * pageSize + 1;
@@ -558,11 +643,11 @@ const Leads = ({ setShowModal }) => {
 
 /* Column width definitions */
 .leads-table col.col-id         { width: 55px; }
-.leads-table col.col-client     { width: 12%; }
-.leads-table col.col-source     { width: 10%; }
+.leads-table col.col-client     { width: 16%; }
+.leads-table col.col-source     { width: 12%; }
 .leads-table col.col-req        { width: 12%; }
 .leads-table col.col-pkg        { width: 15%; }
-.leads-table col.col-assigned   { width: 15%; }
+.leads-table col.col-assigned   { width: 12%; }
 .leads-table col.col-date       { width: 10%; }
 .leads-table col.col-status     { width: 60px; }
 .leads-table col.col-action     { width: 48px; }
@@ -642,73 +727,7 @@ const Leads = ({ setShowModal }) => {
   border-radius: 6px !important;
 }
 
-/* ══════════════════════════════════════════════════
-   KPI CARDS — restore colored backgrounds
-══════════════════════════════════════════════════ */
 
-.leads-page .card-box {
-  position: relative;
-  overflow: hidden;
-  border: none !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
-}
-
-.leads-page .card-box .back-image {
-  position: absolute;
-  right: -20px;
-  top: -20px;
-  pointer-events: none;
-  opacity: 1;
-}
-
-.leads-page .card-box .card-body {
-  position: relative;
-  z-index: 1;
-}
-
-.leads-page .card-box .card-body h4,
-.leads-page .card-box .card-body h2,
-.leads-page .card-box .card-body span {
-  color: #fff !important;
-}
-
-/* Blue — Total Leads */
-.leads-page .card-box.blue {
-  background: linear-gradient(135deg, #01A3FF 0%, #0284d4 50%) !important;
-}
-
-.leads-page .card-box.blue .card-box-icon {
-  background: rgba(255,255,255,0.12);
-  border: 1px solid #ffffff;
-}
-
-/* Green — Conversion Rate */
-.leads-page .card-box.green {
-  background: linear-gradient(135deg, #1EBA62 0%, #17a356 50%) !important;
-}
-
-/* Secondary/Purple — Response Time */
-.leads-page .card-box.secondary {
-  background: linear-gradient(135deg, #9254DE 0%, #7a3fc4 50%) !important;
-}
-
-/* Amber/Orange — Hot Leads */
-.leads-page .card-box.amber {
-  background: linear-gradient(135deg, #FF9500 0%, #e07f00 50%) !important;
-}
-
-/* Icon circle background */
-.leads-page .card-box-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.2);
-  flex-shrink: 0;
-}
 
 /* ── Filter bar ── */
 .leads-filter-bar {
@@ -842,7 +861,6 @@ const Leads = ({ setShowModal }) => {
                       <div className="d-flex align-items-center">
                         <div className="card-box-icon me-2">
                           <svg width="25" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="24" height="24" rx="10" fill="var(--primary)" />
                             <path d="M4 19H20V21H4V19ZM6.5 5H8.5V16H6.5V5ZM12 8H14V16H12V8ZM17.5 11H19.5V16H17.5V11Z" fill="#FCFCFC" />
                           </svg>
                         </div>
@@ -853,14 +871,14 @@ const Leads = ({ setShowModal }) => {
                         </div>
                       </div>
                       <div className="chart-num text-end">
-                        <h2 className="font-w600 mb-0 fs-28">3,932</h2>
-                        <span className="fs-12 font-w400 d-block" style={{ opacity: 0.75 }}>+82 this week</span>
+                        <h2 className="font-w600 mb-0 fs-28">{summaryData[0].value}</h2>
+                        <span className="fs-12 font-w400 d-block" style={{ opacity: 0.75 }}>All enquiries</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Card 2 – Conversion Rate */}
+                {/* Card 2 – Confirmed */}
                 <div className="col-xl-3 col-sm-6">
                   <div className="card card-box green h-100" style={{ marginBottom: 0 }}>
                     <div className="back-image">
@@ -886,57 +904,19 @@ const Leads = ({ setShowModal }) => {
                         </div>
                         <div>
                           <h4 className="fs-15 font-w600 mb-0">
-                            Conversion<br />Rate
+                            Confirmed<br />Leads
                           </h4>
                         </div>
                       </div>
                       <div className="chart-num text-end">
-                        <h2 className="font-w600 mb-0 fs-28">67%</h2>
-                        <span className="fs-12 font-w400 d-block" style={{ opacity: 0.75 }}>+ 3% from last wk</span>
+                        <h2 className="font-w600 mb-0 fs-28">{summaryData[1].value}</h2>
+                        <span className="fs-12 font-w400 d-block" style={{ opacity: 0.75 }}>{summaryData[0].value > 0 ? `${Math.round((summaryData[1].value / summaryData[0].value) * 100)}% of total` : "0% of total"}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Card 3 – Avg Response Time */}
-                <div className="col-xl-3 col-sm-6">
-                  <div className="card card-box secondary h-100" style={{ marginBottom: 0 }}>
-                    <div className="back-image">
-                      <svg width="108" height="84" viewBox="0 0 108 84" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <g opacity="0.4">
-                          <path d="M26.3573 53.0816C-3.53952 45.6892 -21.7583 15.3438 -14.3294 -14.7003C-6.90051 -44.7444 23.3609 -63.1023 53.2577 -55.7099C83.1545 -48.3174 101.373 -17.972 93.9444 12.0721C86.5155 42.1162 56.2541 60.4741 26.3573 53.0816Z" stroke="#01A3FF" />
-                          <path d="M28.021 46.351C1.8418 39.8777 -14.109 13.2911 -7.59921 -13.036C-1.0894 -39.3632 25.4137 -55.4524 51.5929 -48.9792C77.7722 -42.5059 93.723 -15.9193 87.2132 10.4078C80.7034 36.735 54.2003 52.8242 28.021 46.351Z" stroke="#01A3FF" />
-                          <path d="M19.6265 51.4174C-6.55274 44.9442 -22.5035 18.3576 -15.9937 -7.96958C-9.48393 -34.2967 17.0191 -50.3859 43.1984 -43.9127C69.3776 -37.4395 85.3284 -10.8529 78.8186 15.4743C72.3088 41.8014 45.8058 57.8906 19.6265 51.4174Z" stroke="#01A3FF" />
-                          <path d="M10.9723 56.4198C-15.0615 49.9826 -30.8995 23.4265 -24.3891 -2.90312C-17.8787 -29.2328 8.51036 -45.3475 34.5442 -38.9103C60.578 -32.473 76.416 -5.91694 69.9055 20.4127C63.3951 46.7423 37.0061 62.8571 10.9723 56.4198Z" stroke="#01A3FF" />
-                          <path d="M2.31889 61.4223C-23.8604 54.9491 -39.8112 28.3625 -33.3014 2.0353C-26.7916 -24.2918 -0.288486 -40.3811 25.8908 -33.9078C52.07 -27.4346 68.0208 -0.848004 61.511 25.4792C55.0012 51.8063 28.4981 67.8955 2.31889 61.4223Z" stroke="#01A3FF" />
-                          <path d="M-6.33532 66.4247C-32.3691 59.9874 -48.2071 33.4313 -41.6967 7.1017C-35.1863 -19.2279 -8.79725 -35.3427 17.2365 -28.9054C43.2704 -22.4682 59.1083 4.08788 52.5979 30.4175C46.0875 56.7472 19.6985 72.8619 -6.33532 66.4247Z" stroke="#01A3FF" />
-                          <circle cx="-3.26671" cy="24.0209" r="48.8339" transform="rotate(103.889 -3.26671 24.0209)" stroke="#01A3FF" />
-                        </g>
-                      </svg>
-                    </div>
-                    <div className="card-body p-4 d-flex align-items-center justify-content-between flex-wrap">
-                      <div className="d-flex align-items-center">
-                        <div className="card-box-icon me-2">
-                          <svg width="28" height="28" viewBox="0 -1 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M14 3.5C9.03 3.5 5 7.53 5 12.5C5 17.47 9.03 21.5 14 21.5C18.97 21.5 23 17.47 23 12.5C23 7.53 18.97 3.5 14 3.5ZM14 19.5C10.13 19.5 7 16.37 7 12.5C7 8.63 10.13 5.5 14 5.5C17.87 5.5 21 8.63 21 12.5C21 16.37 17.87 19.5 14 19.5Z" fill="#FCFCFC" />
-                            <path d="M14 8.5C13.45 8.5 13 8.95 13 9.5V13.5C13 14.05 13.45 14.5 14 14.5C14.55 14.5 15 14.05 15 13.5V9.5C15 8.95 14.55 8.5 14 8.5ZM16.5 15.09L14.5 13.91C14.01 13.63 13.39 13.8 13.11 14.29C12.83 14.78 13 15.4 13.49 15.68L15.49 16.86C15.65 16.95 15.82 17 16 17C16.35 17 16.7 16.82 16.89 16.5C17.17 16.01 17 15.37 16.5 15.09Z" fill="#FCFCFC" />
-                          </svg>
-                        </div>
-                        <div>
-                          <h4 className="fs-15 font-w600 mb-0">
-                            Response<br />Time(Avg)
-                          </h4>
-                        </div>
-                      </div>
-                      <div className="chart-num text-end">
-                        <h2 className="font-w600 mb-0 fs-28">2h 14m</h2>
-                        <span className="fs-12 font-w400 d-block" style={{ opacity: 0.75 }}>Across leads</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 4 – Hot Leads */}
+                {/* Card 3 – Pending */}
                 <div className="col-xl-3 col-sm-6">
                   <div className="card card-box amber h-100" style={{ marginBottom: 0 }}>
                     <div className="back-image">
@@ -955,19 +935,58 @@ const Leads = ({ setShowModal }) => {
                     <div className="card-body p-4 d-flex align-items-center justify-content-between flex-wrap">
                       <div className="d-flex align-items-center">
                         <div className="card-box-icon me-2">
-                          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M15.75 2.625C13.0 6.125 13.5 9.5 11.5 12C10.2 13.9 7.875 14.875 7.875 14.875C7.875 14.875 9.1 10.5 5.75 9.625C5.75 9.625 4.375 14.875 6.75 18.625C9.125 22.375 13.375 24.125 17.5 22.875C21.625 21.625 23.625 17.5 22 13.625C20.125 9.25 15.75 2.625 15.75 2.625Z" fill="#FCFCFC" />
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.47 2 2 6.47 2 12C2 17.53 6.47 22 12 22C17.53 22 22 17.53 22 12C22 6.47 17.53 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z" fill="#FCFCFC" />
+                            <path d="M12.5 7H11V13L16.25 16.15L17 14.92L12.5 12.25V7Z" fill="#FCFCFC" />
                           </svg>
                         </div>
                         <div>
                           <h4 className="fs-15 font-w600 mb-0">
-                            Hot<br />Leads
+                            Pending<br />Leads
                           </h4>
                         </div>
                       </div>
                       <div className="chart-num text-end">
-                        <h2 className="font-w600 mb-0 fs-28">28</h2>
-                        <span className="fs-12 font-w400 d-block" style={{ opacity: 0.75 }}>needing follow-up</span>
+                        <h2 className="font-w600 mb-0 fs-28">{summaryData[2].value}</h2>
+                        <span className="fs-12 font-w400 d-block" style={{ opacity: 0.75 }}>Awaiting action</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 4 – Cancelled */}
+                <div className="col-xl-3 col-sm-6">
+                  <div className="card card-box secondary h-100" style={{ marginBottom: 0 }}>
+                    <div className="back-image">
+                      <svg width="108" height="84" viewBox="0 0 108 84" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g opacity="0.4">
+                          <path d="M26.3573 53.0816C-3.53952 45.6892 -21.7583 15.3438 -14.3294 -14.7003C-6.90051 -44.7444 23.3609 -63.1023 53.2577 -55.7099C83.1545 -48.3174 101.373 -17.972 93.9444 12.0721C86.5155 42.1162 56.2541 60.4741 26.3573 53.0816Z" stroke="#01A3FF" />
+                          <path d="M28.021 46.351C1.8418 39.8777 -14.109 13.2911 -7.59921 -13.036C-1.0894 -39.3632 25.4137 -55.4524 51.5929 -48.9792C77.7722 -42.5059 93.723 -15.9193 87.2132 10.4078C80.7034 36.735 54.2003 52.8242 28.021 46.351Z" stroke="#01A3FF" />
+                          <path d="M19.6265 51.4174C-6.55274 44.9442 -22.5035 18.3576 -15.9937 -7.96958C-9.48393 -34.2967 17.0191 -50.3859 43.1984 -43.9127C69.3776 -37.4395 85.3284 -10.8529 78.8186 15.4743C72.3088 41.8014 45.8058 57.8906 19.6265 51.4174Z" stroke="#01A3FF" />
+                          <path d="M10.9723 56.4198C-15.0615 49.9826 -30.8995 23.4265 -24.3891 -2.90312C-17.8787 -29.2328 8.51036 -45.3475 34.5442 -38.9103C60.578 -32.473 76.416 -5.91694 69.9055 20.4127C63.3951 46.7423 37.0061 62.8571 10.9723 56.4198Z" stroke="#01A3FF" />
+                          <path d="M2.31889 61.4223C-23.8604 54.9491 -39.8112 28.3625 -33.3014 2.0353C-26.7916 -24.2918 -0.288486 -40.3811 25.8908 -33.9078C52.07 -27.4346 68.0208 -0.848004 61.511 25.4792C55.0012 51.8063 28.4981 67.8955 2.31889 61.4223Z" stroke="#01A3FF" />
+                          <path d="M-6.33532 66.4247C-32.3691 59.9874 -48.2071 33.4313 -41.6967 7.1017C-35.1863 -19.2279 -8.79725 -35.3427 17.2365 -28.9054C43.2704 -22.4682 59.1083 4.08788 52.5979 30.4175C46.0875 56.7472 19.6985 72.8619 -6.33532 66.4247Z" stroke="#01A3FF" />
+                          <circle cx="-3.26671" cy="24.0209" r="48.8339" transform="rotate(103.889 -3.26671 24.0209)" stroke="#01A3FF" />
+                        </g>
+                      </svg>
+                    </div>
+                    <div className="card-body p-4 d-flex align-items-center justify-content-between flex-wrap">
+                      <div className="d-flex align-items-center">
+                        <div className="card-box-icon me-2">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.47 2 2 6.47 2 12C2 17.53 6.47 22 12 22C17.53 22 22 17.53 22 12C22 6.47 17.53 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z" fill="#FCFCFC" />
+                            <path d="M15.59 7L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41L15.59 7Z" fill="#FCFCFC" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4 className="fs-15 font-w600 mb-0">
+                            Cancelled<br />Leads
+                          </h4>
+                        </div>
+                      </div>
+                      <div className="chart-num text-end">
+                        <h2 className="font-w600 mb-0 fs-28">{summaryData[3].value}</h2>
+                        <span className="fs-12 font-w400 d-block" style={{ opacity: 0.75 }}>{summaryData[0].value > 0 ? `${Math.round((summaryData[3].value / summaryData[0].value) * 100)}% of total` : "0% of total"}</span>
                       </div>
                     </div>
                   </div>
@@ -1007,7 +1026,6 @@ const Leads = ({ setShowModal }) => {
                 <div className="leads-table-scroll">
                   <table className="leads-table">
                     <colgroup>
-                      {showCheckboxes && <col className="col-chk" />}
                       <col className="col-id" />
                       <col className="col-client" />
                       <col className="col-source" />
@@ -1021,19 +1039,28 @@ const Leads = ({ setShowModal }) => {
 
                     <thead>
                       <tr>
-                        {showCheckboxes && (
-                          <th style={{ padding: "0 0 0 2px", width: "18px", verticalAlign: "middle", overflow: "visible", textAlign: "right" }}>
-                            <input type="checkbox" onChange={handleSelectAll} checked={isAllSelected} className="form-check-input" style={{ accentColor: "#fff", margin: "0 -4px 0 0" }} />
-                          </th>
-                        )}
                         <th style={{ textAlign: "center" }}>ID</th>
-                        <th >Client / Agent</th>
-                        <th style={{ textAlign: "center" }}>Lead Source</th>
-                        <th >Requirement</th>
-                        <th >Package Details</th>
-                        <th style={{ textAlign: "center" }}>Assigned To</th>
-                        <th style={{ textAlign: "center" }}>Date</th>
-                        <th style={{ textAlign: "center" }}>Status</th>
+                        <th onClick={() => handleSort('title')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          Client / Agent {getSortIcon('title')}
+                        </th>
+                        <th onClick={() => handleSort('source')} style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          Lead Source {getSortIcon('source')}
+                        </th>
+                        <th onClick={() => handleSort('requirement')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          Requirement {getSortIcon('requirement')}
+                        </th>
+                        <th onClick={() => handleSort('packageDetails')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          Package Details {getSortIcon('packageDetails')}
+                        </th>
+                        <th onClick={() => handleSort('assignedTo')} style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          Assigned To {getSortIcon('assignedTo')}
+                        </th>
+                        <th onClick={() => handleSort('date')} style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          Date {getSortIcon('date')}
+                        </th>
+                        <th onClick={() => handleSort('icontext')} style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          Status {getSortIcon('icontext')}
+                        </th>
                         <th style={{ textAlign: "center" }}>Action</th>
                       </tr>
                     </thead>
@@ -1041,20 +1068,23 @@ const Leads = ({ setShowModal }) => {
                     <tbody>
                       {paginatedLeads.map((item, ind) => {
                         const globalIndex = page * pageSize + ind;
-                        const isSelected = selectedRows.has(globalIndex);
                         const isHovered = hoveredRow === globalIndex;
+                        const customerName = item?.customer?.name || item?.agent?.name || "-";
+                        const contactInfo = item?.customer?.email || item?.agent?.email || item?.customer?.phone || "";
+                        const leadSourceName = item?.lead_source?.name || "-";
+                        const assignedName = item?.assigned_to_user?.first_name || "-";
+                        const dateStr = item?.start_date ? new Date(item.start_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+                        const requirementText = Array.isArray(item?.requirements) ? item.requirements.map(r => r?.name || r).join(", ") : (item?.requirements || "-");
+                        const status = statusOverrides[item?.id] || item?.status || item?.enquiry_status || item?.current_status || item?.lead_status || "Pending";
+                        const pkgDetails = item?.sub_destinations?.map(d => d.name).join(", ") || "-";
+
                         return (
                           <tr
-                            key={ind}
-                            className={isSelected ? "row-selected" : isHovered ? "row-hovered" : ""}
+                            key={item?.id || ind}
+                            className={isHovered ? "row-hovered" : ""}
                             onMouseEnter={() => setHoveredRow(globalIndex)}
                             onMouseLeave={() => setHoveredRow(null)}
                           >
-                            {showCheckboxes && (
-                              <td style={{ padding: "0 0 0 2px", verticalAlign: "middle", overflow: "visible", textAlign: "right" }}>
-                                <input type="checkbox" className="form-check-input" checked={isSelected} onChange={() => handleSelectRow(globalIndex)} style={{ margin: "0 -4px 0 0" }} />
-                              </td>
-                            )}
 
                             {/* ID */}
                             <td style={{ textAlign: "center" }}>
@@ -1063,17 +1093,17 @@ const Leads = ({ setShowModal }) => {
                                 color: "#6B7280", background: "#F3F4F6", border: "1px solid #E5E7EB",
                                 borderRadius: "6px", padding: "2px 7px", letterSpacing: "0.3px",
                               }}>
-                                {`#J0${globalIndex + 1}`}
+                                {item?.ref_no || `#J0${globalIndex + 1}`}
                               </span>
                             </td>
 
                             {/* Client / Agent */}
                             <td className="td-client">
                               <span style={{ fontWeight: 700, fontSize: "13px", color: "#111827", display: "block" }}>
-                                {item.title}
+                                {customerName}
                               </span>
                               <span style={{ fontSize: "11.5px", color: "#9CA3AF", display: "block", marginTop: "1px" }}>
-                                <Link to={"app-profile"} style={{ color: "#9CA3AF", textDecoration: "none" }}>{item.phone || item.mail}</Link>
+                                <Link to={"app-profile"} style={{ color: "#9CA3AF", textDecoration: "none" }}>{contactInfo}</Link>
                               </span>
                             </td>
 
@@ -1084,23 +1114,23 @@ const Leads = ({ setShowModal }) => {
                                 fontSize: "12px", fontWeight: 500, background: "#F1F5F9",
                                 color: "#475569", border: "1px solid #E2E8F0", whiteSpace: "nowrap",
                                 maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis",
-                              }} title={item.source}>
-                                {item.source}
+                              }} title={leadSourceName}>
+                                {leadSourceName}
                               </span>
                             </td>
 
                             {/* Requirement */}
-                            <td className="td-truncate" title={item.requirement} style={{ color: "#4B5563" }}>
-                              {item.requirement}
+                            <td className="td-truncate" title={requirementText} style={{ color: "#4B5563" }}>
+                              {requirementText}
                             </td>
 
                             {/* Package Details */}
-                            <td className="td-truncate" title={item.packageDetails} style={{ fontWeight: 500, color: "#1F2937" }}>
-                              {item.packageDetails}
+                            <td className="td-truncate" title={pkgDetails} style={{ fontWeight: 500, color: "#1F2937" }}>
+                              {pkgDetails}
                             </td>
 
                             {/* Assigned To */}
-                            <td className="td-assigned" title={item.assignedTo}>
+                            <td className="td-assigned" title={assignedName}>
                               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                                 <div style={{
                                   width: "24px", height: "24px", borderRadius: "50%",
@@ -1108,23 +1138,23 @@ const Leads = ({ setShowModal }) => {
                                   display: "flex", alignItems: "center", justifyContent: "center",
                                   fontSize: "11px", fontWeight: "700", flexShrink: 0
                                 }}>
-                                  {item.assignedTo ? item.assignedTo.charAt(0).toUpperCase() : "?"}
+                                  {assignedName !== "-" ? assignedName.charAt(0).toUpperCase() : "?"}
                                 </div>
-                                <span style={{ color: "#01A3FF", fontWeight: 600 }}>{item.assignedTo}</span>
+                                <span style={{ color: "#01A3FF", fontWeight: 600 }}>{assignedName}</span>
                               </div>
                             </td>
 
                             {/* Date */}
                             <td style={{ whiteSpace: "nowrap", color: "#6B7280", fontSize: "12.5px" }}>
-                              {new Date(item.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                              {dateStr}
                             </td>
 
                             {/* Status */}
                             <td>
-                              <StatusBadge status={item.icontext} />
+                              <StatusBadge status={status} />
                             </td>
 
-                            {/* Actions */}
+                            {/* Actions – Status Update */}
                             <td style={{ textAlign: "center", padding: "0 8px" }}>
                               <Dropdown>
                                 <Dropdown.Toggle
@@ -1133,8 +1163,10 @@ const Leads = ({ setShowModal }) => {
                                   style={{
                                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                                     width: "30px", height: "30px", borderRadius: "8px",
-                                    background: "#F1F5F9", border: "1px solid #E2E8F0",
-                                    cursor: "pointer", color: "#64748B",
+                                    background: status.toLowerCase() === "confirmed" ? "#ECFDF5" : status.toLowerCase() === "cancelled" ? "#FEF2F2" : "#F1F5F9",
+                                    border: `1px solid ${status.toLowerCase() === "confirmed" ? "#A7F3D0" : status.toLowerCase() === "cancelled" ? "#FECACA" : "#E2E8F0"}`,
+                                    cursor: "pointer",
+                                    color: status.toLowerCase() === "confirmed" ? "#059669" : status.toLowerCase() === "cancelled" ? "#DC2626" : "#64748B",
                                   }}
                                 >
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -1144,11 +1176,41 @@ const Leads = ({ setShowModal }) => {
                                   </svg>
                                 </Dropdown.Toggle>
                                 <Dropdown.Menu className="dropdown-menu-end">
-                                  <Dropdown.Item onClick={() => handleSelectFromMenu(globalIndex)}>
-                                    {isSelected ? "Deselect" : "Select"}
-                                  </Dropdown.Item>
-                                  <Dropdown.Item onClick={() => setViewMode("form")}>Edit</Dropdown.Item>
-                                  <Dropdown.Item>Delete</Dropdown.Item>
+                                  {status.toLowerCase() !== "confirmed" && (
+                                    <Dropdown.Item
+                                      onClick={() => handleStatusUpdate(item?.id, "Confirmed")}
+                                      style={{ color: "#059669", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                      Confirm
+                                    </Dropdown.Item>
+                                  )}
+                                  {status.toLowerCase() !== "cancelled" && (
+                                    <Dropdown.Item
+                                      onClick={() => handleStatusUpdate(item?.id, "Cancelled")}
+                                      style={{ color: "#DC2626", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                      </svg>
+                                      Cancel
+                                    </Dropdown.Item>
+                                  )}
+                                  {(status.toLowerCase() === "confirmed" || status.toLowerCase() === "cancelled") && (
+                                    <Dropdown.Item
+                                      onClick={() => handleStatusUpdate(item?.id, "Pending")}
+                                      style={{ color: "#D97706", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12 6 12 12 16 14" />
+                                      </svg>
+                                      Reset to Pending
+                                    </Dropdown.Item>
+                                  )}
                                 </Dropdown.Menu>
                               </Dropdown>
                             </td>
@@ -1158,7 +1220,7 @@ const Leads = ({ setShowModal }) => {
 
                       {!paginatedLeads.length && (
                         <tr>
-                          <td colSpan={showCheckboxes ? 10 : 9} style={{ textAlign: "center", padding: "48px", color: "#9CA3AF" }}>
+                          <td colSpan={9} style={{ textAlign: "center", padding: "48px", color: "#9CA3AF" }}>
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5" style={{ display: "block", margin: "0 auto 10px" }}>
                               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                             </svg>
@@ -1243,7 +1305,7 @@ const Leads = ({ setShowModal }) => {
             </div>{/* end card */}
 
           </div>{/* end leads-content */}
-        </div>{/* end leads-page */}
+        </div > {/* end leads-page */}
       </>
     );
   }

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { LoadingButton } from "../components/common/LoadingBtn";
+
 import { LOCK_SCREEN_MESSAGES } from "../../constants/lockTime";
 
 const logo = "/logo.png";
@@ -33,21 +33,21 @@ const LockScreen = () => {
 
     // Verify against stored lock PIN
     const storedLockPIN = localStorage.getItem("lockPIN");
-    
+
     if (storedLockPIN && password === storedLockPIN) {
       // PIN verified successfully
       localStorage.removeItem("isLocked");
       localStorage.removeItem("lockTimestamp");
-      
+
       // Reset inactivity timer
       window.dispatchEvent(new Event("resetInactivityTimer"));
-      
+
       // Navigate back to dashboard
       nav("/dashboard");
     } else {
       setError(LOCK_SCREEN_MESSAGES.ERROR_INVALID_PASSWORD);
     }
-    
+
     setLoading(false);
   };
 
@@ -123,16 +123,22 @@ const LockScreen = () => {
                       </div>
 
                       <div className="d-grid gap-2">
-                        <LoadingButton
+                        <button
                           type="submit"
                           className="btn btn-primary"
-                          loading={loading}
                           disabled={loading}
                         >
-                          {loading
-                            ? LOCK_SCREEN_MESSAGES.UNLOCKING_BUTTON
-                            : LOCK_SCREEN_MESSAGES.UNLOCK_BUTTON}
-                        </LoadingButton>
+                          {loading ? (
+                            <>
+                              <div className="spinner-border text-light spinner-border-sm me-2" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                              </div>
+                              {LOCK_SCREEN_MESSAGES.UNLOCKING_BUTTON}
+                            </>
+                          ) : (
+                            LOCK_SCREEN_MESSAGES.UNLOCK_BUTTON
+                          )}
+                        </button>
                       </div>
                     </form>
 

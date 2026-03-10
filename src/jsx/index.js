@@ -17,6 +17,15 @@ import ScrollToTop from "./layouts/ScrollToTop";
 import Dashboard from "./components/Dashboard/Dashboard.jsx";
 import DashboardDark from "./components/Dashboard/DashboardDark";
 import Tickets from "./components/Tickets/Tickets";
+import Reports from "./components/Reports/Reports";
+import SalesSummaryReport from "./components/Reports/SalesSummaryReport";
+import SalesStaffReport from "./components/Reports/SalesStaffReport";
+import DestinationReport from "./components/Reports/DestinationReport";
+import AgentReport from "./components/Reports/AgentReport";
+import PackageReport from "./components/Reports/PackageReport";
+import HotelReport from "./components/Reports/HotelReport";
+import TopPackagesReport from "./components/Reports/TopPackagesReport";
+import MonthlyTrendsReport from "./components/Reports/MonthlyTrendsReport";
 import QuotationInbox from "./components/Dashboard/QuotationInbox";
 import Notification from "./components/Dashboard/Notification";
 
@@ -84,6 +93,7 @@ const enquiryMenu = [
   { name: "follow ups", path: "", component: "" },
   { name: "mail to supplier", path: "", component: "" },
   { name: "supplier payments", path: "", component: "" },
+  { name: "reports", path: "", component: "" },
   { name: "tickets", path: "", component: "" },
   { name: "payments", path: "", component: "" },
   { name: "documents", path: "", component: "" },
@@ -97,6 +107,15 @@ const Markup = () => {
   )
 
   const allRoutes = [
+    { url: "reports", component: <Reports /> },
+    { url: "reports/sales-summary", component: <SalesSummaryReport /> },
+    { url: "reports/sales-staff", component: <SalesStaffReport /> },
+    { url: "reports/destination", component: <DestinationReport /> },
+    { url: "reports/agents", component: <AgentReport /> },
+    { url: "reports/packages", component: <PackageReport /> },
+    { url: "reports/hotels", component: <HotelReport /> },
+    { url: "reports/top-packages", component: <TopPackagesReport /> },
+    { url: "reports/monthly-trends", component: <MonthlyTrendsReport /> },
     { url: "tickets", component: <Tickets /> },
     { url: "quotation-inbox", component: <QuotationInbox /> },
     { url: "notifications", component: <Notification /> },

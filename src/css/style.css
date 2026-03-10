@@ -35252,6 +35252,16 @@ tr a.tb-mail svg path {
   stroke: #f59e0b;
 }
 
+.card-box.purple .card-box-icon {
+  background-color: #8B5CF6;
+}
+.card-box.purple .back-image svg g path {
+  stroke: #8B5CF6;
+}
+.card-box.purple .back-image svg g circle {
+  stroke: #8B5CF6;
+}
+
 .card-box.secondary .card-box-icon {
   background-color: #9568FF;
 }

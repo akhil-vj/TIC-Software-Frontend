@@ -3,20 +3,26 @@ export const MenuList = [
   {
     title: "Dashboard",
     classsChange: "mm-collapse",
-    iconStyle: <i className="material-icons-outlined"></i>,
+    iconStyle: <i className="material-icons-outlined">dashboard</i>,
     to: "dashboard",
   },
   {
     title: "Leads",
     classsChange: "mm-collapse",
-    iconStyle: <i className="flaticon-050-info"> </i>,
+    iconStyle: <i className="material-icons-outlined">campaign</i>,
     to: "leads",
   },
   {
     title: "Enquiry",
     classsChange: "mm-collapse",
-    iconStyle: <i className="material-icons"></i>,
+    iconStyle: <i className="material-icons-outlined">mark_email_unread</i>,
     to: "enquiry",
+  },
+  {
+    title: "Reports",
+    classsChange: "mm-collapse",
+    iconStyle: <i className="fa fa-file-text-o">description</i>,
+    to: "reports",
   },
   {
     title: "Profile",
@@ -29,12 +35,6 @@ export const MenuList = [
     classsChange: "mm-collapse",
     iconStyle: <i className="fa fa-list" aria-hidden="true"></i>,
     to: "follow-ups",
-  },
-  {
-    title: "Tickets",
-    classsChange: "mm-collapse",
-    iconStyle: <i className="merial-icons"></i>,
-    to: "tickets",
   },
   {
     title: "Finance",
@@ -74,7 +74,7 @@ export const MenuList = [
   {
     title: "Settings",
     classsChange: "mm-collapse",
-    iconStyle: <i className="material-icons"></i>,
+    iconStyle: <i className="material-icons">settings</i>,
     content: [
       {
         title: "Admin Settings",

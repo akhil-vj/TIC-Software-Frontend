@@ -6,7 +6,6 @@ import PerfectScrollbar from "react-perfect-scrollbar";
 import { Collapse } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { MenuList } from "./Menu";
-import { useScrollPosition } from "@n8tb1t/use-scroll-position";
 import { ThemeContext } from "../../../context/ThemeContext";
 import { useSelector } from "react-redux";
 
@@ -46,15 +45,6 @@ const SideBar = () => {
     return handleheartBlast.classList.toggle("heart-blast");
   }
 
-  const [hideOnScroll, setHideOnScroll] = useState(true);
-  useScrollPosition(
-    ({ prevPos, currPos }) => {
-      const isShow = currPos.y > prevPos.y;
-      if (isShow !== hideOnScroll) setHideOnScroll(isShow);
-    },
-    [hideOnScroll],
-  );
-
   const handleMenuActive = (status) => {
     setState({ active: status });
     if (state.active === status) {
@@ -73,7 +63,7 @@ const SideBar = () => {
   path = path[path.length - 1];
   /// Active menu
 
-  const {userPermission} = useSelector((state)=> state)
+  const { userPermission } = useSelector((state) => state)
   // console.log('userper',userPermission)
   const [visibleItems, setVisibleItems] = useState([]);
   useEffect(() => {
@@ -89,8 +79,8 @@ const SideBar = () => {
         // Extract the substring before '-read-'
         const extractedPermission = permissionSlug.substring(0, indexOfRead)
 
-       const specialMenu = item.title === 'Settings' 
-       return extractedPermission === item.to || specialMenu;
+        const specialMenu = item.title === 'Settings' || item.title === 'Reports'
+        return extractedPermission === item.to || specialMenu;
       })
     );
     // console.log('sidebar filt',filteredItems)
@@ -101,17 +91,14 @@ const SideBar = () => {
     <div
       onMouseEnter={() => ChangeIconSidebar(true)}
       onMouseLeave={() => ChangeIconSidebar(false)}
-      className={`dlabnav ${iconHover} ${
-        sidebarposition.value === "fixed" &&
+      className={`dlabnav ${iconHover} ${sidebarposition.value === "fixed" &&
         sidebarLayout.value === "horizontal" &&
         headerposition.value === "static"
-          ? hideOnScroll > 120
-            ? "fixed"
-            : ""
-          : ""
-      }`}
+        ? ""
+        : ""
+        }`}
     >
-      <PerfectScrollbar className="dlabnav-scroll">
+      <div className="dlabnav-scroll">
         <ul className="metismenu" id="menu">
           {visibleItems?.map((data, index) => {
             let menuClass = data.classsChange;
@@ -124,9 +111,8 @@ const SideBar = () => {
             } else {
               return (
                 <li
-                  className={` ${
-                    state.active === data.title ? "mm-active" : ""
-                  }`}
+                  className={` ${state.active === data.title ? "mm-active" : ""
+                    }`}
                   key={index}
                 >
                   {data.content && data.content.length > 0 ? (
@@ -146,20 +132,18 @@ const SideBar = () => {
                       </Link>
                       <Collapse in={state.active === data.title ? true : false}>
                         <ul
-                          className={`${
-                            menuClass === "mm-collapse" ? "mm-show" : ""
-                          }`}
+                          className={`${menuClass === "mm-collapse" ? "mm-show" : ""
+                            }`}
                         >
                           {data.content &&
                             data.content.map((data, index) => {
                               return (
                                 <li
                                   key={index}
-                                  className={`${
-                                    state.activeSubmenu === data.title
-                                      ? "mm-active"
-                                      : ""
-                                  }`}
+                                  className={`${state.activeSubmenu === data.title
+                                    ? "mm-active"
+                                    : ""
+                                    }`}
                                 >
                                   {data.content && data.content.length > 0 ? (
                                     <>
@@ -182,22 +166,20 @@ const SideBar = () => {
                                         }
                                       >
                                         <ul
-                                          className={`${
-                                            menuClass === "mm-collapse"
-                                              ? "mm-show"
-                                              : ""
-                                          }`}
+                                          className={`${menuClass === "mm-collapse"
+                                            ? "mm-show"
+                                            : ""
+                                            }`}
                                         >
                                           {data.content &&
                                             data.content.map((data, index) => {
                                               return (
                                                 <li key={index}>
                                                   <Link
-                                                    className={`${
-                                                      path === data.to
-                                                        ? "mm-active"
-                                                        : ""
-                                                    }`}
+                                                    className={`${path === data.to
+                                                      ? "mm-active"
+                                                      : ""
+                                                      }`}
                                                     to={data.to}
                                                   >
                                                     {data.title}
@@ -261,8 +243,8 @@ const SideBar = () => {
                   <Link to={"#"} className="btn bg-white btn-sm">Upgrade</Link>
                 </div>
               </div> */}
-      </PerfectScrollbar>
-    </div>
+      </div>
+    </div >
   );
 };
 
