@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { checkIsFile } from "../../utilis/check";
 import { getApiBaseUrl } from "../../../services/apiConfig";
+import { deleteHotelImage } from "../../../services/HotelService";
 
 const baseUrl = getApiBaseUrl();
 
@@ -64,12 +65,31 @@ export function FileUploader(props) {
   };
 
   // This function will be triggered when the "Remove This Image" button is clicked
-  const handleRemove = (id) => {
+  const handleRemove = async (id) => {
     if (isMulti) {
+      // If it's an existing image (has id), delete from database first
+      if (id) {
+        try {
+          await deleteHotelImage(id);
+        } catch (error) {
+          console.error("Failed to delete image from database:", error);
+          // Optionally, show an error message or prevent removal
+          return;
+        }
+      }
       // Handle both File objects (which have .name) and API objects (which have .id)
       const filterData = fileData.filter((data) => data.name !== id && data.id !== id);
       setFieldValue(name, filterData);
     } else {
+      // For single file, if it has an id, delete from database
+      if (fileData && fileData.id) {
+        try {
+          await deleteHotelImage(fileData.id);
+        } catch (error) {
+          console.error("Failed to delete image from database:", error);
+          return;
+        }
+      }
       setFieldValue(name, "");
     }
   };
