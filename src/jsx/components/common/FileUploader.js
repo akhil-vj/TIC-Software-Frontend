@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { checkIsFile } from "../../utilis/check";
 import { getApiBaseUrl } from "../../../services/apiConfig";
-
+import { axiosDelete } from "../../../services/AxiosInstance";
 const baseUrl = getApiBaseUrl();
 
 export function FileUploader(props) {
@@ -64,15 +64,23 @@ export function FileUploader(props) {
   };
 
   // This function will be triggered when the "Remove This Image" button is clicked
-  const handleRemove = (id) => {
-    if (isMulti) {
-      // Handle both File objects (which have .name) and API objects (which have .id)
-      const filterData = fileData.filter((data) => data.name !== id && data.id !== id);
-      setFieldValue(name, filterData);
-    } else {
-      setFieldValue(name, "");
+const handleRemove = async (img, index) => {
+  try {
+    // 🔴 If image exists in backend
+    if (img.id) {
+      await axiosDelete(`api/hotel-image/${img.id}`);
     }
-  };
+
+    // 🔴 Update UI after success
+    const updated = [...fileData];
+    updated.splice(index, 1);
+    setFieldValue(name, updated);
+
+  } catch (error) {
+    console.error("Delete failed", error);
+    alert("Failed to delete image");
+  }
+};
   const isPreview = isMulti ? !!fileData?.length : !!fileData;
 
   return (
@@ -110,7 +118,7 @@ export function FileUploader(props) {
                     />
                     <button
                       className="bg-danger"
-                      onClick={() => handleRemove(img.name || img.id)}
+                    onClick={() => handleRemove(img, key)}
                       style={styles.delete}
                     >
                       Delete
