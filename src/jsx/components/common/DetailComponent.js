@@ -8,8 +8,9 @@ import { getApiBaseUrl } from "../../../services/apiConfig";
 
 const baseUrl = getApiBaseUrl();
 
-export const DetailComponent = ({ title = "", url, array = [] }) => {
-  const { id } = useParams();
+export const DetailComponent = ({ title = "", url, array = [], id: propId }) => {
+  const params = useParams();
+  const id = propId || params?.id;
   const detailUrl = `${url}/${id}`;
   const { data, loading } = useAsync(detailUrl, !!id);
   const detailData = data?.data;

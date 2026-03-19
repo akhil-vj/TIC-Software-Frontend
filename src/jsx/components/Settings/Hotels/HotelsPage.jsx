@@ -1434,7 +1434,7 @@ const HotelDetailView = ({ hotelId, onBack }) => {
       `}</style>
 
       <div className="detail-component-wrapper">
-        <DetailComponent title="" url={url} array={array} />
+        <DetailComponent title="" url={url} array={array} id={hotelId} />
       </div>
     </>
   );
