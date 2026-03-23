@@ -102,14 +102,19 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     const newData = values.planArr?.map((item, planArrInd) => (
       planArrInd === planIndex ? {
         ...item,
-        schedule: item.schedule.map((scheduleItem, ind) =>
-          ind === index ? { ...scheduleItem, [type]: getRoundOfValue(inputValue) } : scheduleItem
-        )
+        schedule: item.schedule.map((scheduleItem, ind) => {
+          if (ind === index) {
+            const result = { ...scheduleItem, [type]: getRoundOfValue(inputValue) }
+            if (type === 'amount') {
+              const person = scheduleItem.insertType === 'activity' ? scheduleItem.person : values.adult + values.child;
+              result.baseAmount = values.priceOption.value === 'TOTAL' ? inputValue : inputValue * person;
+            }
+            return result;
+          }
+          return scheduleItem;
+        })
       } : item
-
     ));
-    // console.log('planIn',planIndex,index,newValue)
-    // console.log('pdata',newData)
     setFieldValue('planArr', newData);
   };
   const handlePriceMode = (type) => {
@@ -119,13 +124,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         {
           ...item,
           schedule: item.schedule.map((scheduleItem, ind) => {
-            const person = scheduleItem.insertType === 'activity' ? scheduleItem.person : values.adult + values.child
-            const result = { ...scheduleItem, amount: type == 'TOTAL' ? scheduleItem.amount * person : scheduleItem.amount / person }
-            return result
-          }
-          )
+            const person = scheduleItem.insertType === 'activity' ? scheduleItem.person : values.adult + values.child;
+            const currentBaseAmount = scheduleItem.baseAmount !== undefined ? scheduleItem.baseAmount : scheduleItem.amount;
+            const result = { 
+              ...scheduleItem, 
+              amount: type === 'TOTAL' ? currentBaseAmount : currentBaseAmount / person,
+              baseAmount: currentBaseAmount
+            };
+            return result;
+          })
         }
-
       ));
       setFieldValue('planArr', newData);
     }

@@ -52,7 +52,7 @@ function App(props) {
   const navigate = useNavigate();
   
   // Initialize inactivity detection for authenticated users
-  useInactivityDetection();
+  // useInactivityDetection();
   
   useEffect(() => {
     checkAutoLogin(dispatch, navigate);
