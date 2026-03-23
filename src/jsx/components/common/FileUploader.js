@@ -55,10 +55,13 @@ export function FileUploader(props) {
   // This function will be triggered when the file field change
   const onFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
       if (isMulti) {
-        setFieldValue(name, [e.target.files[0], ...fileData]);
+        // Append new files to existing fileData
+        setFieldValue(name, [...(fileData || []), ...selectedFiles]);
       } else {
-        setFieldValue(name, e.target.files[0]);
+        // Replace with single file
+        setFieldValue(name, selectedFiles[0]);
       }
     }
   };
@@ -67,14 +70,18 @@ export function FileUploader(props) {
 const handleRemove = async (img, index) => {
   try {
     // 🔴 If image exists in backend
-    if (img.id) {
+    if (img && img.id) {
       await axiosDelete(`api/hotel-image/${img.id}`);
     }
 
     // 🔴 Update UI after success
-    const updated = [...fileData];
-    updated.splice(index, 1);
-    setFieldValue(name, updated);
+    if (isMulti) {
+      const updated = [...(fileData || [])];
+      updated.splice(index, 1);
+      setFieldValue(name, updated);
+    } else {
+      setFieldValue(name, null);
+    }
 
   } catch (error) {
     console.error("Delete failed", error);
@@ -87,7 +94,7 @@ const handleRemove = async (img, index) => {
     <div className="form-group" key={key}>
       <div className="my-3">
         {label && (
-          <label htmlFor="formFileMultiple" className="form-label">
+          <label htmlFor={name} className="form-label">
             {label} {required && <span>*</span>}
           </label>
         )}
@@ -95,8 +102,7 @@ const handleRemove = async (img, index) => {
           {...restProps}
           className="form-control"
           type={type}
-          // id="formFileMultiple"
-          // multiple={isMulti}
+          multiple={isMulti}
           name={name}
           onChange={onFileChange}
         />
