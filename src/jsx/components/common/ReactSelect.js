@@ -10,7 +10,7 @@ function ReactSelect(props) {
   };
   const options = props.options
   const data = options?.map((opt) => {
-    return { label: opt[optionLabel], value: opt[optionValue] }
+    return { ...opt, label: opt[optionLabel], value: opt[optionValue] }
   })
 
   const isRequired = restProps.required

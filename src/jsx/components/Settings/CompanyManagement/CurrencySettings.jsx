@@ -14,38 +14,44 @@ import ConfirmationModal from "../../common/DeleteModal";
 import NoData from "../../common/NoData";
 
 const currencyOptions = [
-    { label: "USD - US Dollar", value: "USD" },
-    { label: "EUR - Euro", value: "EUR" },
-    { label: "GBP - British Pound", value: "GBP" },
-    { label: "INR - Indian Rupee", value: "INR" },
-    { label: "MYR - Malaysian Ringgit", value: "MYR" },
-    { label: "THB - Thai Baht", value: "THB" },
-    { label: "SGD - Singapore Dollar", value: "SGD" },
-    { label: "IDR - Indonesian Rupiah", value: "IDR" },
-    { label: "PHP - Philippine Peso", value: "PHP" },
-    { label: "JPY - Japanese Yen", value: "JPY" },
-    { label: "CNY - Chinese Yuan", value: "CNY" },
-    { label: "AUD - Australian Dollar", value: "AUD" },
-    { label: "CAD - Canadian Dollar", value: "CAD" },
-    { label: "AED - UAE Dirham", value: "AED" },
-    { label: "KRW - South Korean Won", value: "KRW" },
-    { label: "NZD - New Zealand Dollar", value: "NZD" },
-    { label: "CHF - Swiss Franc", value: "CHF" },
-    { label: "HKD - Hong Kong Dollar", value: "HKD" },
-    { label: "SAR - Saudi Riyal", value: "SAR" },
-    { label: "QAR - Qatari Riyal", value: "QAR" },
-    { label: "KWD - Kuwaiti Dinar", value: "KWD" },
-    { label: "BHD - Bahraini Dinar", value: "BHD" },
-    { label: "OMR - Omani Rial", value: "OMR" },
-    { label: "ZAR - South African Rand", value: "ZAR" },
-    { label: "TRY - Turkish Lira", value: "TRY" },
-    { label: "RUB - Russian Ruble", value: "RUB" },
-    { label: "BRL - Brazilian Real", value: "BRL" },
-    { label: "MXN - Mexican Peso", value: "MXN" },
-    { label: "VND - Vietnamese Dong", value: "VND" },
-    { label: "PKR - Pakistani Rupee", value: "PKR" },
-    { label: "LKR - Sri Lankan Rupee", value: "LKR" },
-    { label: "BDT - Bangladeshi Taka", value: "BDT" },
+    { label: "US Dollar (USD)", value: "US Dollar", code: "USD", symbol: "$" },
+    { label: "Euro (EUR)", value: "Euro", code: "EUR", symbol: "€" },
+    { label: "British Pound (GBP)", value: "British Pound", code: "GBP", symbol: "£" },
+    { label: "India (IND)", value: "India", code: "IND", symbol: "₹" },
+    { label: "Malaysian Ringgit (MYR)", value: "Malaysian Ringgit", code: "MYR", symbol: "RM" },
+    { label: "Thai Baht (THB)", value: "Thai Baht", code: "THB", symbol: "฿" },
+    { label: "Singapore Dollar (SGD)", value: "Singapore Dollar", code: "SGD", symbol: "S$" },
+    { label: "Indonesian Rupiah (IDR)", value: "Indonesian Rupiah", code: "IDR", symbol: "Rp" },
+    { label: "Philippine Peso (PHP)", value: "Philippine Peso", code: "PHP", symbol: "₱" },
+    { label: "Japanese Yen (JPY)", value: "Japanese Yen", code: "JPY", symbol: "¥" },
+    { label: "Chinese Yuan (CNY)", value: "Chinese Yuan", code: "CNY", symbol: "¥" },
+    { label: "Australian Dollar (AUD)", value: "Australian Dollar", code: "AUD", symbol: "A$" },
+    { label: "Canadian Dollar (CAD)", value: "Canadian Dollar", code: "CAD", symbol: "C$" },
+    { label: "UAE Dirham (AED)", value: "UAE Dirham", code: "AED", symbol: "د.إ" },
+    { label: "South Korean Won (KRW)", value: "South Korean Won", code: "KRW", symbol: "₩" },
+    { label: "New Zealand Dollar (NZD)", value: "New Zealand Dollar", code: "NZD", symbol: "NZ$" },
+    { label: "Swiss Franc (CHF)", value: "Swiss Franc", code: "CHF", symbol: "CHF" },
+    { label: "Hong Kong Dollar (HKD)", value: "Hong Kong Dollar", code: "HKD", symbol: "HK$" },
+    { label: "Saudi Riyal (SAR)", value: "Saudi Riyal", code: "SAR", symbol: "ر.س" },
+    { label: "Qatari Riyal (QAR)", value: "Qatari Riyal", code: "QAR", symbol: "ر.ق" },
+    { label: "Kuwaiti Dinar (KWD)", value: "Kuwaiti Dinar", code: "KWD", symbol: "د.ك" },
+    { label: "Bahraini Dinar (BHD)", value: "Bahraini Dinar", code: "BHD", symbol: ".د.ب" },
+    { label: "Omani Rial (OMR)", value: "Omani Rial", code: "OMR", symbol: "ر.ع." },
+    { label: "South African Rand (ZAR)", value: "South African Rand", code: "ZAR", symbol: "R" },
+    { label: "Turkish Lira (TRY)", value: "Turkish Lira", code: "TRY", symbol: "₺" },
+    { label: "Russian Ruble (RUB)", value: "Russian Ruble", code: "RUB", symbol: "₽" },
+    { label: "Brazilian Real (BRL)", value: "Brazilian Real", code: "BRL", symbol: "R$" },
+    { label: "Mexican Peso (MXN)", value: "Mexican Peso", code: "MXN", symbol: "$" },
+    { label: "Vietnamese Dong (VND)", value: "Vietnamese Dong", code: "VND", symbol: "₫" },
+    { label: "Pakistani Rupee (PKR)", value: "Pakistani Rupee", code: "PKR", symbol: "₨" },
+    { label: "Sri Lankan Rupee (LKR)", value: "Sri Lankan Rupee", code: "LKR", symbol: "Rs" },
+    { label: "Bangladeshi Taka (BDT)", value: "Bangladeshi Taka", code: "BDT", symbol: "৳" },
+];
+
+const formatOptions = [
+    { label: "Indian Standard (1,00,00,000)", value: "1,00,00,000" },
+    { label: "International Standard (10,000,000)", value: "10,000,000" },
+
 ];
 
 const AddModal = ({ setShowModal, showModal, editId, setEditId }) => {
@@ -118,12 +124,20 @@ const AddModal = ({ setShowModal, showModal, editId, setEditId }) => {
                     <form onSubmit={formik.handleSubmit}>
                         <div className="row">
                             <div className="mb-3 col-md-4">
-                                <InputField
+                                <ReactSelect
                                     label="Name"
                                     name="name"
-                                    onChange={formik.handleChange}
+                                    placeholder="Select Name"
+                                    options={currencyOptions}
+                                    value={currencyOptions.find(opt => opt.value === formik.values.name)}
+                                    onChange={(option) => {
+                                        formik.setFieldValue("name", option.value);
+                                        formik.setFieldValue("code", option.code);
+                                        formik.setFieldValue("symbol", option.symbol);
+                                    }}
                                     onBlur={formik.handleBlur}
-                                    values={formik.values}
+                                    formik={formik}
+                                    inputId="name"
                                     required
                                 />
                             </div>
@@ -153,8 +167,8 @@ const AddModal = ({ setShowModal, showModal, editId, setEditId }) => {
                                     name="from_currency"
                                     placeholder="Select Currency"
                                     options={currencyOptions}
-                                    value={currencyOptions.find(opt => opt.value === formik.values.from_currency)}
-                                    onChange={(option) => formik.setFieldValue("from_currency", option.value)}
+                                    value={currencyOptions.find(opt => opt.code === formik.values.from_currency)}
+                                    onChange={(option) => formik.setFieldValue("from_currency", option.code)}
                                     onBlur={formik.handleBlur}
                                     formik={formik}
                                     inputId="from_currency"
@@ -166,8 +180,8 @@ const AddModal = ({ setShowModal, showModal, editId, setEditId }) => {
                                     name="to_currency"
                                     placeholder="Select Currency"
                                     options={currencyOptions}
-                                    value={currencyOptions.find(opt => opt.value === formik.values.to_currency)}
-                                    onChange={(option) => formik.setFieldValue("to_currency", option.value)}
+                                    value={currencyOptions.find(opt => opt.code === formik.values.to_currency)}
+                                    onChange={(option) => formik.setFieldValue("to_currency", option.code)}
                                     onBlur={formik.handleBlur}
                                     formik={formik}
                                     inputId="to_currency"
@@ -184,12 +198,16 @@ const AddModal = ({ setShowModal, showModal, editId, setEditId }) => {
                                 />
                             </div>
                             <div className="mb-3 col-md-4">
-                                <InputField
+                                <ReactSelect
                                     label="Currency Format"
                                     name="currency_format"
-                                    onChange={formik.handleChange}
+                                    placeholder="Select Format"
+                                    options={formatOptions}
+                                    value={formatOptions.find(opt => opt.value === formik.values.currency_format)}
+                                    onChange={(option) => formik.setFieldValue("currency_format", option.value)}
                                     onBlur={formik.handleBlur}
-                                    values={formik.values}
+                                    formik={formik}
+                                    inputId="currency_format"
                                 />
                             </div>
                         </div>
@@ -350,7 +368,7 @@ const CurrencySettings = () => {
                                                     <td className="text-center">{item?.to_currency || "-"}</td>
                                                     <td className="text-center">{item?.exchange_rate || "-"}</td>
                                                     <td className="text-center">
-                                                        {item?.currency_format || "-"}
+                                                        {formatOptions.find(opt => opt.value === item?.currency_format)?.label.split(" (")[0] || item?.currency_format || "-"}
                                                     </td>
                                                     <td>
                                                         <Dropdown>
