@@ -4,6 +4,7 @@ import { useFormik } from "formik";
 import { useDispatch } from "react-redux";
 import CustomModal from "../../../layouts/CustomModal";
 import InputField from "../../common/InputField";
+import ReactSelect from "../../common/ReactSelect";
 import { useAsync } from "../../../utilis/useAsync";
 import { axiosPost, axiosPut } from "../../../../services/AxiosInstance";
 import { URLS } from "../../../../constants";
@@ -11,6 +12,41 @@ import { FormAction } from "../../../../store/slices/formSlice";
 import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
 import ConfirmationModal from "../../common/DeleteModal";
 import NoData from "../../common/NoData";
+
+const currencyOptions = [
+    { label: "USD - US Dollar", value: "USD" },
+    { label: "EUR - Euro", value: "EUR" },
+    { label: "GBP - British Pound", value: "GBP" },
+    { label: "INR - Indian Rupee", value: "INR" },
+    { label: "MYR - Malaysian Ringgit", value: "MYR" },
+    { label: "THB - Thai Baht", value: "THB" },
+    { label: "SGD - Singapore Dollar", value: "SGD" },
+    { label: "IDR - Indonesian Rupiah", value: "IDR" },
+    { label: "PHP - Philippine Peso", value: "PHP" },
+    { label: "JPY - Japanese Yen", value: "JPY" },
+    { label: "CNY - Chinese Yuan", value: "CNY" },
+    { label: "AUD - Australian Dollar", value: "AUD" },
+    { label: "CAD - Canadian Dollar", value: "CAD" },
+    { label: "AED - UAE Dirham", value: "AED" },
+    { label: "KRW - South Korean Won", value: "KRW" },
+    { label: "NZD - New Zealand Dollar", value: "NZD" },
+    { label: "CHF - Swiss Franc", value: "CHF" },
+    { label: "HKD - Hong Kong Dollar", value: "HKD" },
+    { label: "SAR - Saudi Riyal", value: "SAR" },
+    { label: "QAR - Qatari Riyal", value: "QAR" },
+    { label: "KWD - Kuwaiti Dinar", value: "KWD" },
+    { label: "BHD - Bahraini Dinar", value: "BHD" },
+    { label: "OMR - Omani Rial", value: "OMR" },
+    { label: "ZAR - South African Rand", value: "ZAR" },
+    { label: "TRY - Turkish Lira", value: "TRY" },
+    { label: "RUB - Russian Ruble", value: "RUB" },
+    { label: "BRL - Brazilian Real", value: "BRL" },
+    { label: "MXN - Mexican Peso", value: "MXN" },
+    { label: "VND - Vietnamese Dong", value: "VND" },
+    { label: "PKR - Pakistani Rupee", value: "PKR" },
+    { label: "LKR - Sri Lankan Rupee", value: "LKR" },
+    { label: "BDT - Bangladeshi Taka", value: "BDT" },
+];
 
 const AddModal = ({ setShowModal, showModal, editId, setEditId }) => {
     const dispatch = useDispatch();
@@ -23,8 +59,10 @@ const AddModal = ({ setShowModal, showModal, editId, setEditId }) => {
             name: "",
             symbol: "",
             code: "",
-            rate: "",
-            format: "",
+            exchange_rate: "",
+            currency_format: "",
+            from_currency: "",
+            to_currency: "",
         },
         onSubmit: async (values) => {
             try {
@@ -54,8 +92,10 @@ const AddModal = ({ setShowModal, showModal, editId, setEditId }) => {
                 name: record.name || "",
                 symbol: record.symbol || "",
                 code: record.code || "",
-                rate: record.rate || "",
-                format: record.format || "",
+                exchange_rate: record.exchange_rate || "",
+                currency_format: record.currency_format || "",
+                from_currency: record.from_currency || "",
+                to_currency: record.to_currency || "",
             });
         }
         return () => {
@@ -108,20 +148,45 @@ const AddModal = ({ setShowModal, showModal, editId, setEditId }) => {
                                 />
                             </div>
                             <div className="mb-3 col-md-4">
+                                <ReactSelect
+                                    label="From Currency"
+                                    name="from_currency"
+                                    placeholder="Select Currency"
+                                    options={currencyOptions}
+                                    value={currencyOptions.find(opt => opt.value === formik.values.from_currency)}
+                                    onChange={(option) => formik.setFieldValue("from_currency", option.value)}
+                                    onBlur={formik.handleBlur}
+                                    formik={formik}
+                                    inputId="from_currency"
+                                />
+                            </div>
+                            <div className="mb-3 col-md-4">
+                                <ReactSelect
+                                    label="To Currency"
+                                    name="to_currency"
+                                    placeholder="Select Currency"
+                                    options={currencyOptions}
+                                    value={currencyOptions.find(opt => opt.value === formik.values.to_currency)}
+                                    onChange={(option) => formik.setFieldValue("to_currency", option.value)}
+                                    onBlur={formik.handleBlur}
+                                    formik={formik}
+                                    inputId="to_currency"
+                                />
+                            </div>
+                            <div className="mb-3 col-md-4">
                                 <InputField
                                     label="Exchange Rate"
-                                    name="rate"
+                                    name="exchange_rate"
                                     onChange={formik.handleChange}
                                     onBlur={formik.handleBlur}
                                     values={formik.values}
-                                    type="number"
                                     required
                                 />
                             </div>
                             <div className="mb-3 col-md-4">
                                 <InputField
                                     label="Currency Format"
-                                    name="format"
+                                    name="currency_format"
                                     onChange={formik.handleChange}
                                     onBlur={formik.handleBlur}
                                     values={formik.values}
@@ -142,36 +207,7 @@ const CurrencySettings = () => {
     const asyncData = useAsync(URLS.CURRENCY_URL);
     const tableData = asyncData?.data?.data;
     const isLoading = asyncData?.loading;
-    const mockCurrencies = [
-        {
-            id: "mock-inr",
-            name: "Indian Rupee",
-            symbol: "₹",
-            code: "INR",
-            rate: "1",
-            format: "₹1,000.00",
-            updated_at: "Mock",
-        },
-        {
-            id: "mock-usd",
-            name: "US Dollar",
-            symbol: "$",
-            code: "USD",
-            rate: "0.012",
-            format: "$1,000.00",
-            updated_at: "Mock",
-        },
-        {
-            id: "mock-myr",
-            name: "Malaysian Ringgit",
-            symbol: "RM",
-            code: "MYR",
-            rate: "0.054",
-            format: "RM1,000.00",
-            updated_at: "Mock",
-        },
-    ];
-    const displayData = tableData?.length ? tableData : mockCurrencies;
+    const displayData = tableData || [];
 
     const [data, setData] = useState(
         document.querySelectorAll("#currency_table_wrapper tbody tr"),
@@ -295,9 +331,10 @@ const CurrencySettings = () => {
                                             <th className="text-center">Name</th>
                                             <th className="text-center">Symbol</th>
                                             <th className="text-center">Code</th>
+                                            <th className="text-center">From Currency</th>
+                                            <th className="text-center">To Currency</th>
                                             <th className="text-center">Exchange Rate</th>
                                             <th className="text-center">Format</th>
-                                            <th className="text-center">Modified Date</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -309,12 +346,11 @@ const CurrencySettings = () => {
                                                     <td className="text-center">{item?.name || "-"}</td>
                                                     <td className="text-center">{item?.symbol || "-"}</td>
                                                     <td className="text-center">{item?.code || "-"}</td>
-                                                    <td className="text-center">{item?.rate || "-"}</td>
+                                                    <td className="text-center">{item?.from_currency || "-"}</td>
+                                                    <td className="text-center">{item?.to_currency || "-"}</td>
+                                                    <td className="text-center">{item?.exchange_rate || "-"}</td>
                                                     <td className="text-center">
-                                                        {item?.format || "-"}
-                                                    </td>
-                                                    <td className="text-center">
-                                                        {item?.updated_at || item?.created_at || "-"}
+                                                        {item?.currency_format || "-"}
                                                     </td>
                                                     <td>
                                                         <Dropdown>
@@ -363,7 +399,7 @@ const CurrencySettings = () => {
                                                 </tr>
                                             ))
                                         ) : (
-                                            <NoData isLoading={isLoading} colSpan={8} />
+                                            <NoData isLoading={isLoading} colSpan={9} />
                                         )}
                                     </tbody>
                                 </table>
