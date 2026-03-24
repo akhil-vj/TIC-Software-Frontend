@@ -38,6 +38,12 @@ export function FileUploader(props) {
       return URL.createObjectURL(image);
     }
     
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      const separator = image.startsWith('/') ? '' : '/';
+      return `${baseUrl}${separator}${image}`;
+    }
+
     // If it's an API response object with file_url
     const rawUrl = image?.file_url || image?.file || image?.url || image?.original_url || image?.path || '';
     if (!rawUrl) return '';

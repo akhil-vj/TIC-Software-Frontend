@@ -25,6 +25,11 @@ const statusOptions = [
   { label: "Active", value: 1 },
   { label: "Inactive", value: 0 },
 ];
+const vehicleTypeOptions = [
+  { label: "Car", value: "Car" },
+  { label: "Suv", value: "Suv" },
+  { label: "Van", value: "Van" },
+];
 
 const AddTransfer = () => {
   const navigate = useNavigate();
@@ -34,6 +39,7 @@ const AddTransfer = () => {
     fromDate: SETUP.TODAY_DATE,
     toDate: SETUP.TODAY_DATE,
     type: { label: "Private", value: "Private" },
+    vehicleType: { label: "Car", value: "Car" },
     status: { label: "Active", value: 1 },
     cost: 0,
     adultCost: 0,
@@ -42,7 +48,9 @@ const AddTransfer = () => {
     image: '',
     costArr: [],
     costId: '',
-    pickupPoint: ''
+    pickupPoint: '',
+    dropPoint: '',
+    subDestination: ''
   };
   const url = URLS.TRANSFER_URL
   const editUrl = `${URLS.TRANSFER_URL}/${id}`
@@ -56,9 +64,12 @@ const AddTransfer = () => {
       const formData = new FormData()
       // const values = formik.values
       formData.append('vehicle_name', checkFormValue(values.name))
-      formData.append('vehicle_number', checkFormValue(values.vehicleNumber))
-      formData.append('phone_number', checkFormValue(values.phoneNumber))
+      // formData.append('vehicle_number', checkFormValue(values.vehicleNumber))
+      formData.append('pickuppoint', checkFormValue(values.pickupPoint))
+      formData.append('droppoint', checkFormValue(values.dropPoint))
+      // formData.append('phone_number', checkFormValue(values.phoneNumber))
       formData.append('destination_id', checkFormValue(values.destination?.value))
+      formData.append('sub_destination_id', checkFormValue(values.subDestination?.value))
       formData.append('description', checkFormValue(values.description))
       formData.append('is_active', values.status.value)
       if (checkIsFile(values.image)) {
@@ -71,6 +82,9 @@ const AddTransfer = () => {
         formData.append(`estimations[${ind}][from_date]`, data.fromDate)
         formData.append(`estimations[${ind}][to_date]`, data.toDate)
         formData.append(`estimations[${ind}][type]`, data.type.value)
+        if (data.type.value === 'Private' && data.vehicleType?.value) {
+          formData.append(`estimations[${ind}][vehicletype]`, data.vehicleType.value)
+        }
         formData.append(`estimations[${ind}][cost]`, data.cost)
         formData.append(`estimations[${ind}][adult_cost]`, data.adultCost)
         formData.append(`estimations[${ind}][child_cost]`, data.childCost)
@@ -96,11 +110,11 @@ const AddTransfer = () => {
     onSubmit: handleClick
   });
   const tableData = formik?.values?.costArr;
-  // const destinationId = formik.values.destination
-  // const subDestinationUrl = `${URLS.SUB_DESTINATION_URL}?destination_id=${destinationId}`
+  const destinationId = formik.values.destination?.value;
+  const subDestinationUrl = destinationId ? `${URLS.SUB_DESTINATION_URL}?destination_id=${destinationId}` : null;
 
   const destinationData = useAsync(URLS.DESTINATION_URL);
-  // const subDestinationData = useAsync(subDestinationUrl, destinationId)
+  const subDestinationData = useAsync(subDestinationUrl, destinationId);
   const categoryData = useAsync(URLS.PROPERTY_CATEGORY_URL);
   const propertyTypeData = useAsync(URLS.PROPERTY_TYPE_URL);
 
@@ -113,17 +127,25 @@ const AddTransfer = () => {
     const data = editData?.data?.data
     if (data) {
       formik.setFieldValue('name', data.vehicle_name)
-      formik.setFieldValue('vehicleNumber', data.vehicle_number)
-      formik.setFieldValue('pickupPoint', '')
-      formik.setFieldValue('phoneNumber', data.phone_number)
+      // formik.setFieldValue('vehicleNumber', data.vehicle_number)
+      formik.setFieldValue('pickupPoint', data.pickuppoint || '')
+      formik.setFieldValue('dropPoint', data.droppoint || '')
+      // formik.setFieldValue('phoneNumber', data.phone_number)
       formik.setFieldValue('destination', { value: data.destination?.id, label: data.destination?.name })
+      if (data.sub_destination) {
+        formik.setFieldValue('subDestination', { value: data.sub_destination?.id, label: data.sub_destination?.name })
+      } else {
+        formik.setFieldValue('subDestination', '')
+      }
       formik.setFieldValue('description', data.description)
       formik.setFieldValue('image', data.image)
       formik.setFieldValue('status', { value: data.is_active, label: data.is_active === 1 ? 'Active' : 'Inactive' })
       const costArr = data.estimations?.map((item, ind) => {
         const obj = {
           costId: item.id, fromDate: item.from_date, toDate: item.to_date,
-          type: { label: item.type, value: item.type }, cost: item.cost,
+          type: { label: item.type, value: item.type },
+          vehicleType: item.vehicletype ? { label: item.vehicletype, value: item.vehicletype } : null,
+          cost: item.cost,
           adultCost: item.adult_cost, childCost: item.child_cost
         }
         return obj
@@ -143,6 +165,7 @@ const AddTransfer = () => {
     formik.setFieldValue("fromDate", value.fromDate);
     formik.setFieldValue("toDate", value.toDate);
     formik.setFieldValue("type", value.type);
+    formik.setFieldValue("vehicleType", value.vehicleType || { label: "Car", value: "Car" });
     formik.setFieldValue("cost", value.cost);
     formik.setFieldValue("adultCost", value.adultCost);
     formik.setFieldValue("childCost", value.childCost);
@@ -155,6 +178,7 @@ const AddTransfer = () => {
       fromDate: formatDate(values.fromDate),
       toDate: formatDate(values.toDate),
       type: values.type,
+      vehicleType: values.type.value === "Private" ? values.vehicleType : null,
       cost: values.cost,
       adultCost: values.adultCost,
       childCost: values.childCost,
@@ -211,7 +235,7 @@ const AddTransfer = () => {
                       />
                     </div>
                   </div>
-                  <div className="col-lg-6 mb-2">
+                  {/* <div className="col-lg-6 mb-2">
                     <div className="form-group mb-3">
                       <InputField
                         label="Vehicle Number"
@@ -223,7 +247,7 @@ const AddTransfer = () => {
                         required
                       />
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="col-lg-6 mb-2">
                     <ReactSelect
@@ -239,6 +263,18 @@ const AddTransfer = () => {
                     />
                   </div>
                   <div className="col-lg-6 mb-2">
+                    <ReactSelect
+                      label="Sub Destination"
+                      options={subDestinationData?.data?.data}
+                      optionLabel="name"
+                      optionValue="id"
+                      value={formik.values?.subDestination}
+                      onChange={(selected) =>
+                        formik.setFieldValue("subDestination", selected)
+                      }
+                    />
+                  </div>
+                  <div className="col-lg-6 mb-2">
                     <div className="form-group mb-3">
                       <InputField
                         label="Pickup Point"
@@ -250,20 +286,20 @@ const AddTransfer = () => {
                       />
                     </div>
                   </div>
-                  {/* <div className="col-lg-6 mb-2">
-          <SelectField
-            label={'Sub Destination'}
-            name={'subDestination'}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            values={formik.values}
-            options={subDestinationData?.data?.data}
-            optionValue="id"
-            optionLabel="name"
-          />
-        </div> */}
-
                   <div className="col-lg-6 mb-2">
+                    <div className="form-group mb-3">
+                      <InputField
+                        label="Drop Point"
+                        name="dropPoint"
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                        values={formik.values}
+                        formik={formik}
+                      />
+                    </div>
+                  </div>
+
+                  {/* <div className="col-lg-6 mb-2">
                     <div className="form-group mb-3">
                       <InputField
                         label="Phone Number"
@@ -275,7 +311,7 @@ const AddTransfer = () => {
                         required
                       />
                     </div>
-                  </div>
+                  </div> */}
                   <div className="col-lg-6 mb-2">
                     <InputField
                       isTextarea
@@ -335,7 +371,7 @@ const AddTransfer = () => {
                   <div className="col-lg-6 mb-2">
                     <ReactSelect
                       isSearchable={false}
-                      label="Type"
+                      label="Transfer Type"
                       options={typeOptions}
                       optionLabel="label"
                       optionValue="value"
@@ -347,20 +383,35 @@ const AddTransfer = () => {
                   </div>
 
                   {formik.values.type.value === "Private" ? (
-                    <div className="col-lg-6 mb-2">
-                      <div className="form-group mb-3">
-                        <InputField
-                          type="number"
-                          label="Cost"
-                          name="cost"
-                          onChange={formik.handleChange}
-                          onBlur={formik.handleBlur}
-                          values={formik.values}
-                          formik={formik}
-                          required
+                    <>
+                      <div className="col-lg-6 mb-2">
+                        <ReactSelect
+                          isSearchable={false}
+                          label="Vehicle Type"
+                          options={vehicleTypeOptions}
+                          optionLabel="label"
+                          optionValue="value"
+                          value={formik.values?.vehicleType}
+                          onChange={(selected) =>
+                            formik.setFieldValue("vehicleType", selected)
+                          }
                         />
                       </div>
-                    </div>
+                      <div className="col-lg-6 mb-2">
+                        <div className="form-group mb-3">
+                          <InputField
+                            type="number"
+                            label="Cost"
+                            name="cost"
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            values={formik.values}
+                            formik={formik}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <>
                       <div className="col-lg-6 mb-2">
@@ -423,6 +474,7 @@ const AddTransfer = () => {
                           <th>From Date</th>
                           <th>To Date</th>
                           <th>Type</th>
+                          <th>Vehicle Type</th>
                           <th>Cost</th>
                           <th>Adult Cost</th>
                           <th>Child Cost</th>
@@ -438,6 +490,7 @@ const AddTransfer = () => {
                                 <td>{data.fromDate}</td>
                                 <td>{data.toDate}</td>
                                 <td>{data.type.label}</td>
+                                <td>{data.vehicleType ? data.vehicleType.label : '-'}</td>
                                 <td>{data.cost}</td>
                                 <td>{data.adultCost}</td>
                                 <td>{data.childCost}</td>
@@ -462,7 +515,7 @@ const AddTransfer = () => {
                           })
                         ) : (
                           <tr id="empty-table-data">
-                            <td colSpan={8} style={{ textAlign: "center" }}>
+                            <td colSpan={9} style={{ textAlign: "center" }}>
                               Empty !
                             </td>
                           </tr>
