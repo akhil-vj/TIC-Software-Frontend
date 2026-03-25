@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import SelectField from "../../common/SelectField";
 import Img1 from "../../../../images/course/hotel-1.jpg";
@@ -79,13 +79,26 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   //   // {id:2,name:'GST on Per'},
   // ]
   const currencyData = useAsync(URLS.CURRENCY_URL);
+  const baseCurrencyData = currencyData?.data?.data?.find(c => c.id === values.baseCurrency);
+  const baseCode = baseCurrencyData ? baseCurrencyData.from_currency : (values.baseCurrency || 'INR');
+
   const currencyOptions = currencyData?.data?.data
-    ?.filter(c => c.from_currency === (values.baseCurrency || 'INR'))
+    ?.filter(c => c.from_currency === baseCode)
     ?.map(c => ({
       ...c,
       label: c.to_currency || c.code,
       value: c.id
     })) || [];
+
+  // Update initial priceIn label if it's a UUID
+  useEffect(() => {
+    if (values.priceIn?.label && values.priceIn.label.length > 20) {
+      const matchedOption = currencyOptions.find(opt => opt.value === values.priceIn.value);
+      if (matchedOption) {
+        setFieldValue('priceIn', matchedOption);
+      }
+    }
+  }, [currencyOptions.length, values.priceIn?.value]);
 
   const taxTypeOption = [
     { id: "gst", name: "GST" },
@@ -181,7 +194,20 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       formData.append('tcs_percentage', checkFormValue(taxSettings.tcs_percentage, 'number'))
       // Always append discount_amount (even if 0)
       formData.append('discount_amount', checkFormValue(values.discount_amount || values.discount || 0, 'number'))
-      let entryIndex = 0
+
+      // Calculate totals for primary option (Option 1)
+      const primaryOption = hotelOption[0];
+      const totalAmount = (totals.totalAmount || 0) + (totals.totalMarkup || 0) + (primaryOption.amount || 0) + (primaryOption.markup || 0);
+      const grandTotal = calculateTotal(primaryOption.amount, primaryOption.markup);
+      const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
+      const convertedTotal = getRoundOfValue(grandTotal / rate);
+
+      formData.append('total_amount', totalAmount);
+      formData.append('grand_total', grandTotal);
+      formData.append('converted_total', convertedTotal);
+      formData.append('exchange_rate', rate);
+
+      let entryIndex = 0;
       values.planArr?.forEach(({ schedule }) => {
         schedule.forEach((data) => {
           if (!data.entryId) {
@@ -627,7 +653,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               <div className="d-flex flex-column align-items-end mb-3">
                 {hotelOption?.map((item, ind) => {
                   const total = calculateTotal(item.amount, item.markup);
-                  const fromCurrency = values.baseCurrency || 'INR';
+                  const fromCurrency = baseCode || 'INR';
                   const toCurrency = values.priceIn.to_currency || values.priceIn.code || values.priceIn.value;
                   const rate = parseFloat(values.priceIn.exchange_rate) || 1;
                   const convertedTotal = getRoundOfValue(total / rate);
