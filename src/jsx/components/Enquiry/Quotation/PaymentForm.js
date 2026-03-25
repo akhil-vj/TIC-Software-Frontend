@@ -78,10 +78,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   //   {id:1,name:'GST on Total'},
   //   // {id:2,name:'GST on Per'},
   // ]
-  const currencyOption = [
-    { value: "INR", label: "INR" },
-    { value: "USD", label: "USD" },
-  ];
+  const currencyData = useAsync(URLS.CURRENCY_URL);
+  const currencyOptions = currencyData?.data?.data?.map(c => ({
+    ...c,
+    label: `${c.name} (${c.code})`,
+    value: c.code
+  })) || [];
+
   const taxTypeOption = [
     { id: "gst", name: "GST" },
   ];
@@ -126,8 +129,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           schedule: item.schedule.map((scheduleItem, ind) => {
             const person = scheduleItem.insertType === 'activity' ? scheduleItem.person : values.adult + values.child;
             const currentBaseAmount = scheduleItem.baseAmount !== undefined ? scheduleItem.baseAmount : scheduleItem.amount;
-            const result = { 
-              ...scheduleItem, 
+            const result = {
+              ...scheduleItem,
               amount: type === 'TOTAL' ? currentBaseAmount : currentBaseAmount / person,
               baseAmount: currentBaseAmount
             };
@@ -607,7 +610,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             <div className="d-flex justify-content-end align-items-center mb-2">
               <h6 className="me-3">Price In:</h6>
               <ReactSelect
-                options={currencyOption}
+                options={currencyOptions}
                 value={values.priceIn}
                 onChange={(selected) => setFieldValue("priceIn", selected)}
                 optionValue="value"
@@ -617,6 +620,28 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 isDisabled={readOnly}
               />
             </div>
+            {/* Converted Total Section */}
+            {values.priceIn && values.priceIn.exchange_rate && (
+              <div className="d-flex flex-column align-items-end mb-3">
+                {hotelOption?.map((item, ind) => {
+                  const total = calculateTotal(item.amount, item.markup);
+                  const rate = parseFloat(values.priceIn.exchange_rate) || 1;
+                  const convertedTotal = getRoundOfValue(total / rate);
+                  if (item.amount === 0) return null;
+                  return (
+                    <div key={ind} className="bg-light p-2 rounded mb-1 text-end" style={{ minWidth: '200px' }}>
+                      <span className="text-muted small">{item.name} Converted:</span>
+                      <h6 className="mb-0 text-primary">
+                        {values.priceIn.symbol} {convertedTotal}
+                      </h6>
+                      <span className="text-muted x-small" style={{ fontSize: '10px' }}>
+                        (Rate: 1 {values.priceIn.code} = {rate} Units)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="d-flex flex-column justify-content-center align-items-end mb-2">
               <input
                 className="form-control ms-3"

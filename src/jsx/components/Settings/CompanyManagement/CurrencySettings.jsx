@@ -17,7 +17,7 @@ const currencyOptions = [
     { label: "US Dollar (USD)", value: "US Dollar", code: "USD", symbol: "$" },
     { label: "Euro (EUR)", value: "Euro", code: "EUR", symbol: "€" },
     { label: "British Pound (GBP)", value: "British Pound", code: "GBP", symbol: "£" },
-    { label: "India (IND)", value: "India", code: "IND", symbol: "₹" },
+    { label: "Indian Ruppee (INR)", value: "Indian Ruppee", code: "INR", symbol: "₹" },
     { label: "Malaysian Ringgit (MYR)", value: "Malaysian Ringgit", code: "MYR", symbol: "RM" },
     { label: "Thai Baht (THB)", value: "Thai Baht", code: "THB", symbol: "฿" },
     { label: "Singapore Dollar (SGD)", value: "Singapore Dollar", code: "SGD", symbol: "S$" },
