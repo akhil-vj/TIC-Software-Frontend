@@ -43,6 +43,7 @@ function SetupModal() {
     priceOption:{value:'PER',label:'Price Per Traveller'},
     gstOption:{value:1,label:'GST on Total'},
     priceIn:{value:'INR',label:'INR'},
+    baseCurrency: 'INR',
     selectedSubDestinations:[],
     discount: 0,
     discount_amount: 0,
@@ -76,6 +77,7 @@ function SetupModal() {
       setFieldValue('perPersonAmount',data.per_person_amounts)
       const priceInObj = {label:data.currency,value:data.currency}
       setFieldValue('priceIn',priceInObj)
+      setFieldValue('baseCurrency', data.currency)
       const destinationObj = {label:data.destination.name,value:data.destination.id}
       setFieldValue('destination',checkFormValue(destinationObj))
       const getSubDestinationOption = (entry) => {

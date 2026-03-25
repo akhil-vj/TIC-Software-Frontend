@@ -79,11 +79,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   //   // {id:2,name:'GST on Per'},
   // ]
   const currencyData = useAsync(URLS.CURRENCY_URL);
-  const currencyOptions = currencyData?.data?.data?.map(c => ({
-    ...c,
-    label: `${c.name} (${c.code})`,
-    value: c.code
-  })) || [];
+  const currencyOptions = currencyData?.data?.data
+    ?.filter(c => c.from_currency === (values.baseCurrency || 'INR'))
+    ?.map(c => ({
+      ...c,
+      label: c.to_currency || c.code,
+      value: c.id
+    })) || [];
 
   const taxTypeOption = [
     { id: "gst", name: "GST" },
@@ -625,6 +627,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               <div className="d-flex flex-column align-items-end mb-3">
                 {hotelOption?.map((item, ind) => {
                   const total = calculateTotal(item.amount, item.markup);
+                  const fromCurrency = values.baseCurrency || 'INR';
+                  const toCurrency = values.priceIn.to_currency || values.priceIn.code || values.priceIn.value;
                   const rate = parseFloat(values.priceIn.exchange_rate) || 1;
                   const convertedTotal = getRoundOfValue(total / rate);
                   if (item.amount === 0) return null;
@@ -635,7 +639,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         {values.priceIn.symbol} {convertedTotal}
                       </h6>
                       <span className="text-muted x-small" style={{ fontSize: '10px' }}>
-                        (Rate: 1 {values.priceIn.code} = {rate} Units)
+                        (Rate: 1 {toCurrency} = {rate} {fromCurrency})
                       </span>
                     </div>
                   );
