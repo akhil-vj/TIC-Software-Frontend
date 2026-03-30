@@ -1,9 +1,9 @@
-import React, { useState, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useState, useEffect, useRef } from "react";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import { Dropdown } from "react-bootstrap";
-import { setTaxValues, resetTaxValues, addAdditionalTax, updateAdditionalTax, deleteAdditionalTax } from "../../../../store/slices/taxSlice";
+import { axiosGet, axiosPost, axiosPut, axiosDelete } from "../../../../services/AxiosInstance";
+import { URLS } from "../../../../constants";
 import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
 
 const validationSchema = Yup.object().shape({
@@ -23,21 +23,56 @@ const validationSchema = Yup.object().shape({
 });
 
 const Tax = () => {
-  const dispatch = useDispatch();
-  const taxValues = useSelector((state) => state.tax);
   const [isEditing, setIsEditing] = useState(false);
   const [taxMode, setTaxMode] = useState("single");
   const [showAddTaxModal, setShowAddTaxModal] = useState(false);
   const [newTaxName, setNewTaxName] = useState("");
   const [newTaxPercentage, setNewTaxPercentage] = useState("");
-  const [editingTaxId, setEditingTaxId] = useState(null);
+  const [editingTax, setEditingTax] = useState(null); // holds { id, name, percentage }
+  const [loading, setLoading] = useState(true);
+
+  // Data from API
+  const [taxSettings, setTaxSettings] = useState(null); // { id, cgst_percentage, ... }
+  const [additionalTaxes, setAdditionalTaxes] = useState([]);
+
   const formikRef = useRef(null);
 
+  // -------------------------------------------------------------------------
+  // Fetch all tax data from backend on mount
+  // -------------------------------------------------------------------------
+  const fetchTaxData = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosGet(URLS.TAX_SETTINGS_URL);
+      if (res?.success) {
+        setTaxSettings(res.data?.tax_settings ?? null);
+        setAdditionalTaxes(res.data?.additional_taxes ?? []);
+      }
+    } catch (error) {
+      notifyError("Failed to load tax settings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTaxData();
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Derived values
+  // -------------------------------------------------------------------------
+  const isSingleTaxMode =
+    !taxSettings ||
+    (taxSettings.sgst_percentage === 0 &&
+      taxSettings.igst_percentage === 0 &&
+      taxSettings.tcs_percentage === 0);
+
   const initialValues = {
-    cgst_percentage: taxValues.cgst_percentage || 0,
-    sgst_percentage: taxValues.sgst_percentage || 0,
-    igst_percentage: taxValues.igst_percentage || 0,
-    tcs_percentage: taxValues.tcs_percentage || 0,
+    cgst_percentage: taxSettings?.cgst_percentage ?? 0,
+    sgst_percentage: taxSettings?.sgst_percentage ?? 0,
+    igst_percentage: taxSettings?.igst_percentage ?? 0,
+    tcs_percentage: taxSettings?.tcs_percentage ?? 0,
   };
 
   // Conditional validation schema based on tax mode
@@ -52,43 +87,63 @@ const Tax = () => {
         igst_percentage: Yup.number(),
         tcs_percentage: Yup.number(),
       });
-    } else {
-      return validationSchema;
     }
+    return validationSchema;
   };
 
-  const handleSubmit = (values) => {
+  // -------------------------------------------------------------------------
+  // Save GST settings
+  // -------------------------------------------------------------------------
+  const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      // If in single mode, copy cgst value to all fields
-      if (taxMode === "single") {
-        dispatch(setTaxValues({
-          cgst_percentage: values.cgst_percentage,
-          sgst_percentage: 0,
-          igst_percentage: 0,
-          tcs_percentage: 0,
-        }));
+      const payload =
+        taxMode === "single"
+          ? {
+              cgst_percentage: values.cgst_percentage,
+              sgst_percentage: 0,
+              igst_percentage: 0,
+              tcs_percentage: 0,
+            }
+          : values;
+
+      const res = await axiosPost(URLS.TAX_SETTINGS_URL, payload);
+      if (res?.success) {
+        setTaxSettings(res.data);
+        notifyCreate("Tax settings updated successfully");
+        setIsEditing(false);
       } else {
-        dispatch(setTaxValues(values));
+        notifyError("Failed to update tax settings");
       }
-      notifyCreate("Tax settings updated successfully");
-      setIsEditing(false);
     } catch (error) {
       notifyError("Failed to update tax settings");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleReset = () => {
-    // Only reset GST values, keep additional taxes
-    dispatch(setTaxValues({
-      cgst_percentage: 0,
-      sgst_percentage: 0,
-      igst_percentage: 0,
-      tcs_percentage: 0,
-    }));
-    notifyCreate("GST values reset to default");
+  // Reset GST to zero via API
+  const handleReset = async () => {
+    try {
+      const payload = {
+        cgst_percentage: 0,
+        sgst_percentage: 0,
+        igst_percentage: 0,
+        tcs_percentage: 0,
+      };
+      const res = await axiosPost(URLS.TAX_SETTINGS_URL, payload);
+      if (res?.success) {
+        setTaxSettings(res.data);
+        notifyCreate("GST values reset to default");
+      }
+    } catch (error) {
+      notifyError("Failed to reset tax settings");
+    }
   };
 
-  const handleAddNewTax = () => {
+  // -------------------------------------------------------------------------
+  // Additional taxes CRUD
+  // -------------------------------------------------------------------------
+  const handleAddNewTax = async () => {
     if (!newTaxName.trim()) {
       notifyError("Tax name is required");
       return;
@@ -98,43 +153,72 @@ const Tax = () => {
       return;
     }
 
-    if (editingTaxId) {
-      dispatch(updateAdditionalTax({
-        id: editingTaxId,
-        name: newTaxName,
-        percentage: parseFloat(newTaxPercentage),
-      }));
-      notifyCreate("Tax updated successfully");
-    } else {
-      dispatch(addAdditionalTax({
-        name: newTaxName,
-        percentage: parseFloat(newTaxPercentage),
-      }));
-      notifyCreate("Tax added successfully");
+    try {
+      if (editingTax) {
+        // Update existing
+        const res = await axiosPut(`${URLS.ADDITIONAL_TAXES_URL}/${editingTax.id}`, {
+          name: newTaxName,
+          percentage: parseFloat(newTaxPercentage),
+        });
+        if (res?.success) {
+          setAdditionalTaxes((prev) =>
+            prev.map((t) => (t.id === editingTax.id ? res.data : t))
+          );
+          notifyCreate("Tax updated successfully");
+        }
+      } else {
+        // Create new
+        const res = await axiosPost(URLS.ADDITIONAL_TAXES_URL, {
+          name: newTaxName,
+          percentage: parseFloat(newTaxPercentage),
+        });
+        if (res?.success) {
+          setAdditionalTaxes((prev) => [res.data, ...prev]);
+          notifyCreate("Tax added successfully");
+        }
+      }
+    } catch (error) {
+      notifyError("Failed to save tax");
     }
 
     setNewTaxName("");
     setNewTaxPercentage("");
-    setEditingTaxId(null);
+    setEditingTax(null);
     setShowAddTaxModal(false);
   };
 
-  const handleDeleteTax = (id) => {
-    if (window.confirm("Are you sure you want to delete this tax?")) {
-      dispatch(deleteAdditionalTax({ id }));
-      notifyCreate("Tax deleted successfully");
+  const handleDeleteTax = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this tax?")) return;
+    try {
+      const res = await axiosDelete(`${URLS.ADDITIONAL_TAXES_URL}/${id}`);
+      if (res?.success) {
+        setAdditionalTaxes((prev) => prev.filter((t) => t.id !== id));
+        notifyCreate("Tax deleted successfully");
+      }
+    } catch (error) {
+      notifyError("Failed to delete tax");
     }
   };
 
   const handleEditTax = (tax) => {
-    setEditingTaxId(tax.id);
+    setEditingTax(tax);
     setNewTaxName(tax.name);
     setNewTaxPercentage(tax.percentage);
     setShowAddTaxModal(true);
   };
 
-  const isSingleTaxMode = taxValues.sgst_percentage === 0 && taxValues.igst_percentage === 0 && taxValues.tcs_percentage === 0;
-  const additionalTaxes = taxValues.additionalTaxes || [];
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
+  if (loading) {
+    return (
+      <div className="container-fluid d-flex justify-content-center align-items-center" style={{ minHeight: "200px" }}>
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container-fluid">
@@ -147,7 +231,12 @@ const Tax = () => {
             </div>
             <div>
               <button
-                onClick={() => setShowAddTaxModal(true)}
+                onClick={() => {
+                  setEditingTax(null);
+                  setNewTaxName("");
+                  setNewTaxPercentage("");
+                  setShowAddTaxModal(true);
+                }}
                 className="btn btn-primary"
               >
                 <i className="fa fa-plus me-2"></i> Add New Tax
@@ -210,13 +299,12 @@ const Tax = () => {
                   <small className="text-muted d-block mt-2">
                     {taxMode === "split"
                       ? "Configure individual GST taxes for different regions"
-                      : "Configure a single GST rate for all transactions"
-                    }
+                      : "Configure a single GST rate for all transactions"}
                   </small>
                 </div>
 
                 <Formik
-                  ref={formikRef}
+                  innerRef={formikRef}
                   initialValues={initialValues}
                   validationSchema={getValidationSchema()}
                   onSubmit={handleSubmit}
@@ -240,14 +328,8 @@ const Tax = () => {
                               <input
                                 type="number"
                                 name="cgst_percentage"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                className={`form-control ${
-                                  touched.cgst_percentage && errors.cgst_percentage
-                                    ? "is-invalid"
-                                    : ""
-                                }`}
+                                min="0" max="100" step="0.01"
+                                className={`form-control ${touched.cgst_percentage && errors.cgst_percentage ? "is-invalid" : ""}`}
                                 value={values.cgst_percentage}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
@@ -264,14 +346,8 @@ const Tax = () => {
                               <input
                                 type="number"
                                 name="sgst_percentage"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                className={`form-control ${
-                                  touched.sgst_percentage && errors.sgst_percentage
-                                    ? "is-invalid"
-                                    : ""
-                                }`}
+                                min="0" max="100" step="0.01"
+                                className={`form-control ${touched.sgst_percentage && errors.sgst_percentage ? "is-invalid" : ""}`}
                                 value={values.sgst_percentage}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
@@ -288,14 +364,8 @@ const Tax = () => {
                               <input
                                 type="number"
                                 name="igst_percentage"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                className={`form-control ${
-                                  touched.igst_percentage && errors.igst_percentage
-                                    ? "is-invalid"
-                                    : ""
-                                }`}
+                                min="0" max="100" step="0.01"
+                                className={`form-control ${touched.igst_percentage && errors.igst_percentage ? "is-invalid" : ""}`}
                                 value={values.igst_percentage}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
@@ -312,14 +382,8 @@ const Tax = () => {
                               <input
                                 type="number"
                                 name="tcs_percentage"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                className={`form-control ${
-                                  touched.tcs_percentage && errors.tcs_percentage
-                                    ? "is-invalid"
-                                    : ""
-                                }`}
+                                min="0" max="100" step="0.01"
+                                className={`form-control ${touched.tcs_percentage && errors.tcs_percentage ? "is-invalid" : ""}`}
                                 value={values.tcs_percentage}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
@@ -338,14 +402,8 @@ const Tax = () => {
                               <input
                                 type="number"
                                 name="cgst_percentage"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                className={`form-control ${
-                                  touched.cgst_percentage && errors.cgst_percentage
-                                    ? "is-invalid"
-                                    : ""
-                                }`}
+                                min="0" max="100" step="0.01"
+                                className={`form-control ${touched.cgst_percentage && errors.cgst_percentage ? "is-invalid" : ""}`}
                                 value={values.cgst_percentage}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
@@ -359,12 +417,9 @@ const Tax = () => {
                       )}
 
                       <div className="d-flex gap-2 mt-4">
-                        <button
-                          type="submit"
-                          className="btn btn-primary"
-                          disabled={isSubmitting}
-                        >
-                          <i className="fa fa-save me-2"></i> Save
+                        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                          <i className="fa fa-save me-2"></i>
+                          {isSubmitting ? "Saving..." : "Save"}
                         </button>
                         <button
                           type="button"
@@ -429,10 +484,17 @@ const Tax = () => {
                   </td>
                   <td>
                     {isSingleTaxMode ? (
-                      <strong className="text-success">{taxValues.cgst_percentage}%</strong>
+                      <strong className="text-success">
+                        {taxSettings?.cgst_percentage ?? 0}%
+                      </strong>
                     ) : (
                       <strong className="text-success">
-                        {(parseFloat(taxValues.cgst_percentage || 0) + parseFloat(taxValues.sgst_percentage || 0) + parseFloat(taxValues.igst_percentage || 0) + parseFloat(taxValues.tcs_percentage || 0)).toFixed(2)}%
+                        {(
+                          parseFloat(taxSettings?.cgst_percentage || 0) +
+                          parseFloat(taxSettings?.sgst_percentage || 0) +
+                          parseFloat(taxSettings?.igst_percentage || 0) +
+                          parseFloat(taxSettings?.tcs_percentage || 0)
+                        ).toFixed(2)}%
                       </strong>
                     )}
                   </td>
@@ -447,31 +509,14 @@ const Tax = () => {
                         as="div"
                         className="i-false btn-link btn sharp tp-btn btn-primary pill"
                       >
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M8.33319 9.99985C8.33319 10.9203 9.07938 11.6665 9.99986 11.6665C10.9203 11.6665 11.6665 10.9203 11.6665 9.99986C11.6665 9.07938 10.9203 8.33319 9.99986 8.33319C9.07938 8.33319 8.33319 9.07938 8.33319 9.99985Z"
-                            fill="#ffffff"
-                          />
-                          <path
-                            d="M8.33319 3.33329C8.33319 4.25376 9.07938 4.99995 9.99986 4.99995C10.9203 4.99995 11.6665 4.25376 11.6665 3.33329C11.6665 2.41282 10.9203 1.66663 9.99986 1.66663C9.07938 1.66663 8.33319 2.41282 8.33319 3.33329Z"
-                            fill="#ffffff"
-                          />
-                          <path
-                            d="M8.33319 16.6667C8.33319 17.5871 9.07938 18.3333 9.99986 18.3333C10.9203 18.3333 11.6665 17.5871 11.6665 16.6667C11.6665 15.7462 10.9203 15 9.99986 15C9.07938 15 8.33319 15.7462 8.33319 16.6667Z"
-                            fill="#ffffff"
-                          />
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M8.33319 9.99985C8.33319 10.9203 9.07938 11.6665 9.99986 11.6665C10.9203 11.6665 11.6665 10.9203 11.6665 9.99986C11.6665 9.07938 10.9203 8.33319 9.99986 8.33319C9.07938 8.33319 8.33319 9.07938 8.33319 9.99985Z" fill="#ffffff" />
+                          <path d="M8.33319 3.33329C8.33319 4.25376 9.07938 4.99995 9.99986 4.99995C10.9203 4.99995 11.6665 4.25376 11.6665 3.33329C11.6665 2.41282 10.9203 1.66663 9.99986 1.66663C9.07938 1.66663 8.33319 2.41282 8.33319 3.33329Z" fill="#ffffff" />
+                          <path d="M8.33319 16.6667C8.33319 17.5871 9.07938 18.3333 9.99986 18.3333C10.9203 18.3333 11.6665 17.5871 11.6665 16.6667C11.6665 15.7462 10.9203 15 9.99986 15C9.07938 15 8.33319 15.7462 8.33319 16.6667Z" fill="#ffffff" />
                         </svg>
                       </Dropdown.Toggle>
                       <Dropdown.Menu className="dropdown-menu-end">
-                        <Dropdown.Item
-                          onClick={() => setIsEditing(true)}
-                        >
+                        <Dropdown.Item onClick={() => setIsEditing(true)}>
                           <i className="fa fa-edit me-2"></i> Edit
                         </Dropdown.Item>
                       </Dropdown.Menu>
@@ -495,9 +540,7 @@ const Tax = () => {
                       <strong className="text-success">{tax.percentage}%</strong>
                     </td>
                     <td>
-                      <span className="badge bg-warning text-dark">
-                        Single
-                      </span>
+                      <span className="badge bg-warning text-dark">Single</span>
                     </td>
                     <td>
                       <Dropdown>
@@ -505,31 +548,14 @@ const Tax = () => {
                           as="div"
                           className="i-false btn-link btn sharp tp-btn btn-primary pill"
                         >
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 20 20"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M8.33319 9.99985C8.33319 10.9203 9.07938 11.6665 9.99986 11.6665C10.9203 11.6665 11.6665 10.9203 11.6665 9.99986C11.6665 9.07938 10.9203 8.33319 9.99986 8.33319C9.07938 8.33319 8.33319 9.07938 8.33319 9.99985Z"
-                              fill="#ffffff"
-                            />
-                            <path
-                              d="M8.33319 3.33329C8.33319 4.25376 9.07938 4.99995 9.99986 4.99995C10.9203 4.99995 11.6665 4.25376 11.6665 3.33329C11.6665 2.41282 10.9203 1.66663 9.99986 1.66663C9.07938 1.66663 8.33319 2.41282 8.33319 3.33329Z"
-                              fill="#ffffff"
-                            />
-                            <path
-                              d="M8.33319 16.6667C8.33319 17.5871 9.07938 18.3333 9.99986 18.3333C10.9203 18.3333 11.6665 17.5871 11.6665 16.6667C11.6665 15.7462 10.9203 15 9.99986 15C9.07938 15 8.33319 15.7462 8.33319 16.6667Z"
-                              fill="#ffffff"
-                            />
+                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8.33319 9.99985C8.33319 10.9203 9.07938 11.6665 9.99986 11.6665C10.9203 11.6665 11.6665 10.9203 11.6665 9.99986C11.6665 9.07938 10.9203 8.33319 9.99986 8.33319C9.07938 8.33319 8.33319 9.07938 8.33319 9.99985Z" fill="#ffffff" />
+                            <path d="M8.33319 3.33329C8.33319 4.25376 9.07938 4.99995 9.99986 4.99995C10.9203 4.99995 11.6665 4.25376 11.6665 3.33329C11.6665 2.41282 10.9203 1.66663 9.99986 1.66663C9.07938 1.66663 8.33319 2.41282 8.33319 3.33329Z" fill="#ffffff" />
+                            <path d="M8.33319 16.6667C8.33319 17.5871 9.07938 18.3333 9.99986 18.3333C10.9203 18.3333 11.6665 17.5871 11.6665 16.6667C11.6665 15.7462 10.9203 15 9.99986 15C9.07938 15 8.33319 15.7462 8.33319 16.6667Z" fill="#ffffff" />
                           </svg>
                         </Dropdown.Toggle>
                         <Dropdown.Menu className="dropdown-menu-end">
-                          <Dropdown.Item
-                            onClick={() => handleEditTax(tax)}
-                          >
+                          <Dropdown.Item onClick={() => handleEditTax(tax)}>
                             <i className="fa fa-edit me-2"></i> Edit
                           </Dropdown.Item>
                           <Dropdown.Item
@@ -557,21 +583,21 @@ const Tax = () => {
         </div>
       </div>
 
-      {/* Add/Edit Tax Modal */}
+      {/* Add/Edit Additional Tax Modal */}
       {showAddTaxModal && (
         <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header border-bottom">
                 <h5 className="modal-title">
-                  {editingTaxId ? "Edit Tax" : "Add New Tax"}
+                  {editingTax ? "Edit Tax" : "Add New Tax"}
                 </h5>
                 <button
                   type="button"
                   className="btn-close"
                   onClick={() => {
                     setShowAddTaxModal(false);
-                    setEditingTaxId(null);
+                    setEditingTax(null);
                     setNewTaxName("");
                     setNewTaxPercentage("");
                   }}
@@ -608,7 +634,7 @@ const Tax = () => {
                   className="btn btn-secondary"
                   onClick={() => {
                     setShowAddTaxModal(false);
-                    setEditingTaxId(null);
+                    setEditingTax(null);
                     setNewTaxName("");
                     setNewTaxPercentage("");
                   }}
@@ -620,7 +646,7 @@ const Tax = () => {
                   className="btn btn-primary"
                   onClick={handleAddNewTax}
                 >
-                  {editingTaxId ? "Update" : "Add"} Tax
+                  {editingTax ? "Update" : "Add"} Tax
                 </button>
               </div>
             </div>

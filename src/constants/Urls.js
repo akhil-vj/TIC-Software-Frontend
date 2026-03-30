@@ -38,4 +38,6 @@ export const URLS = {
   PRINT_ITINERARY_URL: "/api/itinerary/print/",
   ITINERARY_UPDATE_URL: "/api/itinerary-update/",
   CUSTOMER_URL: "/api/customers-search-by-mobile",
+  TAX_SETTINGS_URL: "/api/tax-settings",
+  ADDITIONAL_TAXES_URL: "/api/additional-taxes",
 };
