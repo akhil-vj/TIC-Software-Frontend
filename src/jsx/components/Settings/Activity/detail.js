@@ -29,9 +29,9 @@ function DetailActivity() {
             detailData?.contact_email}</h6>
           </div>
           <div className="mb-3">
-            <h4 className="text-primary">Phone Number:</h4>
+            <h4 className="text-primary">Activity Type:</h4>
             <h6>{
-            detailData?.contact_number}</h6>
+            detailData?.activity_type?.name}</h6>
           </div>
           <div className="mb-3">
             <h4 className="text-primary">Destination:</h4>

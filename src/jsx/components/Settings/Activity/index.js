@@ -49,7 +49,7 @@ const Activity = () => {
   const tableArray = [
     { label: "Sl no", value: "index", className: "text-center" },
     { label: "Name", value: "activity_name" },
-    { label: "Number", value: "contact_number" },
+    { label: "Activity Type", value: ["activity_type", "name"] },
     { label: "Email", value: "contact_email" },
     { label: "Destination", value: ["destination", "name"], className: 'text-center' },
     { label: "Status", value: "is_active" },

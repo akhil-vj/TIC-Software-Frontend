@@ -169,12 +169,10 @@ const Tax = () => {
           <div className="table-responsive full-data dataTables_wrapper">
             <table className="table display mb-4 dataTablesCard text-black dataTable no-footer">
               <thead>
-                <tr className="bg-light">
-                  <th style={{ width: "80px" }} className="text-dark fw-bold text-uppercase py-3 ps-4">No.</th>
-                  <th className="text-dark fw-bold text-uppercase py-3">Tax Name</th>
-                  <th style={{ width: "200px" }} className="text-dark fw-bold text-uppercase py-3">Percentage</th>
-                  <th style={{ width: "120px" }} className="text-dark fw-bold text-uppercase py-3">Action</th>
-                </tr>
+                  <th style={{ width: "80px" }}>No.</th>
+                  <th >Tax Name</th>
+                  <th style={{ width: "200px" }}>Percentage</th>
+                  <th style={{ width: "120px" }}>Action</th>
               </thead>
               <tbody>
                 {/* Additional Taxes */}

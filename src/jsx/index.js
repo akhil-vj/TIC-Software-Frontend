@@ -79,6 +79,7 @@ import Language from "./components/Settings/Language.jsx";
 import Activity from "./components/Settings/Activity";
 import AddActivity from "./components/Settings/Activity/addActivity";
 import DetailActivity from "./components/Settings/Activity/detail";
+import ActivityType from "./components/Settings/ActivityType";
 import DetailTransfer from "./components/Settings/Transfer/detail";
 import UserDetail from "./components/Settings/UserManagement/UserDetail";
 import RoleDetail from "./components/Settings/UserManagement/RoleDetail";
@@ -148,6 +149,7 @@ const Markup = () => {
     { url: "activity/add", component: <AddActivity /> },
     { url: "activity/add/:id", component: <AddActivity /> },
     { url: "activity/:id", component: <DetailActivity /> },
+    { url: "activity-type", component: <ActivityType /> },
     { url: "lead-source", component: <LeadSource /> },
     { url: "priority", component: <Priority /> },
     { url: "requirement", component: <Requirement /> },

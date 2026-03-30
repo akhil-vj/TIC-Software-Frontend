@@ -53,11 +53,6 @@ const AddActivity = () => {
     name: Yup.string()
       .min(3, "Your name must consist of at least 3 characters ")
       .required("Please enter a name"),
-    phoneNumber: Yup.string()
-      .transform((value) => (value === "" || value === null ? undefined : value))
-      .min(5, "Your phone number must be at least 5 characters long")
-      .max(15, "Your phone number must be at limit 15 characters long")
-      .notRequired(),
     email: Yup.string()
       .transform((value) => (value === "" || value === null ? undefined : value))
       .email( "not a valid email")
@@ -71,6 +66,7 @@ const AddActivity = () => {
       // const values = formik.values
       formData.append('activity_name',values.name)
       formData.append('contact_number',checkFormValue(values.phoneNumber))
+      formData.append('activity_type_id',checkFormValue(values.activityType?.value))
       formData.append('contact_email',checkFormValue(values.email))
       formData.append('destination_id',checkFormValue(values.destination?.value))
       formData.append('sub_destination_id',checkFormValue(values.subDestination?.value))
@@ -116,6 +112,7 @@ const AddActivity = () => {
   const destinationData = useAsync(URLS.DESTINATION_URL);
   const subDestinationData = useAsync(subDestinationUrl,destinationId);
   // const subDestinationData = useAsync(subDestinationUrl, destinationId)
+  const activityTypeData = useAsync(URLS.ACTIVITY_TYPE_URL);
   const categoryData = useAsync(URLS.PROPERTY_CATEGORY_URL);
   const propertyTypeData = useAsync(URLS.PROPERTY_TYPE_URL);
 
@@ -129,6 +126,9 @@ const AddActivity = () => {
       formik.setFieldValue('email',data.contact_email )
       formik.setFieldValue('destination',{value:data.destination?.id,label:data.destination?.name})
       formik.setFieldValue('subDestination',{value:data.sub_destination?.id,label:data.sub_destination?.name})
+      if(data.activity_type){
+        formik.setFieldValue('activityType',{value:data.activity_type?.id,label:data.activity_type?.name})
+      }
       formik.setFieldValue('description',data.description)
       formik.setFieldValue('status',{value:data.is_active,label:data.is_active===1?'Active':'Inactive'})
       const costArr = data.estimations?.map((item,ind)=>{
@@ -253,16 +253,16 @@ const AddActivity = () => {
                   </div>
 
                   <div className="col-lg-6 mb-2">
-                    <div className="form-group mb-3">
-                      <InputField
-                        label="Phone Number"
-                        name="phoneNumber"
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        values={formik.values}
-                        formik={formik}
-                      />
-                    </div>
+                    <ReactSelect
+                      label="Activity Type"
+                      options={activityTypeData?.data?.data}
+                      optionLabel="name"
+                      optionValue="id"
+                      value={formik.values?.activityType}
+                      onChange={(selected) =>
+                        formik.setFieldValue("activityType", selected)
+                      }
+                    />
                   </div>
                   <div className="col-lg-6 mb-2">
                     <div className="form-group mb-3">

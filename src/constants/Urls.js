@@ -29,6 +29,7 @@ export const URLS = {
   MAIL_SETTINGS_URL: "/api/mail-settings",
   CHANGE_PASSWORD_URL: "/api/user/change-password",
   ACTIVITY_URL: "/api/activities",
+  ACTIVITY_TYPE_URL: "/api/activity-types",
   ACTIVITY_UPDATE_URL: "/api/activity-status-update",
   TRANSFER_URL: "/api/transfers",
   TRANSFER_UPDATE_URL: "/api/transfer-update",
