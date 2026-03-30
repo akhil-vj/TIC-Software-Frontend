@@ -8,6 +8,7 @@ import PaymentForm from "./PaymentForm";
 import { checkFormValue } from "../../../utilis/check";
 import { filePost, filePut } from "../../../../services/AxiosInstance";
 import { URLS } from "../../../../constants";
+import { getDefaultCurrency } from "../../../../constants/destinationCurrency";
 import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatDate, formatTimeToHis, parseDate, parseTime } from "../../../utilis/date";
@@ -301,6 +302,10 @@ function SetupModal() {
       setFieldValue('child',checkFormValue(equiryIdData.child_count))
       const destinationObj = {label:equiryIdData.destination.name,value:equiryIdData.destination.id}
       setFieldValue('destination',checkFormValue(destinationObj))
+      // Auto-set currency based on destination
+      const currencyCode = getDefaultCurrency(equiryIdData.destination?.name);
+      setFieldValue('baseCurrency', currencyCode);
+      setFieldValue('priceIn', { value: currencyCode, label: currencyCode });
     }
   },[equiryIdData?.id,isEdit])
   useEffect(() => {

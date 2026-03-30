@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import DatePicker from "react-datepicker";
 import SelectField from "../../common/SelectField";
 import Img1 from "../../../../images/course/hotel-1.jpg";
@@ -17,6 +17,24 @@ import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
 import { ModeBtn } from "../../common/ModeBtn";
 import { useSelector } from "react-redux";
 
+// ─── Person type definitions ─────────────────────────────────────────────────
+const PERSON_TYPES = [
+  { key: "single", label: "Person (Single Sharing)" },
+  { key: "double", label: "Person (Double Sharing)" },
+  { key: "triple", label: "Person (Triple Sharing)" },
+  { key: "extra",  label: "Person (With Extra Bed)" },
+  { key: "childW", label: "Child with Extra Bed" },
+  { key: "childN", label: "Child without Extra Bed" },
+];
+
+const CURRENCY_SYMBOLS = {
+  INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ",
+  THB: "฿", MYR: "RM", SGD: "S$", AUD: "A$", CAD: "C$",
+  JPY: "¥", CNY: "¥", SAR: "﷼", QAR: "﷼", KWD: "د.ك",
+  OMR: "ر.ع.", BHD: "BD", LKR: "₨", NPR: "₨", IDR: "Rp",
+};
+const getSymbol = (code) => CURRENCY_SYMBOLS[code] || code || "";
+
 const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   const {
     values,
@@ -27,680 +45,840 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     isSubmitting,
     setFieldValue,
   } = formik;
+
   const navigate = useNavigate();
-  const [showMarkup, setShowMarkup] = useState(false)
-  const itineraryId = values.itineraryId
-  const isEdit = !!itineraryId
+  const [showMarkup, setShowMarkup] = useState(false);
+  const itineraryId = values.itineraryId;
+  const isEdit = !!itineraryId;
   const [readOnly, setReadOnly] = useState(isEdit);
 
-  // Get tax values from Redux store
   const taxSettings = useSelector((state) => state.tax);
 
-  const dayList = [1, 2, 3, 4];
-  const scheduleData = [1, 2];
-  const destinationOptions = ["Destination 1", "Destination 2"];
-  const categoryOptions = ["Hotel", "Activity", "Transfer"];
-  const dataList = [1, 2, 3, 4];
-
-  // // Step 1: Parse the date strings into Date objects
-  // const startDate = new Date(values.formStartDate);
-  // const endDate = new Date(values.formEndDate);
-
-  // // Step 2 and Step 3: Generate all dates between the two dates and store in an array
-  // const datesArray = [];
-  // let currentDate = startDate;
-  // while (currentDate <= endDate) {
-  //   datesArray.push(new Date(currentDate));
-  //   currentDate.setDate(currentDate.getDate() + 1);
-  // }
-
-  const handleAddCategory = () => {
-    if (values.categoryOptions === "Hotel") {
-      navigate("/add-hotel");
-    }
-  };
-  const formSubmit = () => {
-    // setShowModal(false)
-    // setFormComponent('setupForm')
-    notify({ message: "Itinary Created Successfully" });
-    navigate("/enquiry/quotation");
-  };
-  const tableBlog = [1, 2];
-  const handleBack = () => {
-    setFormComponent("packageForm")
-  }
-  // console.log('payment',values)
   const priceOption = [
-    { id: 'TOTAL', name: 'Total Price' },
-    { id: 'PER', name: 'Price Per Traveller' },
-  ]
-  // const gstOption = [
-  //   {id:1,name:'GST on Total'},
-  //   // {id:2,name:'GST on Per'},
-  // ]
+    { id: "PER",   name: "Price Per Traveller" },
+    { id: "TOTAL", name: "Total Price" },
+  ];
+  // Fetch additional taxes from the Tax Settings page
+  const taxData = useAsync(URLS.ADDITIONAL_TAXES_URL);
+  const taxTypeOption = (taxData?.data?.data || []).map(t => ({ id: t.id, name: t.name, percentage: t.percentage }));
+
+  // Auto-select first tax if no taxType is set and options are available
+  useEffect(() => {
+    if (taxTypeOption.length > 0 && !values.taxType) {
+      setFieldValue("taxType", taxTypeOption[0]);
+    }
+  }, [taxTypeOption.length]);
+
   const currencyData = useAsync(URLS.CURRENCY_URL);
-  const baseCurrencyData = currencyData?.data?.data?.find(c => c.id === values.baseCurrency);
-  const baseCode = baseCurrencyData ? baseCurrencyData.from_currency : (values.baseCurrency || 'INR');
+  const baseCurrencyData = currencyData?.data?.data?.find(
+    (c) => c.id === values.baseCurrency
+  );
+  const baseCode = baseCurrencyData
+    ? baseCurrencyData.from_currency
+    : values.baseCurrency || "INR";
 
-  const currencyOptions = currencyData?.data?.data
-    ?.filter(c => c.from_currency === baseCode)
-    ?.map(c => ({
-      ...c,
-      label: c.to_currency || c.code,
-      value: c.id
-    })) || [];
+  const currencyOptions = [
+    {
+      label: `${baseCode} (Base)`,
+      value: "base",
+      to_currency: baseCode,
+      exchange_rate: 0,
+      symbol: getSymbol(baseCode),
+    },
+    ...(currencyData?.data?.data
+      ?.filter((c) => c.from_currency === baseCode)
+      ?.map((c) => ({ ...c, label: c.to_currency || c.code, value: c.id })) || []),
+  ];
 
-  // Update initial priceIn label if it's a UUID
   useEffect(() => {
     if (values.priceIn?.label && values.priceIn.label.length > 20) {
-      const matchedOption = currencyOptions.find(opt => opt.value === values.priceIn.value);
-      if (matchedOption) {
-        setFieldValue('priceIn', matchedOption);
-      }
+      const matchedOption = currencyOptions.find(
+        (opt) => opt.value === values.priceIn.value
+      );
+      if (matchedOption) setFieldValue("priceIn", matchedOption);
     }
   }, [currencyOptions.length, values.priceIn?.value]);
 
-  const taxTypeOption = [
-    { id: "gst", name: "GST" },
-  ];
-  const handleMarkup = () => {
-    setFieldValue('baseMarkup', checkFormValue(values.baseMarkupInput, 'number'))
-    setFieldValue('extraMarkup', checkFormValue(values.extraMarkupInput, 'number'))
-    setShowMarkup(false)
-  }
+  // ─── Fix: convert amounts on first load when PER mode is active ──────────
+  const priceModeInitialized = useRef(false);
+  useEffect(() => {
+    if (priceModeInitialized.current) return;
+    const hasScheduleItems = values.planArr?.some(p => p.schedule?.length > 0);
+    if (!hasScheduleItems) return;
+
+    // Only act when mode is PER and items are missing baseAmount (= freshly loaded from DB)
+    if (values.priceOption?.value === 'PER') {
+      const needsConversion = values.planArr.some(p =>
+        p.schedule.some(s => s.baseAmount === undefined)
+      );
+      if (needsConversion) {
+        priceModeInitialized.current = true;
+        const newData = values.planArr.map(item => ({
+          ...item,
+          schedule: item.schedule.map(scheduleItem => {
+            if (scheduleItem.baseAmount !== undefined) return scheduleItem;
+            const person = scheduleItem.insertType === 'activity'
+              ? (scheduleItem.person || 1)
+              : ((values.adult || 0) + (values.child || 0)) || 1;
+            return {
+              ...scheduleItem,
+              baseAmount: scheduleItem.amount,
+              amount: getRoundOfValue(scheduleItem.amount / person),
+            };
+          }),
+        }));
+        setFieldValue('planArr', newData);
+      } else {
+        priceModeInitialized.current = true;
+      }
+    } else {
+      // TOTAL mode — just stamp baseAmount so toggles work correctly
+      priceModeInitialized.current = true;
+      const needsBase = values.planArr.some(p =>
+        p.schedule.some(s => s.baseAmount === undefined)
+      );
+      if (needsBase) {
+        const newData = values.planArr.map(item => ({
+          ...item,
+          schedule: item.schedule.map(scheduleItem => ({
+            ...scheduleItem,
+            baseAmount: scheduleItem.baseAmount ?? scheduleItem.amount,
+          })),
+        }));
+        setFieldValue('planArr', newData);
+      }
+    }
+  }, [values.planArr?.length, values.priceOption?.value]);
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
   const getRoundOfValue = (value, round = 2) => {
     const num = Number(value);
-    if (Number.isFinite(num)) {
-      return Number(num.toFixed(round))
-    }
-    return 0
-  }
-  const handleInputChange = (planIndex, index, newValue, type = 'amount') => {
-    const inputValue = Number(newValue)
-    const newData = values.planArr?.map((item, planArrInd) => (
-      planArrInd === planIndex ? {
-        ...item,
-        schedule: item.schedule.map((scheduleItem, ind) => {
-          if (ind === index) {
-            const result = { ...scheduleItem, [type]: getRoundOfValue(inputValue) }
-            if (type === 'amount') {
-              const person = scheduleItem.insertType === 'activity' ? scheduleItem.person : values.adult + values.child;
-              result.baseAmount = values.priceOption.value === 'TOTAL' ? inputValue : inputValue * person;
-            }
-            return result;
-          }
-          return scheduleItem;
-        })
-      } : item
-    ));
-    setFieldValue('planArr', newData);
+    return Number.isFinite(num) ? Number(num.toFixed(round)) : 0;
   };
+
+  const handleBack = () => setFormComponent("packageForm");
+
+  const handleInputChange = (planIndex, index, newValue, type = "amount") => {
+    const inputValue = Number(newValue);
+    const newData = values.planArr?.map((item, planArrInd) =>
+      planArrInd === planIndex
+        ? {
+            ...item,
+            schedule: item.schedule.map((scheduleItem, ind) => {
+              if (ind === index) {
+                const result = { ...scheduleItem, [type]: getRoundOfValue(inputValue) };
+                if (type === "amount") {
+                  const person =
+                    scheduleItem.insertType === "activity"
+                      ? scheduleItem.person
+                      : values.adult + values.child;
+                  result.baseAmount =
+                    values.priceOption.value === "TOTAL"
+                      ? inputValue
+                      : inputValue * person;
+                }
+                return result;
+              }
+              return scheduleItem;
+            }),
+          }
+        : item
+    );
+    setFieldValue("planArr", newData);
+  };
+
   const handlePriceMode = (type) => {
-    // check select price option with current quotation price option
     if (values.priceOption.value !== type) {
-      const newData = values.planArr?.map((item, planArrInd) => (
-        {
-          ...item,
-          schedule: item.schedule.map((scheduleItem, ind) => {
-            const person = scheduleItem.insertType === 'activity' ? scheduleItem.person : values.adult + values.child;
-            const currentBaseAmount = scheduleItem.baseAmount !== undefined ? scheduleItem.baseAmount : scheduleItem.amount;
-            const result = {
-              ...scheduleItem,
-              amount: type === 'TOTAL' ? currentBaseAmount : currentBaseAmount / person,
-              baseAmount: currentBaseAmount
-            };
-            return result;
-          })
-        }
-      ));
-      setFieldValue('planArr', newData);
+      const newData = values.planArr?.map((item) => ({
+        ...item,
+        schedule: item.schedule.map((scheduleItem) => {
+          const person =
+            scheduleItem.insertType === "activity"
+              ? scheduleItem.person
+              : values.adult + values.child;
+          const currentBaseAmount =
+            scheduleItem.baseAmount !== undefined
+              ? scheduleItem.baseAmount
+              : scheduleItem.amount;
+          return {
+            ...scheduleItem,
+            amount: type === "TOTAL" ? currentBaseAmount : currentBaseAmount / person,
+            baseAmount: currentBaseAmount,
+          };
+        }),
+      }));
+      setFieldValue("planArr", newData);
     }
-  }
-  // console.log('valuss',values)
+  };
+
+  const handleMarkup = () => {
+    setFieldValue("baseMarkup",  checkFormValue(values.baseMarkupInput,  "number"));
+    setFieldValue("extraMarkup", checkFormValue(values.extraMarkupInput, "number"));
+    setShowMarkup(false);
+  };
+
+  // ─── Derived data ─────────────────────────────────────────────────────────────
+  const scheduleArr =
+    values.planArr?.flatMap(({ date, schedule }, planArrInd) =>
+      schedule.map((item, scheduleInd) => ({ date, item, planArrInd, scheduleInd }))
+    ) || [];
+
+  const totals = scheduleArr.reduce(
+    (acc, { item }) => {
+      if (item.insertType !== "hotel") {
+        acc.totalAmount += item.amount;
+        acc.totalMarkup += item.markup;
+      }
+      return acc;
+    },
+    { totalAmount: 0, totalMarkup: 0 }
+  );
+
+  const getPerPersonCost = (item) => {
+    if (item.adultCost && item.childCost)
+      return { adultCost: item.adultCost, childCost: item.childCost };
+    const totalPersons = values.adult + values.child;
+    if (totalPersons > 0 && item.amount) {
+      const cpp = item.amount / totalPersons;
+      return {
+        adultCost: getRoundOfValue(cpp * values.adult),
+        childCost: getRoundOfValue(cpp * values.child),
+      };
+    }
+    return { adultCost: 0, childCost: 0 };
+  };
+
+  const optionInitialValue = [
+    { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
+    { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
+    { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
+  ];
+
+  // Helper to safely parse a count value — treats "", undefined, null, NaN as 0
+  const safeCount = (val) => {
+    if (val === '' || val === null || val === undefined) return 0;
+    const n = parseInt(val, 10);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
+  const hotelOption = scheduleArr.reduce((acc, { item }) => {
+    if (item.insertType === "hotel") {
+      const optLabel = item.option?.label || (typeof item.option === 'string' ? item.option : '');
+      const idx =
+        optLabel === "Option 1" ? 0
+        : optLabel === "Option 2" ? 1
+        : optLabel === "Option 3" ? 2
+        : -1;
+      if (idx >= 0) {
+        acc[idx].amount += Number(item.amount || 0);
+        acc[idx].markup += Number(item.markup || 0);
+
+        // Accurate weighted distribution based on hotel room rates
+        const selectedRoom = item.roomOption?.find(r => r.id == item.roomType?.value);
+        const rates = {
+          single: Number(selectedRoom?.single_bed_amount || 0),
+          double: Number(selectedRoom?.double_bed_amount || 0),
+          triple: Number(selectedRoom?.triple_bed_amount || 0),
+          extra: Number(selectedRoom?.extra_bed_amount || 0),
+          childW: Number(selectedRoom?.child_w_bed_amount || 0),
+          childN: Number(selectedRoom?.child_n_bed_amount || 0),
+        };
+        const counts = {
+          single: safeCount(item.single),
+          double: safeCount(item.double),
+          triple: safeCount(item.triple),
+          extra: safeCount(item.extra),
+          childW: safeCount(item.childW),
+          childN: safeCount(item.childN),
+        };
+
+        const itemTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
+        
+        let ratio = 1;
+        if (itemTotalWeight > 0) {
+          ratio = (Number(item.amount || 0)) / itemTotalWeight;
+        } else {
+          const totalPax = counts.single + counts.double + counts.triple + counts.extra + counts.childW + counts.childN;
+          if (totalPax > 0) {
+            const avg = Number(item.amount || 0) / totalPax;
+            rates.single = rates.double = rates.triple = rates.extra = rates.childW = rates.childN = avg;
+            ratio = 1;
+          }
+        }
+
+        acc[idx].single += counts.single;
+        acc[idx].double += counts.double;
+        acc[idx].triple += counts.triple;
+        acc[idx].extra  += counts.extra;
+        acc[idx].childW += counts.childW;
+        acc[idx].childN += counts.childN;
+
+        acc[idx].singleTotalCost += (counts.single * rates.single) * ratio;
+        acc[idx].doubleTotalCost += (counts.double * rates.double) * ratio;
+        acc[idx].tripleTotalCost += (counts.triple * rates.triple) * ratio;
+        acc[idx].extraTotalCost  += (counts.extra * rates.extra) * ratio;
+        acc[idx].childWTotalCost += (counts.childW * rates.childW) * ratio;
+        acc[idx].childNTotalCost += (counts.childN * rates.childN) * ratio;
+      }
+    }
+    return acc;
+  }, optionInitialValue);
+
+  const getTotalPerPersonCosts = () => {
+    let totalAdultCost = 0;
+    let totalChildCost = 0;
+    scheduleArr.forEach(({ item }) => {
+      const ppc = getPerPersonCost(item);
+      totalAdultCost += ppc.adultCost;
+      totalChildCost += ppc.childCost;
+    });
+    return {
+      totalAdultCost: getRoundOfValue(totalAdultCost),
+      totalChildCost: getRoundOfValue(totalChildCost),
+    };
+  };
+  const allServicesTotalPerPerson = getTotalPerPersonCosts();
+
+  const getHotelOptionTotal = (amount, markup) =>
+    getRoundOfValue(amount + markup + totals.totalAmount + totals.totalMarkup);
+
+  const calculateInputMarkup = (amount, markup) => {
+    if (values.baseMarkup) {
+      return getRoundOfValue(
+        getHotelOptionTotal(amount, markup) * values.baseMarkup * 0.01
+      );
+    }
+    return values.extraMarkup;
+  };
+
+  const calculateTotal = (amount, markup) => {
+    const optionTotal    = totals.totalAmount + totals.totalMarkup + amount + markup;
+    const discountAmount = optionTotal * checkFormValue(values.discount, "number") * 0.01;
+    const grandTotal     = optionTotal - discountAmount;
+    // Use the selected tax type's percentage
+    const selectedTaxPct = parseFloat(values.taxType?.percentage || 0);
+    const taxAmount      = grandTotal * selectedTaxPct * 0.01;
+    return getRoundOfValue(
+      grandTotal +
+      calculateInputMarkup(amount, markup) +
+      taxAmount
+    );
+  };
+
+  const getVatDisplay = () => values.taxType?.percentage || 0;
+
+  /**
+   * Break down a hotel option's totals into per-person-type rows.
+   * Adult types (0,1) share adultCost; child types (2,3) share childCost.
+   * Adjust the distribution keys here once real per-type data is available.
+   */
+  const getPersonTypeRows = (item) => {
+    const totalPersons = (item.single || 0) + (item.double || 0) + (item.triple || 0) + (item.extra || 0) + (item.childW || 0) + (item.childN || 0);
+
+    const totalMarkup = calculateInputMarkup(item.amount, item.markup);
+    const totalPrice = calculateTotal(item.amount, item.markup);
+    const vat = getVatDisplay();
+
+    return PERSON_TYPES.map((pt) => {
+      const count = safeCount(item[pt.key]);
+      if (count <= 0) return null;
+
+      // hotelRowCost is the TOTAL cost for ALL pax of this type (count * rate * ratio)
+      const hotelRowCostAll = item[`${pt.key}TotalCost`] || 0;
+      // Per-person hotel cost
+      const hotelCostPerPerson = count > 0 ? hotelRowCostAll / count : 0;
+
+      // Non-hotel costs per person of this type
+      const nonHotelPerPerson = totalPersons > 0 ? totals.totalAmount / totalPersons : 0;
+
+      // Net cost per person = hotel cost per person + non-hotel cost per person
+      const perPersonNet = hotelCostPerPerson + nonHotelPerPerson;
+
+      // Fraction this row's TOTAL (all pax) represents of the overall base
+      const rowAllPaxNet = perPersonNet * count;
+      const overallBase = item.amount + totals.totalAmount;
+      const fraction = overallBase > 0 ? rowAllPaxNet / overallBase : 0;
+
+      // Aggregate markup and total (for ALL pax of this type)
+      const rowMarkupAll = getRoundOfValue(totalMarkup * fraction);
+      const rowTotalAll = getRoundOfValue(totalPrice * fraction);
+
+      return {
+        label: pt.label,
+        perPersonCost: getRoundOfValue(perPersonNet),
+        markup: rowMarkupAll,
+        vat,
+        total: rowTotalAll,
+        count
+      };
+    }).filter(row => row !== null);
+  };
+
+  // ─── Handle billing submission ────────────────────────────────────────────────
   const handleBilling = async () => {
     try {
-      if (!itineraryId) {
-        notifyError('Save itinerary before updating pricing');
-        return;
-      }
-      const entriesCount = values.planArr?.reduce((acc, { schedule }) => acc + (schedule?.length || 0), 0) || 0;
-      if (entriesCount === 0) {
-        notifyError('Add at least one itinerary item before pricing');
-        return;
-      }
-      const formData = new FormData()
-      formData.append('package_name', values.packageName || '')
-      formData.append('start_date', values.formStartDate ? new Date(values.formStartDate).toLocaleDateString("en-CA") : '')
-      formData.append('end_date', values.formEndDate ? new Date(values.formEndDate).toLocaleDateString("en-CA") : '')
-      formData.append('valid_until', values.formValidityDate ? new Date(values.formValidityDate).toLocaleDateString("en-CA") : '')
-      formData.append('adult_count', checkFormValue(values.adult, 'number') || 0)
-      formData.append('child_count', checkFormValue(values.child, 'number') || 0)
-      formData.append('extra_markup_percentage', checkFormValue(values.baseMarkup, 'number'))
-      formData.append('extra_markup_amount', checkFormValue(values.extraMarkup, 'number'))
-      formData.append('description', values.paymentDescription || '.')
+      if (!itineraryId) { notifyError("Save itinerary before updating pricing"); return; }
+      const entriesCount =
+        values.planArr?.reduce((acc, { schedule }) => acc + (schedule?.length || 0), 0) || 0;
+      if (entriesCount === 0) { notifyError("Add at least one itinerary item before pricing"); return; }
+
+      const formData = new FormData();
+      formData.append("package_name",             values.packageName || "");
+      formData.append("start_date",               values.formStartDate    ? new Date(values.formStartDate).toLocaleDateString("en-CA")    : "");
+      formData.append("end_date",                 values.formEndDate      ? new Date(values.formEndDate).toLocaleDateString("en-CA")      : "");
+      formData.append("valid_until",              values.formValidityDate ? new Date(values.formValidityDate).toLocaleDateString("en-CA") : "");
+      formData.append("adult_count",              checkFormValue(values.adult, "number") || 0);
+      formData.append("child_count",              checkFormValue(values.child, "number") || 0);
+      formData.append("extra_markup_percentage",  checkFormValue(values.baseMarkup,  "number"));
+      formData.append("extra_markup_amount",      checkFormValue(values.extraMarkup, "number"));
+      formData.append("description",              values.paymentDescription || ".");
       const currencyValue = values?.priceIn?.value ?? values?.priceIn?.id;
-      formData.append('currency', checkFormValue(currencyValue))
-      formData.append('price_mode', checkFormValue(values.priceOption.value === 'PER' ? 'PER_PERSON' : 'TOTAL_PRICE'))
-      formData.append('per_person_amounts', values.perPersonAmount ? '1' : '0')
-      // Destination
+      formData.append("currency",                 checkFormValue(currencyValue));
+      formData.append("price_mode",               checkFormValue(values.priceOption.value === "PER" ? "PER_PERSON" : "TOTAL_PRICE"));
+      formData.append("per_person_amounts",       values.perPersonAmount ? "1" : "0");
       const destinationId = values.destination?.value || values.destination?.id;
-      if (destinationId) {
-        formData.append('destination_id', destinationId)
-      }
-      // Use Redux tax values instead of form values
-      formData.append('cgst_percentage', checkFormValue(taxSettings.cgst_percentage, 'number'))
-      formData.append('sgst_percentage', checkFormValue(taxSettings.sgst_percentage, 'number'))
-      formData.append('igst_percentage', checkFormValue(taxSettings.igst_percentage, 'number'))
-      formData.append('tcs_percentage', checkFormValue(taxSettings.tcs_percentage, 'number'))
-      // Always append discount_amount (even if 0)
-      formData.append('discount_amount', checkFormValue(values.discount_amount || values.discount || 0, 'number'))
+      if (destinationId) formData.append("destination_id", destinationId);
+      const selectedTaxPct = parseFloat(values.taxType?.percentage || 0);
+      formData.append("tax_type_id",             checkFormValue(values.taxType?.id));
+      formData.append("tax_type_name",           checkFormValue(values.taxType?.name));
+      formData.append("cgst_percentage",          checkFormValue(selectedTaxPct, "number"));
+      formData.append("sgst_percentage",          0);
+      formData.append("igst_percentage",          0);
+      formData.append("tcs_percentage",           0);
+      formData.append("discount_amount",          checkFormValue(values.discount_amount || values.discount || 0, "number"));
 
-      // Calculate totals for primary option (Option 1)
-      const primaryOption = hotelOption[0];
-      const totalAmount = (totals.totalAmount || 0) + (totals.totalMarkup || 0) + (primaryOption.amount || 0) + (primaryOption.markup || 0);
-      const grandTotal = calculateTotal(primaryOption.amount, primaryOption.markup);
-      const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
+      const primaryOption  = hotelOption[0];
+      const grandTotal     = calculateTotal(primaryOption.amount, primaryOption.markup);
+      const totalAmount    = (totals.totalAmount || 0) + (totals.totalMarkup || 0) + (primaryOption.amount || 0) + (primaryOption.markup || 0);
+      const rate           = parseFloat(values.priceIn?.exchange_rate) || 1;
       const convertedTotal = getRoundOfValue(grandTotal / rate);
-
-      formData.append('total_amount', totalAmount);
-      formData.append('grand_total', grandTotal);
-      formData.append('converted_total', convertedTotal);
-      formData.append('exchange_rate', rate);
+      formData.append("total_amount",    totalAmount);
+      formData.append("grand_total",     grandTotal);
+      formData.append("converted_total", convertedTotal);
+      formData.append("exchange_rate",   rate);
 
       let entryIndex = 0;
       values.planArr?.forEach(({ schedule }) => {
         schedule.forEach((data) => {
-          if (!data.entryId) {
-            throw new Error('Missing entry id. Please save itinerary items first.');
-          }
-          formData.append(`entries[${entryIndex}][id]`, checkFormValue(data.entryId))
-          formData.append(`entries[${entryIndex}][amount]`, checkFormValue(data.amount))
-          formData.append(`entries[${entryIndex}][markup]`, checkFormValue(data.markup))
-          entryIndex = entryIndex + 1
-        })
-      })
-      // formData.append('assigned_to',checkFormValue(values.assigned?.value))
-      let response
-      const url = `${URLS.ITINERARY_URL}/${itineraryId}/set-pricing`
-      // if(isEdit){
-      //   response = await axiosPut(editUrl,formData)
-      // }else{
-      //   console.log('url',url,formData)
-      response = await filePost(url, formData)
-      // }
+          if (!data.entryId) throw new Error("Missing entry id. Please save itinerary items first.");
+          formData.append(`entries[${entryIndex}][id]`,     checkFormValue(data.entryId));
+          // Always save the canonical total amount so future loads are consistent
+          const canonicalAmount = data.baseAmount !== undefined ? data.baseAmount : data.amount;
+          formData.append(`entries[${entryIndex}][amount]`, checkFormValue(canonicalAmount));
+          formData.append(`entries[${entryIndex}][markup]`, checkFormValue(data.markup));
+          entryIndex += 1;
+        });
+      });
 
-      if (setShowModal) {
-        setShowModal(false)
-        // navigate('add/profile')
-      }
-      if (response?.success) {
-        // formik.setFieldValue('itineraryId',response?.data?.id)
-        // navigate(response?.data?.id)
-        notifyCreate('Payment', isEdit)
-      }
+      const response = await filePost(`${URLS.ITINERARY_URL}/${itineraryId}/set-pricing`, formData);
+      if (setShowModal) setShowModal(false);
+      if (response?.success) notifyCreate("Payment", isEdit);
     } catch (error) {
-      console.log('er', error)
-      notifyError(error)
+      notifyError(error);
     }
-  }
-
-  const scheduleArr = values.planArr?.flatMap(({ date, schedule }, planArrInd) => {
-    return schedule.map((item, scheduleInd) => ({
-      date,
-      item,
-      planArrInd,
-      scheduleInd
-    }));
-  }) || [];
-  // Calculate total using reduce
-  const totals = scheduleArr.reduce((accumulator, currentValue) => {
-    const { item } = currentValue
-    if (item.insertType !== 'hotel') {
-
-      // Add amount to totalAmount
-      accumulator.totalAmount += item.amount;
-
-      // Add markup to totalMarkup
-      accumulator.totalMarkup += item.markup;
-    }
-    return accumulator;
-
-  }, { totalAmount: 0, totalMarkup: 0 });
-
-  // Calculate per-person pricing for hotels based on adult/child breakdown
-  const getPerPersonPricing = () => {
-    const perPersonData = {};
-    scheduleArr.forEach(({ item }) => {
-      if (item.insertType === 'hotel') {
-        const optionKey = item.option?.label || 'Default';
-        if (!perPersonData[optionKey]) {
-          perPersonData[optionKey] = { totalAdultCost: 0, totalChildCost: 0, entryCount: 0 };
-        }
-        perPersonData[optionKey].totalAdultCost += item.adultCost || 0;
-        perPersonData[optionKey].totalChildCost += item.childCost || 0;
-        perPersonData[optionKey].entryCount += 1;
-      }
-    });
-    return perPersonData;
-  };
-  const perPersonPricing = getPerPersonPricing();
-
-  // Calculate total using reduce
-  // Helper function to calculate per-person costs if not available
-  const getPerPersonCost = (item) => {
-    // If adultCost and childCost are already set, use them
-    if (item.adultCost && item.childCost) {
-      return { adultCost: item.adultCost, childCost: item.childCost };
-    }
-
-    // Otherwise calculate based on amount and number of persons
-    const totalPersons = values.adult + values.child;
-    if (totalPersons > 0 && item.amount) {
-      // For hotels and activities, distribute cost proportionally
-      const costPerPerson = item.amount / totalPersons;
-      return {
-        adultCost: getRoundOfValue(costPerPerson * values.adult),
-        childCost: getRoundOfValue(costPerPerson * values.child)
-      };
-    }
-
-    return { adultCost: 0, childCost: 0 };
   };
 
-  const optionInitialValue = [{ name: 'Option 1', amount: 0, markup: 0, adultCost: 0, childCost: 0 }, { name: 'Option 2', amount: 0, markup: 0, adultCost: 0, childCost: 0 }, { name: 'Option 3', amount: 0, markup: 0, adultCost: 0, childCost: 0 }]
-  const hotelOption = scheduleArr.reduce((accumulator, currentValue) => {
-    const { item } = currentValue
-    if (item.insertType == 'hotel') {
-      const perPersonCost = getPerPersonCost(item);
-      if (item.option?.label === 'Option 1') {
-        accumulator[0].amount += item.amount
-        accumulator[0].markup += item.markup
-        accumulator[0].adultCost += perPersonCost.adultCost
-        accumulator[0].childCost += perPersonCost.childCost
-      }
-      if (item.option?.label === 'Option 2') {
-        accumulator[1].amount += item.amount
-        accumulator[1].markup += item.markup
-        accumulator[1].adultCost += perPersonCost.adultCost
-        accumulator[1].childCost += perPersonCost.childCost
-      }
-      if (item.option?.label === 'Option 3') {
-        accumulator[2].amount += item.amount
-        accumulator[2].markup += item.markup
-        accumulator[2].adultCost += perPersonCost.adultCost
-        accumulator[2].childCost += perPersonCost.childCost
-      }
+  const visibleOptions = hotelOption.filter((item) => {
+    const personRows = getPersonTypeRows(item);
+    return personRows.length > 0;
+  });
 
-    }
-    return accumulator;
-
-  }, optionInitialValue);
-
-  // Calculate TOTAL adult and child costs across ALL services
-  const getTotalPerPersonCosts = () => {
-    let totalAdultCost = 0;
-    let totalChildCost = 0;
-
-    scheduleArr.forEach(({ item }) => {
-      const perPersonCost = getPerPersonCost(item);
-      totalAdultCost += perPersonCost.adultCost;
-      totalChildCost += perPersonCost.childCost;
-    });
-
-    return { totalAdultCost: getRoundOfValue(totalAdultCost), totalChildCost: getRoundOfValue(totalChildCost) };
-  };
-
-  const allServicesTotalPerPerson = getTotalPerPersonCosts();
-
-  const getHotelOptionTotal = (amount, markup, type = 'amount') => {
-    // const typeTotal = type === 'amount' ? totals.totalAmount : totals.totalMarkup
-    const total = amount + markup + totals.totalAmount + totals.totalMarkup
-    const roundOfTotal = getRoundOfValue(total)
-    return roundOfTotal
-  }
-  const calculateInputMarkup = (amount, markup) => {
-    if (values.baseMarkup) {
-      const optionTotal = getHotelOptionTotal(amount, markup)
-      const val = optionTotal * values.baseMarkup * 0.01
-      const roundOfVal = getRoundOfValue(val)
-      return roundOfVal
-    } else {
-      return values.extraMarkup
-    }
-  }
-  const calculateTotal = (amount, markup) => {
-    const optionTotal = totals.totalAmount + totals.totalMarkup + amount + markup
-    const discountAmount = optionTotal * checkFormValue(values.discount, 'number') * 0.01
-    const grandTotal = optionTotal - discountAmount
-    const getPercentValue = (val) => {
-      let result
-      if (val) {
-        result = grandTotal * val * 0.01
-      } else {
-        result = 0
-      }
-      return result
-    }
-    // Use Redux tax values instead of form values
-    const percentValue = grandTotal + calculateInputMarkup(amount, markup) + getPercentValue(taxSettings.cgst_percentage) + getPercentValue(taxSettings.sgst_percentage) + getPercentValue(taxSettings.igst_percentage) + getPercentValue(taxSettings.tcs_percentage)
-    const roundOfPercentValue = getRoundOfValue(percentValue)
-    return roundOfPercentValue
-  }
-
-  // Detect if in single mode (all other taxes are 0)
-  const isSingleTaxMode = taxSettings.sgst_percentage === 0 && taxSettings.igst_percentage === 0 && taxSettings.tcs_percentage === 0;
+  // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <>
-      <form
-      // onSubmit={formSubmit}
-      >
-
-        <div className="d-flex justify-content-between">
-          <button className="btn btn-outline-light" type="button" onClick={handleBack}><i class="fa fa-arrow-left fa-xl" aria-hidden="true"></i></button>
-          <ModeBtn className="" isEdit={isEdit}
-            readOnly={readOnly} setReadOnly={setReadOnly} />
-        </div>
-        <div
-          className="table-responsive  full-data dataTables_wrapper"
-          id="example2_wrapperr"
-        >
-          <table
-            className="table-responsive-lg table display mb-4 dataTablesCard  text-black dataTable no-footer package-table"
-            id="example2"
-          >
-            <thead className="bg-white">
-              <tr className="">
-                {/* <th className="sorting_asc ">
-                                                <input type="checkbox" onClick={() => chackboxFun("all")} className="form-check-input" id="checkAll" required="" />
-                                            </th> */}
-                {/* <th>#</th> */}
-                <th>Item</th>
-                <th>Type</th>
-                <th>Net</th>
-                <th>Mark up</th>
-                <th>Gross</th>
-                {/* <th className="text-center">Date</th>
-                <th className="text-end">Status</th> */}
-                {/* <th></th> */}
-              </tr>
-            </thead>
-            <tbody>
-              {scheduleArr.map(({ item, planArrInd, scheduleInd }, ind) => (
-                <tr key={ind}>
-                  {/* <td className="sorting_1">
-                                                    <div className="checkbox me-0 align-self-center">
-                                                        <div className="custom-control custom-checkbox ">
-                                                            <input type="checkbox" className="form-check-input" id={"customCheckBox2"+ ind} required="" 
-                                                                onClick={() => chackboxFun()} 
-                                                            />
-                                                            <label className="custom-control-label" htmlFor={"customCheckBox2"+ ind} ></label>
-                                                        </div>
-                                                    </div>
-                                                </td> */}
-                  {/* <td>{ind+1}</td> */}
-                  <td className="whitesp-no p-0">
-                    <div className="py-sm-3 py-1 ps-3">
-                      <div>
-
-                        <h6 className="font-w500 fs-15 mb-0">{item.name} {
-                          item.insertType == 'hotel' && item.option?.label &&
-                          // <div className="">
-                          <span className="bg-success text-white p-1 rounded ms-2" style={{ fontSize: '10px' }}>{item.option?.label}</span>
-                          // </div>
-                        }</h6>
-                        <span className="fs-14 font-w400">
-                          {/* Delux - 24/6/23 to 28/6/23 */}
-                          {`${item.roomType?.label || item.type?.label || ''} ( ${formatDate(item.startDate)} to ${formatDate(item.endDate)} )`}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{item.insertType}</td>
-                  <td className="package-td">
-                    <input className="form-control" type="number" value={item.amount} disabled={readOnly} onChange={(e) => handleInputChange(planArrInd, scheduleInd, e.target.value)} />
-                  </td>
-                  <td className="package-td">
-                    <input className="form-control" type="number" value={item.markup} disabled={readOnly} onChange={(e) => handleInputChange(planArrInd, scheduleInd, e.target.value, 'markup')} />
-                  </td>
-                  <td className="package-td">
-                    {getRoundOfValue(item.amount + item.markup)}
-                  </td>
-                </tr>
-              ))
-              }
-              {/* <tr className="custom-tr">
-                <td>Total</td>
-                <td></td>
-                <td></td>
-                <td>9000</td>
-                <td>0 %</td>
-                <td>9000</td>
-              </tr>
-              <tr className="">
-                <td>Discount</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td className="text-primary">2000</td>
-              </tr> */}
-            </tbody>
-          </table>
-        </div>
-        <div className="d-flex justify-content-between align-items-center mt-3 p-2" style={{ backgroundColor: '#eee' }}>
+      <form>
+        {/* ── Page Header & Controls ── */}
+        <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
           <div className="d-flex align-items-center">
-            <div className="me-2">
-              <ReactSelect
-                // label="priceOption"
-                options={priceOption}
-                value={values.priceOption}
-                onChange={(selected) => {
-                  setFieldValue("priceOption", selected)
-                  handlePriceMode(selected.value)
-                }}
-                isDisabled={readOnly}
-                optionValue="id"
-                optionLabel="name"
-                formik={formik}
-                onBlur={handleBlur}
-                // inputId='destination'
-                // className='custom-input'
-                required
-              />
+            <button className="btn btn-outline-primary btn-sm me-3" type="button" onClick={handleBack} style={{ borderRadius: "8px" }}>
+              <i className="fa fa-arrow-left" aria-hidden="true"></i> Back
+            </button>
+            <div>
+              <h4 className="mb-0 text-dark fw-bold">Quotation Strategy</h4>
+              <span className="text-muted" style={{ fontSize: "13px" }}>Review and finalize pricing details</span>
             </div>
-            <div className="" >
-              <ReactSelect
-                options={taxTypeOption}
-                value={values.taxType}
-                onChange={(selected) => setFieldValue("taxType", selected)}
-                isDisabled={readOnly}
-                optionValue="id"
-                optionLabel="name"
-                formik={formik}
-                onBlur={handleBlur}
-                required
-              />
-            </div>
-
           </div>
-          <div className="">
-            <h6 className="">{values.baseMarkup ? `Base Markup - ${values.baseMarkup} %` : `Extra Markup -  ${values.extraMarkup || 0} Rs`}</h6>
-            <button type="button" className="btn bg-white p-2 mx-auto" disabled={readOnly} onClick={() => setShowMarkup(true)}>Update</button>
+          <ModeBtn isEdit={isEdit} readOnly={readOnly} setReadOnly={setReadOnly} />
+        </div>
+
+        {/* ── Itemized Pricing Table ── */}
+        <div className="card shadow-sm border-0 mb-4">
+          <div className="card-header bg-white border-bottom py-3">
+            <h5 className="card-title fw-bold mb-0 text-dark" style={{ fontSize: "16px" }}>Itemized Breakdown</h5>
+          </div>
+          <div className="card-body p-0">
+            <div className="table-responsive">
+              <table className="table mb-0 text-dark" style={{ borderCollapse: "collapse" }}>
+                <thead style={{ backgroundColor: "#f8f9fa", borderBottom: "2px solid #dee2e6" }}>
+                  <tr>
+                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px" }}>Tours / Hotels</th>
+                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px", width: "15%" }}>Type</th>
+                    <th className="py-3 px-4 fw-bold text-uppercase text-dark text-end" style={{ fontSize: "12px", letterSpacing: "1px", width: "15%" }}>Net Price</th>
+                    <th className="py-3 px-4 fw-bold text-uppercase text-dark text-end" style={{ fontSize: "12px", letterSpacing: "1px", width: "15%" }}>Gross Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scheduleArr.map(({ item, planArrInd, scheduleInd }, ind) => (
+                    <tr key={ind} className="border-bottom" style={{ transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fcfdff'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      <td className="px-4 py-3 align-middle">
+                        <div className="d-flex align-items-center">
+                          <div className="bg-light rounded d-flex align-items-center justify-content-center me-3" style={{ width: "40px", height: "40px" }}>
+                            <i className={`fa fa-lg ${item.insertType === 'hotel' ? 'fa-building text-primary' : item.insertType === 'activity' ? 'fa-ticket text-warning' : 'fa-car text-success'}`}></i>
+                          </div>
+                          <div>
+                            <h6 className="fw-bold text-dark mb-1" style={{ fontSize: "14px" }}>
+                              {item.name}
+                              {item.insertType === "hotel" && item.option?.label && (
+                                <span className="badge bg-success ms-2 fw-medium" style={{ fontSize: "10px", letterSpacing: "0.5px" }}>{item.option.label}</span>
+                              )}
+                            </h6>
+                            <span className="text-muted" style={{ fontSize: "12px" }}>
+                              {`${item.roomType?.label || item.type?.label || "Service"} • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-middle text-capitalize fw-medium text-dark" style={{ fontSize: "13px" }}>
+                        {item.insertType}
+                      </td>
+                      <td className="px-4 py-3 align-middle text-end">
+                        <input
+                          className="form-control text-end fw-bold text-dark"
+                          type="number"
+                          value={item.amount}
+                          disabled={readOnly}
+                          onChange={(e) => handleInputChange(planArrInd, scheduleInd, e.target.value)}
+                          style={{ border: "1px solid transparent", backgroundColor: "#f8f9fa", borderRadius: "6px", transition: "all 0.2s" }}
+                          onFocus={(e) => { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; }}
+                          onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "#f8f9fa"; handleBlur(e); }}
+                        />
+                      </td>
+                      <td className="px-4 py-3 align-middle text-end fw-bold text-dark fs-15">
+                         {getRoundOfValue(item.amount + item.markup)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-        <div
-          className="table-responsive  full-data dataTables_wrapper mt-5"
-          id="example2_wrapperr"
-        >
-          <table
-            className="table-responsive-lg table display mb-4 dataTablesCard  text-black dataTable no-footer package-table"
-            id="example2"
-          >
-            <thead className="bg-primary">
-              <tr className="">
-                {/* <th className="sorting_asc ">
-                                                <input type="checkbox" onClick={() => chackboxFun("all")} className="form-check-input" id="checkAll" required="" />
-                                            </th> */}
-                {/* <th>#</th> */}
-                <th>Service</th>
-                {values.priceOption.value === 'TOTAL' ? <th>Price</th> : <><th>Adult</th><th>Child</th></>}
-                <th>Markup</th>
-                <th>GST (%)</th>
-                <th>Discount</th>
-                <th>Total</th>
-                {/* <th className="text-center">Date</th>
-                                            <th className="text-end">Status</th> */}
-                {/* <th></th> */}
-              </tr>
-            </thead>
-            <tbody>
-              {hotelOption?.map((item, ind) => (
-                // item.insertType === 'hotel' &&
-                item.amount !== 0 && <tr key={ind}>
-                  {/* <td className="sorting_1">
-                                                    <div className="checkbox me-0 align-self-center">
-                                                        <div className="custom-control custom-checkbox ">
-                                                            <input type="checkbox" className="form-check-input" id={"customCheckBox2"+ ind} required="" 
-                                                                onClick={() => chackboxFun()} 
-                                                            />
-                                                            <label className="custom-control-label" htmlFor={"customCheckBox2"+ ind} ></label>
-                                                        </div>
-                                                    </div>
-                                                </td> */}
-                  {/* <td>{ind+1}</td> */}
-                  <td className="whitesp-no p-0">
-                    <div className="py-sm-3 py-1 ps-3">
-                      <div>
 
-                        <h6 className="font-w500 fs-15 mb-0">{item.name}
-                          {/* {
-                          item.insertType == 'hotel' && 
-                          // <div className="">
-                        <span className="bg-success text-white p-1 rounded ms-2" style={{fontSize:'10px'}}>{item.option?.label}</span>
-                        // </div>
-                        } */}
-                        </h6>
-
-                      </div>
-                    </div>
-                  </td>
-                  {values.priceOption.value === 'TOTAL' ? <td>{getHotelOptionTotal(item.amount, item.markup)}</td> : <><td>{allServicesTotalPerPerson.totalAdultCost}</td><td>{allServicesTotalPerPerson.totalChildCost}</td></>}
-                  <td>{calculateInputMarkup(item.amount, item.markup)}</td>
-                  {/* Display combined tax value from Redux store */}
-                  <td className="package-td">
-                    {isSingleTaxMode ? taxSettings.cgst_percentage : (parseFloat(taxSettings.cgst_percentage || 0) + parseFloat(taxSettings.sgst_percentage || 0) + parseFloat(taxSettings.igst_percentage || 0) + parseFloat(taxSettings.tcs_percentage || 0)).toFixed(2)}
-                  </td>
-                  <td className="package-td">0</td>
-                  <td className="package-td">
-                    {calculateTotal(item.amount, item.markup)}
-                  </td>
-                </tr>
-              ))
-              }
-              {/* <tr className="custom-tr">
-                <td>Total</td>
-                <td></td>
-                <td></td>
-                <td>9000</td>
-                <td>0 %</td>
-                <td>9000</td>
-              </tr>
-              <tr className="">
-                <td>Discount</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td className="text-primary">2000</td>
-              </tr> */}
-            </tbody>
-          </table>
-        </div>
-        <div className="d-flex justify-content-end mt-4">
-          <div>
-            {/* Discount % */}
-            <div className="d-flex justify-content-end align-items-center mb-2">
-              <h6 className="me-3">Discount (%):</h6>
-              <input
-                type="number"
-                className="form-control"
-                name={'discount'}
-                onChange={handleChange}
-                disabled={readOnly}
-                onBlur={handleBlur}
-                value={values.discount || ''}
-                style={{ width: '80px' }}
-                min="0"
-                step="0.01"
-              />
-            </div>
-            {/* Price Currency */}
-            <div className="d-flex justify-content-end align-items-center mb-2">
-              <h6 className="me-3">Price In:</h6>
-              <ReactSelect
-                options={currencyOptions}
-                value={values.priceIn}
-                onChange={(selected) => setFieldValue("priceIn", selected)}
-                optionValue="value"
-                optionLabel="label"
-                formik={formik}
-                onBlur={handleBlur}
-                isDisabled={readOnly}
-              />
-            </div>
-            {/* Converted Total Section */}
-            {values.priceIn && values.priceIn.exchange_rate && (
-              <div className="d-flex flex-column align-items-end mb-3">
-                {hotelOption?.map((item, ind) => {
-                  const total = calculateTotal(item.amount, item.markup);
-                  const fromCurrency = baseCode || 'INR';
-                  const toCurrency = values.priceIn.to_currency || values.priceIn.code || values.priceIn.value;
-                  const rate = parseFloat(values.priceIn.exchange_rate) || 1;
-                  const convertedTotal = getRoundOfValue(total / rate);
-                  if (item.amount === 0) return null;
-                  return (
-                    <div key={ind} className="bg-light p-2 rounded mb-1 text-end" style={{ minWidth: '200px' }}>
-                      <span className="text-muted small">{item.name} Converted:</span>
-                      <h6 className="mb-0 text-primary">
-                        {values.priceIn.symbol} {convertedTotal}
-                      </h6>
-                      <span className="text-muted x-small" style={{ fontSize: '10px' }}>
-                        (Rate: 1 {toCurrency} = {rate} {fromCurrency})
-                      </span>
-                    </div>
-                  );
-                })}
+        {/* ── Pricing Mode & Extra Markup Bar ── */}
+        <div className="card shadow-sm border-0 mb-5 bg-white">
+          <div className="card-body p-3 px-4 d-flex justify-content-between align-items-center flex-wrap">
+            
+            {/* Mode & Tax Toggles */}
+            <div className="d-flex align-items-center gap-4">
+              <div>
+                <span className="text-dark fw-bold d-block mb-1" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>CALCULATION MODE</span>
+                <div style={{ width: "200px" }}>
+                  <ReactSelect
+                    options={priceOption}
+                    value={values.priceOption}
+                    onChange={(selected) => {
+                      setFieldValue("priceOption", selected);
+                      handlePriceMode(selected.value);
+                    }}
+                    isDisabled={readOnly}
+                    optionValue="id"
+                    optionLabel="name"
+                    formik={formik}
+                    onBlur={handleBlur}
+                    required
+                  />
+                </div>
               </div>
-            )}
-            <div className="d-flex flex-column justify-content-center align-items-end mb-2">
-              <input
-                className="form-control ms-3"
-                placeholder="Early Bird Offer"
-                name={'paymentDescription'}
-                onChange={handleChange}
-                disabled={readOnly}
-                onBlur={handleBlur}
-                value={values.paymentDescription}
-                style={{ width: '50%' }}
-              />
+
+              <div className="border-start ps-4">
+                <span className="text-dark fw-bold d-block mb-1" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>TAX TYPE</span>
+                <div style={{ width: "160px" }}>
+                  <ReactSelect
+                    options={taxTypeOption}
+                    value={values.taxType}
+                    onChange={(selected) => setFieldValue("taxType", selected)}
+                    isDisabled={readOnly}
+                    optionValue="id"
+                    optionLabel="name"
+                    formik={formik}
+                    onBlur={handleBlur}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Markup Info & Edit */}
+            <div className="d-flex align-items-center gap-4 mt-3 mt-md-0">
+              <div className="text-end">
+                <span className="text-muted fw-bold d-block mb-1" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>BASE MARKUP</span>
+                <span className="fw-bold text-dark fs-5">{values.baseMarkup}%</span>
+              </div>
+              <div className="text-end border-start ps-4">
+                <span className="text-muted fw-bold d-block mb-1" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>EXTRA MARKUP</span>
+                <span className="fw-bold text-dark fs-5">{getSymbol(baseCode)} {values.extraMarkup || 0}</span>
+              </div>
               <button
                 type="button"
-                className="btn btn-primary mt-4"
-                onClick={handleBilling}
+                className="btn btn-outline-primary ms-3 d-flex justify-content-center align-items-center"
+                onClick={() => setShowMarkup(true)}
                 disabled={readOnly}
+                style={{ borderRadius: "8px", width: "42px", height: "42px" }}
+                title="Edit Markup"
               >
-                Update Billing
+                <i className="fa fa-pencil fa-lg"></i>
               </button>
+            </div>
+            
+          </div>
+        </div>
+
+        {/* ════════════════════════════════════════════════════
+            REDESIGNED PRICING TABLE
+            Header : Options | Person | Markup | VAT | Total
+            Each option row is split into 4 person-type sub-rows
+        ════════════════════════════════════════════════════ */}
+        <div className="card shadow-sm border-0 mb-4 mt-5">
+          <div className="card-header bg-white border-bottom py-3">
+            <h5 className="card-title fw-bold mb-0 text-dark" style={{ fontSize: "16px" }}>Quoted Options Breakdown</h5>
+          </div>
+          <div className="card-body p-0">
+            <div className="table-responsive" id="pricing_table_wrapper">
+              <table className="table mb-0 text-dark" style={{ borderCollapse: "collapse" }}>
+                <thead style={{ backgroundColor: "#f8f9fa", borderBottom: "2px solid #dee2e6" }}>
+                  <tr>
+                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px", width: "120px" }}>Options</th>
+                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px" }}>Person</th>
+                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px" }}>Markup</th>
+                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px" }}>{values.taxType?.name || "TAX"} (%)</th>
+                    <th className="py-3 px-4 fw-bold text-uppercase text-dark text-end" style={{ fontSize: "12px", letterSpacing: "1px" }}>Total</th>
+                  </tr>
+                </thead>
+
+            <tbody>
+              {visibleOptions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center text-muted py-5">
+                    <div className="mb-2"><i className="fa fa-info-circle fa-2x"></i></div>
+                    <div>No valid hotel options or room counts found. Please check your itinerary setup.</div>
+                  </td>
+                </tr>
+              ) : (
+                visibleOptions.map((item, optIdx) => {
+                  const personRows = getPersonTypeRows(item);
+                  const exchangeRate = parseFloat(values.priceIn?.exchange_rate) || 0;
+                  const hasConversion = exchangeRate > 0;
+                  const currSymbol = hasConversion
+                    ? getSymbol(values.priceIn?.to_currency || values.priceIn?.label)
+                    : getSymbol(baseCode);
+                  const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
+
+                  const grandTotal = getRoundOfValue(
+                    personRows.reduce((sum, pt) => sum + convert(pt.total), 0)
+                  );
+
+                  return (
+                    <React.Fragment key={optIdx}>
+                      {personRows.map((pt, ptIdx) => (
+                        <tr
+                          key={`${optIdx}-${ptIdx}`}
+                          style={{
+                            backgroundColor: ptIdx % 2 === 0 ? "#ffffff" : "#f9fbff",
+                            borderBottom: "1px solid #f0f0f0",
+                          }}
+                        >
+                          {/* Option label — merged cell spanning person rows + grand total row */}
+                          {ptIdx === 0 && (
+                            <td
+                              rowSpan={personRows.length + 1}
+                              className="align-middle text-center fw-bold"
+                              style={{
+                                verticalAlign: "middle",
+                                borderRight: "2px solid #dee2e6",
+                                backgroundColor: "#f8f9fa",
+                              }}
+                            >
+                              <span
+                                className="badge bg-primary px-3 py-2"
+                                style={{ fontSize: "12px" }}
+                              >
+                                {item.name}
+                              </span>
+                            </td>
+                          )}
+
+                          {/* Person type label + per-person cost */}
+                          <td style={{ paddingLeft: "16px", color: "#333", borderRight: '1px solid #eee' }}>
+                            <span className="fw-medium">{pt.label}</span>
+                            {pt.count > 1
+                              ? <span className="text-muted ms-2">(x{pt.count})</span>
+                              : <span className="text-muted ms-2">—</span>}
+                            {pt.count > 1 && (
+                              <div className="text-muted" style={{ fontSize: '11px' }}>
+                                {currSymbol} {convert(pt.perPersonCost)} / person
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Markup */}
+                          <td style={{ borderRight: '1px solid #eee' }}>{currSymbol} {convert(pt.markup)}</td>
+
+                          {/* VAT */}
+                          <td style={{ borderRight: '1px solid #eee' }}>{pt.vat} %</td>
+
+                          {/* Total (aggregate for all pax of this type) */}
+                          <td className="fw-bold text-dark">{currSymbol} {convert(pt.total)}</td>
+                        </tr>
+                      ))}
+
+                      {/* Grand Total row */}
+                      <tr
+                        style={{
+                          backgroundColor: "#e8f4fd",
+                          borderBottom: "3px solid #dee2e6",
+                        }}
+                      >
+                        <td
+                          colSpan={3}
+                          className="text-end fw-bold pe-3"
+                          style={{ color: "#0d6efd", fontSize: "14px" }}
+                        >
+                          Grand Total:
+                        </td>
+                        <td className="fw-bold" style={{ color: "#0d6efd", fontSize: "15px" }}>
+                          {currSymbol} {grandTotal}
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                })
+              )}
+            </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Summary / billing controls ── */}
+        <div className="mt-5">
+          <div className="card shadow-sm border-0 w-100" style={{ backgroundColor: "#fcfdff" }}>
+            <div className="card-body p-4 p-md-5">
+              <div className="row">
+                
+                {/* ── Left Column: Settings ── */}
+                <div className="col-lg-5 col-xl-4 border-end pe-lg-4 mb-4 mb-lg-0">
+                  <h5 className="card-title fw-bold mb-4 text-dark pb-2">Billing Settings</h5>
+
+                  {/* Price In */}
+                  <div className="mb-4">
+                    <label className="text-secondary fw-medium mb-2 d-block">Display Price In Currency</label>
+                    <ReactSelect
+                      options={currencyOptions}
+                      value={values.priceIn}
+                      onChange={(selected) => setFieldValue("priceIn", selected)}
+                      optionValue="value"
+                      optionLabel="label"
+                      formik={formik}
+                      onBlur={handleBlur}
+                      isDisabled={readOnly}
+                    />
+                  </div>
+
+                  {/* Discount % */}
+                  <div>
+                    <label className="text-secondary fw-medium mb-2 d-block">Apply Discount (%)</label>
+                    <div className="input-group mb-3 shadow-sm border-0 rounded">
+                      <input
+                        type="number"
+                        className="form-control fw-bold text-primary"
+                        name="discount"
+                        onChange={handleChange}
+                        disabled={readOnly}
+                        onBlur={handleBlur}
+                        value={values.discount || ""}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        style={{ height: "45px", backgroundColor: "#fff", borderRight: "none" }}
+                      />
+                      <span className="input-group-text bg-white text-muted" style={{ borderLeft: "none" }}>%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Right Column: Summary & Actions ── */}
+                <div className="col-lg-7 col-xl-8 ps-lg-5">
+                  <h5 className="card-title fw-bold mb-4 text-dark pb-2">Converted Output</h5>
+
+                  {/* Converted totals (only shown when exchange rate exists) */}
+                  {values.priceIn?.exchange_rate ? (
+                    <div className="mb-4">
+                      
+                      <div className="card shadow-sm border-0 rounded-3 overflow-hidden" style={{ borderLeft: "4px solid #0d6efd" }}>
+                        <div className="card-body p-0 bg-white">
+                          {hotelOption.map((item, ind) => {
+                            if (item.amount === 0) return null;
+                            const total         = calculateTotal(item.amount, item.markup);
+                            const rate          = parseFloat(values.priceIn.exchange_rate) || 1;
+                            const convertedTotal = getRoundOfValue(total / rate);
+                            const toCurrency    =
+                              values.priceIn.to_currency ||
+                              values.priceIn.code ||
+                              values.priceIn.value;
+                            const isLast = ind === hotelOption.length - 1 || hotelOption.slice(ind + 1).every(h => h.amount === 0);
+                            
+                            return (
+                              <div key={ind} className={`p-4 ${isLast ? '' : 'border-bottom border-light'}`}>
+                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                  <span className="fw-bold text-dark text-truncate pe-3" style={{ fontSize: "16px", maxWidth: "60%" }}>{item.name}</span>
+                                  <h4 className="mb-0 text-primary fw-bold text-end">
+                                    {getSymbol(values.priceIn.to_currency || values.priceIn.label)} {convertedTotal}
+                                  </h4>
+                                </div>
+                                <div className="d-flex justify-content-between align-items-center mt-1">
+                                  <span className="text-secondary" style={{ fontSize: "13px" }}>Final Option Total</span>
+                                  <span className="text-muted fw-medium" style={{ fontSize: "12px" }}>
+                                    Rate: 1 {toCurrency} = {rate} {baseCode}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-4 p-4 rounded text-center text-muted" style={{ backgroundColor: "#f8f9fa", border: "1px dashed #ced4da" }}>
+                      <i className="fa fa-info-circle mb-2" style={{ fontSize: "20px" }}></i>
+                      <p className="mb-0">Selected currency is base currency. See amounts in the table above.</p>
+                    </div>
+                  )}
+
+                  {/* Update Billing button */}
+                  <div className="d-flex justify-content-end mt-auto pt-3">
+                    <button
+                      type="button"
+                      className="btn btn-primary px-5 py-3 fw-bold shadow-sm w-100 w-md-auto"
+                      onClick={handleBilling}
+                      disabled={readOnly}
+                      style={{ borderRadius: "8px", letterSpacing: "0.5px", fontSize: "15px" }}
+                    >
+                      <i className="fa fa-refresh me-2"></i> Update Billing
+                    </button>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
         </div>
       </form>
+
+      {/* ── Markup modal ── */}
       <CustomModal
         showModal={showMarkup}
-        title={`Add Extra Markup`}
-        handleModalClose={() => {
-          setShowMarkup(false);
-        }}
+        title="Add Extra Markup"
+        handleModalClose={() => setShowMarkup(false)}
       >
         <div className="card-body">
           <div className="basic-form">
@@ -710,34 +888,33 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                   <InputField
                     label="Base Markup %"
                     name="baseMarkupInput"
-                    type='number'
+                    type="number"
                     onChange={(e) => {
-                      handleChange(e)
-                      setFieldValue('extraMarkupInput', 0)
+                      handleChange(e);
+                      setFieldValue("extraMarkupInput", 0);
                     }}
                     onBlur={handleBlur}
                     values={values}
-                    inputClassName='w-25'
+                    inputClassName="w-25"
                   />
                 </div>
                 <div className="mb-3 col-md-12">
                   <InputField
                     label="Extra Markup"
                     name="extraMarkupInput"
-                    type='number'
+                    type="number"
                     onChange={(e) => {
-                      handleChange(e)
-                      setFieldValue('baseMarkupInput', 0)
+                      handleChange(e);
+                      setFieldValue("baseMarkupInput", 0);
                     }}
                     onBlur={handleBlur}
                     values={values}
-                    inputClassName='w-25'
+                    inputClassName="w-25"
                   />
                 </div>
-
               </div>
               <button type="button" className="btn btn-primary" onClick={handleMarkup}>
-                {`Update`}
+                Update
               </button>
             </form>
           </div>
