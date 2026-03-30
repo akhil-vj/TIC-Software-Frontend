@@ -12,7 +12,7 @@ import CustomModal from "../../../layouts/CustomModal";
 import { URLS } from "../../../../constants";
 import { useAsync } from "../../../utilis/useAsync";
 import { checkFormValue } from "../../../utilis/check";
-import { filePost } from "../../../../services/AxiosInstance";
+import { filePost, axiosGet } from "../../../../services/AxiosInstance";
 import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
 import { ModeBtn } from "../../common/ModeBtn";
 import { useSelector } from "react-redux";
@@ -48,6 +48,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
   const navigate = useNavigate();
   const [showMarkup, setShowMarkup] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [previewSnapshot, setPreviewSnapshot] = useState(null);
+  const [historyData, setHistoryData] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const itineraryId = values.itineraryId;
   const isEdit = !!itineraryId;
   const [readOnly, setReadOnly] = useState(isEdit);
@@ -478,6 +482,40 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     }
   };
 
+  const fetchHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const response = await axiosGet(`${URLS.ITINERARY_URL}/${itineraryId}/pricing-history`);
+      if (response?.success) {
+        setHistoryData(response.data);
+      }
+    } catch (error) {
+      notifyError(error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleOpenHistory = () => {
+    fetchHistory();
+    setShowHistory(true);
+  };
+
+  const handleRestore = async (snapshotId) => {
+    if (!window.confirm("Are you sure you want to restore this pricing version? This will overwrite your current pricing configuration.")) return;
+    try {
+      const response = await filePost(`${URLS.ITINERARY_URL}/${itineraryId}/restore-pricing/${snapshotId}`, new FormData());
+      if (response?.success) {
+        notifyCreate("Pricing Restored", true);
+        setShowHistory(false);
+        // Reload page to refetch everything from the top level
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    } catch (error) {
+      notifyError(error);
+    }
+  };
+
   const visibleOptions = hotelOption.filter((item) => {
     const personRows = getPersonTypeRows(item);
     return personRows.length > 0;
@@ -492,6 +530,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           <div className="d-flex align-items-center">
             <button className="btn btn-outline-primary btn-sm me-3" type="button" onClick={handleBack} style={{ borderRadius: "8px" }}>
               <i className="fa fa-arrow-left" aria-hidden="true"></i> Back
+            </button>
+            <button className="btn btn-outline-info btn-sm me-3" type="button" onClick={handleOpenHistory} style={{ borderRadius: "8px" }} disabled={!isEdit}>
+              <i className="fa fa-history" aria-hidden="true"></i> History
             </button>
             <div>
               <h4 className="mb-0 text-dark fw-bold">Quotation Strategy</h4>
@@ -917,6 +958,235 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 Update
               </button>
             </form>
+          </div>
+        </div>
+      </CustomModal>
+
+      {/* ── History Modal ── */}
+      <CustomModal
+        showModal={showHistory}
+        title="Pricing History"
+        handleModalClose={() => setShowHistory(false)}
+        className="modal-lg"
+      >
+        <div className="card-body p-4" style={{ backgroundColor: "#f8f9fa", position: "relative" }}>
+          {loadingHistory ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status"></div>
+              <div className="mt-2 text-muted fw-medium">Loading history...</div>
+            </div>
+          ) : historyData.length === 0 ? (
+            <div className="text-center py-5 text-muted">
+              <div className="mb-3">
+                <div style={{ width: "80px", height: "80px", borderRadius: "50%", backgroundColor: "#e9ecef", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
+                  <i className="fa fa-history fa-2x text-secondary"></i>
+                </div>
+              </div>
+              <h5 className="fw-bold text-dark">No history available</h5>
+              <p>Save the itinerary pricing at least once to see history.</p>
+            </div>
+          ) : (
+            <div className="timeline-container position-relative" style={{ maxHeight: "65vh", overflowY: "auto", padding: "10px 10px 10px 30px" }}>
+              {/* Vertical Timeline Line */}
+              <div style={{ position: "absolute", left: "15px", top: "25px", bottom: "25px", width: "3px", backgroundColor: "#dde1e6", borderRadius: "3px" }}></div>
+              
+              {historyData.map((snapshot, idx) => {
+                const isCurrent = idx === 0;
+                let snapData = {};
+                try {
+                  snapData = typeof snapshot.snapshot_data === "string" ? JSON.parse(snapshot.snapshot_data) : (snapshot.snapshot_data || {});
+                } catch (e) { console.error("Could not parse snapshot data"); }
+                const itinData = snapData?.itinerary || {};
+                const totalTax = (Number(itinData.cgst_percentage) || 0) + (Number(itinData.sgst_percentage) || 0) + (Number(itinData.igst_percentage) || 0);
+
+                let snapCurrencySymbol = getSymbol(baseCode);
+                if (snapshot.currency && snapshot.currency !== 'base' && snapshot.currency !== baseCode) {
+                   const matchedCur = currencyOptions.find(c => c.value === snapshot.currency);
+                   if (matchedCur) {
+                     snapCurrencySymbol = getSymbol(matchedCur.to_currency || matchedCur.code);
+                   } else if (snapshot.currency.length < 10) {
+                     snapCurrencySymbol = getSymbol(snapshot.currency);
+                   } else {
+                     snapCurrencySymbol = ""; // Mask raw database UUIDs
+                   }
+                }
+
+                return (
+                  <div key={snapshot.id} className="position-relative mb-4">
+                    {/* Timeline Dot */}
+                    <div 
+                      className="position-absolute shadow-sm"
+                      style={{ 
+                        left: "-21px", top: "20px", width: "16px", height: "16px", 
+                        borderRadius: "50%", 
+                        backgroundColor: isCurrent ? "#28a745" : "#0d6efd", 
+                        border: "3px solid #fff", zIndex: 2 
+                      }}
+                    ></div>
+                    
+                    {/* Premium Card */}
+                    <div 
+                      className={`card shadow-sm border-0 rounded-4 ${isCurrent ? "border-start border-success" : ""}`}
+                      style={{ transition: "transform 0.2s, box-shadow 0.2s", cursor: "default", borderLeftWidth: isCurrent ? "4px" : "0" }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-4px)";
+                        e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.08)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "0 0.125rem 0.25rem rgba(0,0,0,0.075)";
+                      }}
+                    >
+                      <div className="card-body p-4">
+                        <div className="d-flex flex-wrap justify-content-between align-items-center mb-0">
+                          <div className="mb-3 mb-md-0">
+                            <h6 className="fw-bold mb-2 text-dark" style={{ fontSize: "15px" }}>
+                              <i className="fa fa-calendar-alt text-primary me-2 opacity-75"></i>
+                              {new Date(snapshot.created_at).toLocaleString('en-US', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                            </h6>
+                            <div className="d-flex align-items-center flex-wrap gap-2 mt-2">
+                              <span className="badge bg-light text-secondary border px-3 py-2 rounded-pill" style={{ fontSize: "12px", letterSpacing: "0.2px" }}>
+                                <i className="fa fa-user me-2 text-primary opacity-75"></i> {snapshot.created_by || "System"}
+                              </span>
+                              {isCurrent && (
+                                <span className="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 rounded-pill shadow-sm" style={{ fontSize: "12px" }}>
+                                  <i className="fa fa-check-circle me-1"></i> Active Version
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="text-md-end text-start mt-2 mt-md-0">
+                            <span className="text-muted d-block fw-bold" style={{ fontSize: "11px", textTransform:"uppercase", letterSpacing:"1px" }}>Total Overview</span>
+                            <h3 className="fw-bolder text-dark mb-0 mt-1" style={{ letterSpacing: "-0.5px" }}>
+                              <span className="text-primary me-1">{snapCurrencySymbol}</span>{snapshot.grand_total}
+                            </h3>
+                          </div>
+                        </div>
+
+                        {/* Snapshot Detail Grid */}
+                        <div className="bg-light bg-opacity-50 rounded-4 p-3 mt-4 border border-light">
+                          <div className="row g-3">
+                            <div className="col-6 col-md-3">
+                              <div className="text-muted fw-bold mb-1" style={{ fontSize: "10px", textTransform:"uppercase", letterSpacing: "0.5px" }}>Pricing Mode</div>
+                              <div className="fw-bold text-dark" style={{ fontSize: "13px" }}>
+                                {itinData.price_mode === 'PER_PERSON' ? (
+                                  <><i className="fa fa-user me-1 text-info opacity-75"></i> Per Person</>
+                                ) : (
+                                  <><i className="fa fa-users me-1 text-warning opacity-75"></i> Total Run</>
+                                )}
+                              </div>
+                            </div>
+                            <div className="col-6 col-md-3">
+                              <div className="text-muted fw-bold mb-1" style={{ fontSize: "10px", textTransform:"uppercase", letterSpacing: "0.5px" }}>Margin Config</div>
+                              <div className="fw-bold text-dark" style={{ fontSize: "13px" }}>{itinData.extra_markup_percentage || 0}% <span className="text-muted fw-normal">applied</span></div>
+                            </div>
+                            <div className="col-6 col-md-3">
+                              <div className="text-muted fw-bold mb-1" style={{ fontSize: "10px", textTransform:"uppercase", letterSpacing: "0.5px" }}>Discount</div>
+                              <div className="fw-bold text-danger" style={{ fontSize: "13px" }}>
+                                - {snapCurrencySymbol} {itinData.discount_amount || 0}
+                              </div>
+                            </div>
+                            <div className="col-6 col-md-3">
+                              <div className="text-muted fw-bold mb-1" style={{ fontSize: "10px", textTransform:"uppercase", letterSpacing: "0.5px" }}>Taxes</div>
+                              <div className="fw-bold text-dark" style={{ fontSize: "13px" }}>
+                                {totalTax}% <span className="text-muted fw-normal">Added</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Area */}
+                        {!isCurrent && (
+                          <div className="mt-4 text-end border-top pt-3">
+                            <button
+                              className="btn btn-outline-info fw-bold rounded-pill mx-1 px-4 py-2 text-uppercase"
+                              onClick={() => setPreviewSnapshot(snapshot)}
+                              style={{ fontSize: "12px", transition: "all 0.2s", letterSpacing: "0.5px", borderWidth: "2px" }}
+                              onMouseEnter={(e) => { e.currentTarget.className = "btn btn-info text-dark fw-bold rounded-pill mx-1 px-4 py-2 text-uppercase"; }}
+                              onMouseLeave={(e) => { e.currentTarget.className = "btn btn-outline-info fw-bold rounded-pill mx-1 px-4 py-2 text-uppercase"; }}
+                            >
+                              <i className="fa fa-eye me-2"></i> View
+                            </button>
+                            <button
+                                className="btn btn-outline-primary fw-bold rounded-pill mx-1 px-4 py-2 text-uppercase"
+                                onClick={() => handleRestore(snapshot.id)}
+                                style={{ fontSize: "12px", transition: "all 0.2s", letterSpacing: "0.5px", borderWidth: "2px" }}
+                                onMouseEnter={(e) => { e.currentTarget.className = "btn btn-primary text-white fw-bold rounded-pill mx-1 px-4 py-2 text-uppercase"; }}
+                                onMouseLeave={(e) => { e.currentTarget.className = "btn btn-outline-primary fw-bold rounded-pill mx-1 px-4 py-2 text-uppercase"; }}
+                              >
+                                <i className="fa fa-history me-2"></i> Restore Version
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </CustomModal>
+
+      {/* ── Preview Modal ── */}
+      <CustomModal
+        showModal={!!previewSnapshot}
+        title="Snapshot Items Breakdown"
+        handleModalClose={() => setPreviewSnapshot(null)}
+        className="modal-lg"
+      >
+        <div className="card-body p-0">
+          <div className="table-responsive" style={{ maxHeight: "60vh", overflowY: "auto" }}>
+            <table className="table mb-0 text-dark">
+              <thead className="bg-light sticky-top">
+                <tr>
+                  <th className="py-3 px-4 fw-bold text-uppercase" style={{ fontSize: "12px" }}>Activity / Hotel</th>
+                  <th className="py-3 px-4 fw-bold text-uppercase text-end" style={{ fontSize: "12px" }}>Net Price</th>
+                  <th className="py-3 px-4 fw-bold text-uppercase text-end" style={{ fontSize: "12px" }}>Markup</th>
+                  <th className="py-3 px-4 fw-bold text-uppercase text-end" style={{ fontSize: "12px" }}>Gross Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {previewSnapshot && scheduleArr.map(({ item }, ind) => {
+                  let snapData = {};
+                  try { snapData = typeof previewSnapshot.snapshot_data === "string" ? JSON.parse(previewSnapshot.snapshot_data) : (previewSnapshot.snapshot_data || {}); } catch(e) {}
+                  
+                  const snapEntries = snapData.entries || [];
+                  const snapEntry = snapEntries.find(e => e.id === item.entryId) || { amount: 0, markup: 0 };
+                  const net = Number(snapEntry.amount) || 0;
+                  const markup = Number(snapEntry.markup) || 0;
+
+                  let snapCurrencySymbol = getSymbol(baseCode);
+                  if (previewSnapshot.currency && previewSnapshot.currency !== 'base' && previewSnapshot.currency !== baseCode) {
+                    const matchedCur = currencyOptions.find(c => c.value === previewSnapshot.currency);
+                    if (matchedCur) snapCurrencySymbol = getSymbol(matchedCur.to_currency || matchedCur.code);
+                    else if (previewSnapshot.currency.length < 10) snapCurrencySymbol = getSymbol(previewSnapshot.currency);
+                    else snapCurrencySymbol = ""; 
+                  }
+
+                  return (
+                    <tr key={ind} className="border-bottom" style={{ transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fcfdff'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                       <td className="px-4 py-3 align-middle">
+                         <div className="fw-bold fs-14 text-dark">{item.name}</div>
+                         <div className="text-muted text-capitalize mt-1" style={{ fontSize: "11px", letterSpacing: "0.2px" }}>{item.insertType}</div>
+                       </td>
+                       <td className="px-4 py-3 align-middle text-end fw-medium">{snapCurrencySymbol} {net}</td>
+                       <td className="px-4 py-3 align-middle text-end fw-medium">{snapCurrencySymbol} {markup}</td>
+                       <td className="px-4 py-3 align-middle text-end fw-bold text-dark fs-15">{snapCurrencySymbol} {getRoundOfValue(net + markup)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-4 text-end bg-light border-top">
+            <button className="btn btn-outline-secondary rounded-pill fw-bold px-4 py-2 me-3" onClick={() => setPreviewSnapshot(null)} style={{ fontSize: "13px" }}>Close Preview</button>
+            {previewSnapshot && historyData[0] && previewSnapshot.id !== historyData[0].id && (
+              <button className="btn btn-danger rounded-pill fw-bold shadow-sm px-4 py-2" onClick={() => { handleRestore(previewSnapshot.id); setPreviewSnapshot(null); }} style={{ fontSize: "13px" }}>
+                <i className="fa fa-history me-2"></i> Restore This Version
+              </button>
+            )}
           </div>
         </div>
       </CustomModal>
