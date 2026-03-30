@@ -179,6 +179,7 @@ export const CustomTable = ({
         <div
           className="table-responsive  full-data dataTables_wrapper"
           id="example2_wrapper"
+          style={{ minHeight: '350px', paddingBottom: '50px' }}
         >
           <table
             className="table-responsive-lg table display mb-4 dataTablesCard  text-black dataTable no-footer custom-table"
@@ -242,7 +243,7 @@ export const CustomTable = ({
                       :
                       arrValue?.label === 'Actions' ? 
                       <td>
-                          <Dropdown>
+                          <Dropdown drop={index >= tableData.length - 2 && tableData.length > 2 ? "up" : "down"}>
                             <Dropdown.Toggle
                               as="div"
                               className="i-false btn-link btn sharp tp-btn btn-primary pill"

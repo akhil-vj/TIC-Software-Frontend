@@ -63,8 +63,8 @@ const StaffOptions = [
 
 const inputOptions = [
   { label: "Name", name: "name" },
-  { label: "Email", name: "email" },
   { label: "Mobile", name: "mobile" },
+  { label: "Email", name: "email" },
   // { label:'Skills', value:'HTML,  JavaScript,  PHP' },
 ];
 
@@ -113,6 +113,7 @@ const EditProfile = ({ setShowModal }) => {
   const url = URLS.ENQUIRY_URL;
   const editUrl = `${url}/${id}`;
   const { data } = useAsync(editUrl, !!isEdit);
+  const allEnquiriesData = useAsync(url, !isEdit);
   const editData = data?.data;
   const itineraryByEnquiryUrl = `${URLS.ITINERARY_URL}?enquiry_id=${id}`;
   const { data: itineraryData } = useAsync(itineraryByEnquiryUrl, !!isEdit);
@@ -326,6 +327,47 @@ const EditProfile = ({ setShowModal }) => {
       }
     }
   }, [selectedTypeValue?.id, selectedTypeData?.id, values.typeValue?.label]);
+  useEffect(() => {
+    if (!readOnly && !isEdit) {
+      const agentName = values.typeValue?.name || "";
+      const assignedName = values.assigned?.first_name || "";
+      
+      if (agentName || assignedName) {
+        let agentPart = "";
+        if (agentName) {
+          const words = String(agentName).trim().split(" ");
+          if (words.length > 1) {
+            agentPart = words.map(w => w[0].toUpperCase()).join("");
+          } else {
+            agentPart = String(agentName).substring(0, 2).toUpperCase();
+          }
+        }
+        
+        let assignedPart = assignedName ? String(assignedName).substring(0, 1).toUpperCase() : "";
+        let prefix = "";
+        if (agentPart && assignedPart) prefix = `${agentPart}/${assignedPart}/`;
+        else if (agentPart) prefix = `${agentPart}/`;
+        else if (assignedPart) prefix = `${assignedPart}/`;
+        
+        let highestNum = 0;
+        const existingEnquiries = allEnquiriesData?.data?.data || [];
+        existingEnquiries.forEach(enq => {
+           if (enq.ref_no && String(enq.ref_no).startsWith(prefix)) {
+              let numStr = String(enq.ref_no).substring(prefix.length);
+              let num = parseInt(numStr, 10);
+              if (!isNaN(num) && num > highestNum) {
+                 highestNum = num;
+              }
+           }
+        });
+        const sequentialNum = highestNum + 1;
+        
+        if (prefix) {
+            setFieldValue("refNo", `${prefix}${sequentialNum}`);
+        }
+      }
+    }
+  }, [values.typeValue?.name, values.assigned?.first_name, isEdit, readOnly, allEnquiriesData?.data?.data]);
 
   return (
     <>
@@ -381,6 +423,20 @@ const EditProfile = ({ setShowModal }) => {
                     />
                   </div>
                   <div className="col-sm-4">
+                    <ReactSelect
+                      label="Assigned To"
+                      onChange={(selected) =>
+                        setFieldValue("assigned", selected)
+                      }
+                      onBlur={handleBlur}
+                      value={values.assigned}
+                      options={staffDataOptions}
+                      optionValue="id"
+                      optionLabel="first_name"
+                      isDisabled={readOnly}
+                    />
+                  </div>
+                  <div className="col-sm-4">
                     <InputField
                       label="Ref No."
                       name="refNo"
@@ -392,23 +448,48 @@ const EditProfile = ({ setShowModal }) => {
                     />
                   </div>
                   {!isB2b && (
+                    <>
+                      <div className="col-sm-2">
+                        <SelectField
+                          label="Salute"
+                          name={"salute"}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          values={values}
+                          options={SaluteOptions}
+                          optionValue="value"
+                          optionLabel="label"
+                          required
+                          disabled={disabled || readOnly}
+                        />
+                      </div>
+                      <div className="col-sm-6">
+                        <InputField
+                          label="Name"
+                          name="name"
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          values={values}
+                          disabled={disabled || readOnly}
+                          required={true}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {isB2b && (
                     <div className="col-sm-6">
-                      <SelectField
-                        label="Salute"
-                        name={"salute"}
+                      <InputField
+                        label="Name"
+                        name="name"
                         onChange={handleChange}
                         onBlur={handleBlur}
                         values={values}
-                        options={SaluteOptions}
-                        optionValue="value"
-                        optionLabel="label"
-                        required
                         disabled={disabled || readOnly}
+                        required={true}
                       />
-
                     </div>
                   )}
-                  {inputOptions.map((item, ind) => (
+                  {inputOptions.slice(1).map((item, ind) => (
                     <div className="col-sm-6" key={ind}>
 
                       <InputField
@@ -548,22 +629,6 @@ const EditProfile = ({ setShowModal }) => {
                       isDisabled={readOnly}
                     />
                   </div>
-                  <div className="col-sm-6">
-                    <ReactSelect
-                      label="Assigned To"
-                      onChange={(selected) =>
-                        setFieldValue("assigned", selected)
-                      }
-                      onBlur={handleBlur}
-                      value={values.assigned}
-                      options={staffDataOptions}
-                      optionValue="id"
-                      optionLabel="first_name"
-                      isDisabled={readOnly}
-                    />
-                  </div>
-
-
 
                   <div className="card-footer border-0 pt-0 pb-3">
                     <button

@@ -9,6 +9,7 @@ import ReactSelect from "../../common/ReactSelect";
 import { parseDate } from "../../../utilis/date";
 import { checkFormValue } from "../../../utilis/check";
 import {ModeBtn} from "../../common/ModeBtn";
+import { notifyError } from "../../../utilis/notifyMessage";
 
 const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit }) => {
   const {
@@ -27,7 +28,36 @@ const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit })
 
 
   const formSubmit = (e) => {
-    // e.preventDefault();
+    // Validate all mandatory fields
+    const packageName = values.packageName?.trim();
+    const startDate = values.formStartDate;
+    const endDate = values.formEndDate;
+    const adult = values.adult;
+    const destination = values.destination;
+
+    // Check if required fields are filled
+    if (!packageName) {
+      notifyError("Please fill in Package Name");
+      return;
+    }
+    if (!startDate) {
+      notifyError("Please select Start Date");
+      return;
+    }
+    if (!endDate) {
+      notifyError("Please select End Date");
+      return;
+    }
+    if (!adult || adult === "0" || adult === 0) {
+      notifyError("Please enter number of Adults");
+      return;
+    }
+    if (!destination?.value) {
+      notifyError("Please select Destination");
+      return;
+    }
+
+    // If all validations pass, proceed to package form
     setShowModal(false);
     setFormComponent("packageForm");
   };
