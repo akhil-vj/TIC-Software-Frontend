@@ -154,11 +154,11 @@ const AddActivity = () => {
   
   
   const handleEstimationForm = (value,id=-1) => {
-    if(!!value.costId){
-      formik.setFieldValue(`costId`,value.costId)
-    }
+    formik.setFieldValue(`costId`,value.costId || '')
     formik.setFieldValue("fromDate", value.fromDate);
     formik.setFieldValue("toDate", value.toDate);
+    formik.setFieldValue("openingTime", value.openingTime);
+    formik.setFieldValue("closingTime", value.closingTime);
     formik.setFieldValue("type", value.type);
     formik.setFieldValue("cost", value.cost);
     formik.setFieldValue("adultCost", value.adultCost);
@@ -449,12 +449,18 @@ const AddActivity = () => {
                           <th>Closing Time</th>
                           <th>Adult Cost</th>
                           <th>Child Cost</th>
+                          <th>Total</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {!!tableData?.length ? (
                           tableData.map((data, key) => {
+                            const adultCount = Number(formik.values.adultCount || 0);
+                            const childCount = Number(formik.values.childCount || 0);
+                            const adultTotal = Number(data.adultCost || 0) * adultCount;
+                            const childTotal = Number(data.childCost || 0) * childCount;
+                            const total = adultTotal + childTotal;
                             return (
                               <tr key={key}>
                                 <th>{key + 1}</th>
@@ -462,8 +468,9 @@ const AddActivity = () => {
                                 <td>{data.toDate}</td>
                                 <td>{parseTime(data.openingTime)}</td>
                                 <td>{parseTime(data.closingTime)}</td>
-                                <td>{data.adultCost}</td>
-                                <td>{data.childCost}</td>
+                                <td>{adultTotal}</td>
+                                <td>{childTotal}</td>
+                                <td><strong>{total}</strong></td>
                                 <td>
                                   <div className="d-flex">
                                     <button
@@ -485,7 +492,7 @@ const AddActivity = () => {
                           })
                         ) : (
                           <tr id="empty-table-data">
-                            <td colSpan={8} style={{ textAlign: "center" }}>
+                            <td colSpan={9} style={{ textAlign: "center" }}>
                               Empty !
                             </td>
                           </tr>
