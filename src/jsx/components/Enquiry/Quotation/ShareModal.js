@@ -73,24 +73,28 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
     // Pricing Options
     if (!values.hideTotalPrice) {
-      const currency = packageData.priceIn?.label?.substring(0, 3) || packageData.priceIn?.from_currency || "USD";
-      let totalAmount = 0;
-
-      packageData.planArr?.forEach((day) => {
-        day.schedule?.forEach((item) => {
-          totalAmount += (item.amount || 0) + (item.markup || 0);
-        });
-      });
-      // Add overarching amounts? Assuming simple item.amount calculation based on PaymentForm
-      const baseAmount = totalAmount; // Without VAT/Discounts for simplicity in string
-
-      const pricePerPerson = adultCount > 0 ? (baseAmount / adultCount).toFixed(0) : 0;
-
-      text += `*Price (${currency}):*\n`;
-      if (values.priceBreakup) {
-        text += `• *${pricePerPerson} / Person (Double Sharing)* x ${adultCount} Pax\n`;
+      // Safely extract the currency code. Since payment form now passes full objects, we prioritize to_currency or clean labels
+      let currencyCode = "USD";
+      if (packageData.priceIn && packageData.priceIn.to_currency) {
+        currencyCode = packageData.priceIn.to_currency;
+      } else if (packageData.priceIn?.label && String(packageData.priceIn.label).length < 15) {
+        currencyCode = String(packageData.priceIn.label).split(" ")[0]; // Strip out "(Base)"
+      } else if (packageData.baseCurrency && String(packageData.baseCurrency).length < 15) {
+        currencyCode = packageData.baseCurrency;
+      } else if (packageData.currency && String(packageData.currency).length < 15) {
+        currencyCode = packageData.currency;
       }
-      text += `*Total: ${baseAmount.toLocaleString()} /-* _(exc. Vat)_\n\n`;
+
+      // Prioritize the backend/formik converted_total when present to accurately reflect exchange rates
+      const grandTotal = parseFloat(packageData.converted_total || packageData.grand_total || packageData.total_amount || 0);
+
+      const pricePerPerson = adultCount > 0 ? (grandTotal / adultCount).toFixed(0) : 0;
+
+      text += `*Price (${currencyCode}):*\n`;
+      if (values.priceBreakup) {
+        text += `• *${parseFloat(pricePerPerson).toLocaleString()} / Person (Double Sharing)* x ${adultCount} Pax\n`;
+      }
+      text += `*Total: ${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-* _(exc. Vat)_\n\n`;
     }
 
     if (values.itinerary && packageData.planArr) {
