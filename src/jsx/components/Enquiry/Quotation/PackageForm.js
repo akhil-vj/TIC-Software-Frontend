@@ -618,10 +618,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
       <ShareModal
         showModal={showShareModal}
         setShowModal={setShowShareModal}
-      // onClick={onInsert}
-      // onClose={onClose}
-      // editId={editId}
-      // data={editData}
+        packageData={values}
       />
       <ViewerModal showModal={showViewerModal} handleClose={handleCloseViewer} file={pdfPreview || pdfFile} />
       <ItineraryPreview
