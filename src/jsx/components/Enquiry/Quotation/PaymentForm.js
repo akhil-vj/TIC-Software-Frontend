@@ -475,8 +475,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       });
 
       const response = await filePost(`${URLS.ITINERARY_URL}/${itineraryId}/set-pricing`, formData);
-      if (setShowModal) setShowModal(false);
-      if (response?.success) notifyCreate("Payment", isEdit);
+      if (response?.success) {
+        setFieldValue("grand_total", grandTotal);
+        setFieldValue("converted_total", convertedTotal);
+        setFieldValue("total_amount", totalAmount);
+        
+        if (setShowModal) setShowModal(false);
+        notifyCreate("Payment", isEdit);
+      }
     } catch (error) {
       notifyError(error);
     }

@@ -38,7 +38,10 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   const generateWhatsAppText = () => {
     if (!packageData) return "";
 
-    const tripId = packageData.enquiry?.seq || packageData.itineraryId || "TBA";
+    const rawTripId = packageData.seq || packageData.itinerary_no || packageData.enquiry?.seq || packageData.itineraryId || "TBA";
+    const tripId = String(rawTripId).includes("-") && String(rawTripId).length > 20 
+      ? rawTripId.split("-")[0] // Just take the start of UUID if no seq is found, or better, fallback to TBA
+      : rawTripId;
     const packageName = packageData.packageName || "Trip Package";
 
     // Dates

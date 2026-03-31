@@ -57,8 +57,9 @@ function SetupModal() {
       }))
       .filter((item) => item.id && item.name);
 
-  const handleFormValue = (data) => {
+  const handleFormValue = (data, setFieldValue) => {
     if(data && data?.id){
+      setFieldValue('seq', data.seq)
       setFieldValue('packageName',checkFormValue(data.package_name))
       setFieldValue('formStartDate',parseDate(data.start_date))
       setFieldValue('formEndDate',parseDate(data.end_date))
@@ -76,6 +77,10 @@ function SetupModal() {
       setFieldValue('paymentDescription',checkFormValue(data.description))
       setFieldValue('priceOption',data.price_mode === 'PER_PERSON'?{value:'PER',label:'Price Per Traveller'}:{value:'TOTAL',label:'Total Price'})
       setFieldValue('perPersonAmount',data.per_person_amounts)
+      setFieldValue('grand_total',checkFormValue(data.grand_total))
+      setFieldValue('converted_total',checkFormValue(data.converted_total))
+      setFieldValue('total_amount',checkFormValue(data.total_amount))
+      setFieldValue('exchange_rate',checkFormValue(data.exchange_rate))
       const priceInObj = {label:data.currency,value:data.currency}
       setFieldValue('priceIn',priceInObj)
       setFieldValue('baseCurrency', data.currency)
@@ -269,7 +274,7 @@ function SetupModal() {
         formik.setFieldValue('itineraryId',response?.data?.id)
         navigate(response?.data?.id)
       }
-      handleFormValue(response?.data)
+      handleFormValue(response?.data, setFieldValue)
       notifyCreate('Quotation',isEdit)
     }
     } catch (error) {
@@ -329,7 +334,7 @@ function SetupModal() {
   },[itineraryId])
   useEffect(()=>{
     // console.log('test',data)
-    handleFormValue(editItineraryData)
+    handleFormValue(editItineraryData, setFieldValue)
 
   },[itineraryId,editItineraryData?.id])
   
