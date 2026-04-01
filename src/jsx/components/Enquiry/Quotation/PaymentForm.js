@@ -95,13 +95,15 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   ];
 
   useEffect(() => {
-    if (values.priceIn?.label && values.priceIn.label.length > 20) {
+    if (values.priceIn?.value) {
       const matchedOption = currencyOptions.find(
         (opt) => opt.value === values.priceIn.value
       );
-      if (matchedOption) setFieldValue("priceIn", matchedOption);
+      if (matchedOption && matchedOption.label !== values.priceIn.label) {
+        setFieldValue("priceIn", matchedOption);
+      }
     }
-  }, [currencyOptions.length, values.priceIn?.value]);
+  }, [currencyOptions.length, values.priceIn?.value, values.priceIn?.label]);
 
   // ─── Fix: convert amounts on first load when PER mode is active ──────────
   const priceModeInitialized = useRef(false);

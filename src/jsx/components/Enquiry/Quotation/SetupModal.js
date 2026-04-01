@@ -81,9 +81,10 @@ function SetupModal() {
       setFieldValue('converted_total',checkFormValue(data.converted_total))
       setFieldValue('total_amount',checkFormValue(data.total_amount))
       setFieldValue('exchange_rate',checkFormValue(data.exchange_rate))
-      const priceInObj = {label:data.currency,value:data.currency}
-      setFieldValue('priceIn',priceInObj)
-      setFieldValue('baseCurrency', data.currency)
+      const baseCurr = getDefaultCurrency(data.destination?.name);
+      setFieldValue('baseCurrency', baseCurr);
+      const priceInObj = {label:data.currency,value:data.currency};
+      setFieldValue('priceIn',priceInObj);
       const destinationObj = {label:data.destination.name,value:data.destination.id}
       setFieldValue('destination',checkFormValue(destinationObj))
       const getSubDestinationOption = (entry) => {
