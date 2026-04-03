@@ -16,10 +16,11 @@ import { URLS } from "../../../../constants";
 import ShareModal from "./ShareModal";
 import ReactSelect from "../../common/ReactSelect";
 import { ModeBtn } from "../../common/ModeBtn";
-import axiosInstance from '../../../../services/AxiosInstance'
+import axiosInstance from '../../../../services/AxiosInstance';
 import { ViewerModal } from "../../common/Viewer";
-import pdfFile from '../../../../pdf/diet-sheet.pdf'
+import pdfFile from '../../../../pdf/diet-sheet.pdf';
 import ItineraryPreview from "./ItineraryPreview";
+
 
 const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
   const {
@@ -321,11 +322,11 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     }
     setPdfPreview(null);
     setShowViewerModal(false);
-  }
+  };
 
   const getPdfPrint = async () => {
     try {
-      const url = URLS.PRINT_ITINERARY_URL + values.itineraryId
+      const url = URLS.PRINT_ITINERARY_URL + values.itineraryId;
       const response = await axiosInstance().post(url, null, { responseType: 'blob' });
       if (response?.data) {
         const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -334,10 +335,11 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
         setShowViewerModal(true);
       }
     } catch (error) {
-      console.log('err', error)
-      notifyError(error?.response?.data?.message || 'Failed to generate quotation PDF')
+      console.log('err', error);
+      notifyError(error?.response?.data?.message || 'Failed to generate quotation PDF');
     }
-  }
+  };
+
   return (
     <>
       <form
