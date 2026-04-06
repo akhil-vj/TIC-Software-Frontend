@@ -13,6 +13,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     terms: false,
     name: packageData?.enquiry?.name || packageData?.enquiry?.customer_name || "",
     email: packageData?.enquiry?.email || "",
+    subject: "",
   };
 
   const formik = useFormik({
@@ -23,6 +24,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   const { values, handleChange, handleBlur, setFieldValue } = formik;
   const [generatedText, setGeneratedText] = useState("");
   const [generatedHtml, setGeneratedHtml] = useState("");
+  const [showMailSetup, setShowMailSetup] = useState(false);
   const emailPreviewRef = useRef(null);
 
   const formatShortDate = (dateObj) => {
@@ -544,11 +546,17 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   };
 
   const handleEmailSend = () => {
-    const subject = encodeURIComponent(generateEmailSubject());
+    setFieldValue("subject", generateEmailSubject());
+    setShowMailSetup(true);
+  };
+
+  const confirmEmailSend = () => {
+    const subject = encodeURIComponent(values.subject || generateEmailSubject());
     const body = encodeURIComponent(generatedText);
     const toEmail = values.email ? encodeURIComponent(values.email) : "";
     const mailtoUrl = `mailto:${toEmail}?subject=${subject}&body=${body}`;
     window.open(mailtoUrl, "_self");
+    setShowMailSetup(false);
   };
 
   const handleCopy = () => {
@@ -603,27 +611,28 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       className="modal-xl"
     >
       <div className="card-body p-4">
-        {/* ── Mode Tabs ── */}
-        <div className="d-flex align-items-center mb-3">
-          <button
-            className={`btn btn-sm me-2 ${isWhatsApp ? 'btn-success' : 'btn-outline-secondary'}`}
-            type="button"
-            onClick={() => setFieldValue("mode", "whatsapp")}
-            style={{ borderRadius: "20px", padding: "6px 18px" }}
-          >
-            <i className="fa-brands fa-whatsapp me-2"></i>
-            WhatsApp
-          </button>
-          <button
-            className={`btn btn-sm ${!isWhatsApp ? 'btn-primary' : 'btn-outline-secondary'}`}
-            type="button"
-            onClick={() => setFieldValue("mode", "email")}
-            style={{ borderRadius: "20px", padding: "6px 18px" }}
-          >
-            <i className="fa-regular fa-envelope me-2"></i>
-            Email
-          </button>
-        </div>
+          <>
+            {/* ── Mode Tabs ── */}
+            <div className="d-flex align-items-center mb-3">
+              <button
+                className={`btn btn-sm me-2 ${isWhatsApp ? 'btn-success' : 'btn-outline-secondary'}`}
+                type="button"
+                onClick={() => setFieldValue("mode", "whatsapp")}
+                style={{ borderRadius: "20px", padding: "6px 18px" }}
+              >
+                <i className="fa-brands fa-whatsapp me-2"></i>
+                WhatsApp
+              </button>
+              <button
+                className={`btn btn-sm ${!isWhatsApp ? 'btn-primary' : 'btn-outline-secondary'}`}
+                type="button"
+                onClick={() => setFieldValue("mode", "email")}
+                style={{ borderRadius: "20px", padding: "6px 18px" }}
+              >
+                <i className="fa-regular fa-envelope me-2"></i>
+                Email
+              </button>
+            </div>
 
         {/* ── Info hint ── */}
         <p className="text-muted small mb-3" style={{ fontSize: "12px" }}>
@@ -651,22 +660,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           ))}
         </div>
 
-        {/* ── Email "To" field (only in email mode) ── */}
-        {!isWhatsApp && (
-          <div className="mb-3">
-            <label className="form-label small fw-semibold mb-1">Recipient Email</label>
-            <input
-              type="email"
-              className="form-control form-control-sm"
-              placeholder="Enter recipient email address"
-              name="email"
-              value={values.email}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              style={{ maxWidth: "400px", borderRadius: "8px" }}
-            />
-          </div>
-        )}
+            {/* ── Email "To" field removed from standard view as requested ── */}
 
         {/* ── Preview Box ── */}
         {isWhatsApp ? (
@@ -699,6 +693,73 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
             }}
             dangerouslySetInnerHTML={{ __html: generatedHtml || '<p class="text-muted p-3">No content to preview.</p>' }}
           />
+        )}
+
+        {/* ── Mail Setup Popup ── */}
+        {showMailSetup && (
+          <div
+            style={{
+              position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: "rgba(0,0,0,0.4)", zIndex: 9999,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+            onClick={() => setShowMailSetup(false)}
+          >
+            <div
+              style={{
+                backgroundColor: "#fff", borderRadius: "12px", padding: "28px",
+                width: "100%", maxWidth: "460px", boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="d-flex align-items-center justify-content-between mb-4">
+                <h6 className="mb-0 fw-bold">
+                  <i className="fa-regular fa-envelope me-2 text-primary"></i>
+                  Open in Mail Client
+                </h6>
+                <button
+                  type="button" className="btn-close"
+                  onClick={() => setShowMailSetup(false)}
+                ></button>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label small fw-semibold mb-1">Recipient Email</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  placeholder="Enter recipient email address"
+                  name="email"
+                  value={values.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  autoFocus
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="form-label small fw-semibold mb-1">Subject</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Email subject"
+                  name="subject"
+                  value={values.subject}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+              </div>
+
+              <div className="d-flex justify-content-end gap-2">
+                <button className="btn btn-light" type="button" onClick={() => setShowMailSetup(false)}>
+                  Cancel
+                </button>
+                <button className="btn btn-primary px-4" type="button" onClick={confirmEmailSend}>
+                  <i className="fa-regular fa-paper-plane me-2"></i> Send
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* ── Action Buttons ── */}
@@ -736,7 +797,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
               </span>
             </>
           )}
-        </div>
+            </div>
+          </>
       </div>
     </CustomModal>
   );

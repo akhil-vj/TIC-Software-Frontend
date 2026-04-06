@@ -351,7 +351,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
             type="button"
             onClick={handleBack}
           >
-            <i class="fa fa-arrow-left fa-xl" aria-hidden="true"></i>
+            <i className="fa fa-arrow-left fa-xl" aria-hidden="true"></i>
           </button>
           <ModeBtn className="" isEdit={isEdit}
             readOnly={readOnly} setReadOnly={setReadOnly} />
