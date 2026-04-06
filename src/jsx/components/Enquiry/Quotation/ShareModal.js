@@ -223,102 +223,108 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
     const { tripId, packageName, startDate, endDate, nightsCount, daysCount, adultCount, childCount, refId, clientName, currencyCode, grandTotal, pricePerPerson } = info;
 
-    // Common styles for email compatibility
-    const styles = {
-      body: 'font-family: "Segoe UI", Arial, Helvetica, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: 0 auto; background-color: #ffffff;',
-      header: 'background: linear-gradient(135deg, #1a237e 0%, #283593 100%); color: #ffffff; padding: 30px 35px; border-radius: 8px 8px 0 0;',
-      headerTitle: 'margin: 0 0 5px 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;',
-      headerSubtitle: 'margin: 0; font-size: 14px; opacity: 0.85; font-weight: 400;',
-      infoBar: 'background-color: #f5f7ff; padding: 20px 35px; border-bottom: 2px solid #e8eaf6;',
-      infoItem: 'display: inline-block; margin-right: 30px; font-size: 13px;',
-      infoLabel: 'color: #7986cb; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 3px;',
-      infoValue: 'color: #1a237e; font-weight: 700; font-size: 15px;',
-      sectionTitle: 'font-size: 16px; font-weight: 700; color: #1a237e; margin: 25px 0 15px 0; padding-bottom: 8px; border-bottom: 2px solid #e8eaf6;',
-      table: 'width: 100%; border-collapse: collapse; font-size: 13px;',
-      th: 'background-color: #f5f7ff; color: #1a237e; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.8px; padding: 12px 15px; border: 1px solid #e0e3f0; text-align: left;',
-      td: 'padding: 10px 15px; border: 1px solid #e8eaf6; vertical-align: top;',
-      tdAlt: 'padding: 10px 15px; border: 1px solid #e8eaf6; vertical-align: top; background-color: #fafbff;',
-      badge: 'display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;',
-      badgeHotel: 'background-color: #e8f5e9; color: #2e7d32;',
-      badgeActivity: 'background-color: #fff3e0; color: #e65100;',
-      badgeTransfer: 'background-color: #e3f2fd; color: #1565c0;',
-      totalRow: 'background-color: #1a237e; color: #ffffff; font-weight: 700;',
-      footer: 'background-color: #f5f7ff; padding: 20px 35px; border-radius: 0 0 8px 8px; border-top: 2px solid #e8eaf6; font-size: 12px; color: #666;',
-    };
-
-    const getBadgeStyle = (type) => {
-      switch (type?.toLowerCase()) {
-        case 'hotel': return styles.badge + styles.badgeHotel;
-        case 'activity': return styles.badge + styles.badgeActivity;
-        case 'transfer': return styles.badge + styles.badgeTransfer;
-        default: return styles.badge;
-      }
+    // ── Color palette (TIC Tours brand: Blue + Red) ──
+    const C = {
+      primary:     '#0d6efd',   // TIC bright blue
+      primaryDark: '#0a47a0',   // dark blue
+      primaryDeep: '#062d6e',   // very dark blue (header)
+      primaryLight:'#e8f0fe',   // very light blue tint
+      accent:      '#c62828',   // TIC crimson red
+      accentLight: '#fce8e8',   // light red tint
+      accentDark:  '#8e1c1c',   // darker red
+      text:        '#1e293b',   // dark slate
+      textMuted:   '#64748b',   // muted blue-grey
+      textLight:   '#94a3b8',   // light grey
+      border:      '#cbd5e1',   // soft blue-grey border
+      borderLight: '#e2e8f0',   // very light border
+      bgAlt:       '#f8fafc',   // alternating row blue tint
+      bgCard:      '#fafbfd',   // card background
+      white:       '#ffffff',
+      badgeHotelBg:    '#e3f2fd', badgeHotelTx:    '#1565c0',
+      badgeActivityBg: '#fff3e0', badgeActivityTx: '#e65100',
+      badgeTransferBg: '#f3e5f5', badgeTransferTx: '#7b1fa2',
     };
 
     let html = '';
 
-    // ── Outer container ──
-    html += `<div style="${styles.body}">`;
+    // ── Outer wrapper ──
+    html += `<div style="font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: ${C.text}; line-height: 1.6; max-width: 820px; margin: 0 auto; background-color: ${C.white}; border: 1px solid ${C.borderLight}; border-radius: 10px; overflow: hidden;">`;
 
     // ── Header ──
-    html += `<div style="${styles.header}">`;
-    html += `<h1 style="${styles.headerTitle}">${packageName}</h1>`;
-    html += `<p style="${styles.headerSubtitle}">Trip ID: ${tripId}${refId ? ` &nbsp;|&nbsp; Ref: ${refId}` : ''}</p>`;
+    html += `<div style="background: linear-gradient(135deg, ${C.primaryDeep} 0%, ${C.primaryDark} 50%, ${C.primary} 100%); color: ${C.white}; padding: 32px 40px 28px 40px;">`;
+    html += `<h1 style="margin: 0 0 6px 0; font-size: 26px; font-weight: 700; letter-spacing: 0.3px;">${packageName}</h1>`;
+    html += `<p style="margin: 0; font-size: 14px; opacity: 0.9;">Trip ID: <strong>${tripId}</strong>${refId ? ` &nbsp;&bull;&nbsp; Ref: <strong>${refId}</strong>` : ''}</p>`;
+    // Decorative red accent divider (matches TIC logo swoosh)
+    html += `<div style="width: 60px; height: 3px; background-color: ${C.accent}; margin-top: 16px; border-radius: 2px;"></div>`;
     html += `</div>`;
 
-    // ── Info Bar ──
-    html += `<table style="width: 100%; background-color: #f5f7ff; border-bottom: 2px solid #e8eaf6;" cellpadding="0" cellspacing="0"><tr>`;
-    html += `<td style="padding: 20px 35px;">`;
-    html += `<table cellpadding="0" cellspacing="0"><tr>`;
-    html += `<td style="padding-right: 35px; vertical-align: top;">
-      <div style="${styles.infoLabel}">Travel Dates</div>
-      <div style="${styles.infoValue}">${formatFullDate(startDate)} — ${formatFullDate(endDate)}</div>
-    </td>`;
-    html += `<td style="padding-right: 35px; vertical-align: top;">
-      <div style="${styles.infoLabel}">Duration</div>
-      <div style="${styles.infoValue}">${nightsCount}N / ${daysCount}D</div>
-    </td>`;
-    html += `<td style="padding-right: 35px; vertical-align: top;">
-      <div style="${styles.infoLabel}">Travellers</div>
-      <div style="${styles.infoValue}">${adultCount} Adults${childCount > 0 ? `, ${childCount} Children` : ''}</div>
-    </td>`;
-    html += `</tr></table>`;
-    html += `</td></tr></table>`;
+    // ── Info Cards Bar ──
+    html += `<table style="width: 100%; background-color: ${C.primaryLight}; border-bottom: 1px solid ${C.border};" cellpadding="0" cellspacing="0"><tr>`;
+    html += `<td style="padding: 22px 40px;">`;
+    html += `<table cellpadding="0" cellspacing="0" style="width: 100%;"><tr>`;
+
+    const infoCards = [
+      { label: 'Travel Dates', value: `${formatFullDate(startDate)} — ${formatFullDate(endDate)}` },
+      { label: 'Duration', value: `${nightsCount} Nights / ${daysCount} Days` },
+      { label: 'Travellers', value: `${adultCount} Adults${childCount > 0 ? `, ${childCount} Children` : ''}` },
+    ];
+    infoCards.forEach((card, i) => {
+      html += `<td style="vertical-align: top;${i < infoCards.length - 1 ? ' padding-right: 20px;' : ''}">
+        <div style="background-color: ${C.white}; border: 1px solid ${C.border}; border-radius: 8px; padding: 12px 16px;">
+          <div style="color: ${C.textMuted}; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.8px; margin-bottom: 4px;">${card.label}</div>
+          <div style="color: ${C.primaryDark}; font-weight: 700; font-size: 14px;">${card.value}</div>
+        </div>
+      </td>`;
+    });
+    html += `</tr></table></td></tr></table>`;
 
     // ── Greeting ──
-    html += `<div style="padding: 25px 35px 0 35px;">`;
-    html += `<p style="margin: 0 0 5px 0;">Dear <strong>${clientName}</strong>,</p>`;
-    html += `<p style="margin: 0 0 20px 0; color: #555;">Thank you for your enquiry. Please find below the detailed itinerary and pricing for your package.</p>`;
+    html += `<div style="padding: 28px 40px 0 40px;">`;
+    html += `<p style="margin: 0 0 4px 0; font-size: 15px;">Dear <strong style="color: ${C.primary};">${clientName}</strong>,</p>`;
+    html += `<p style="margin: 0 0 22px 0; color: ${C.textMuted}; font-size: 14px;">Thank you for your enquiry. Please find below the detailed itinerary and pricing for your travel package.</p>`;
     html += `</div>`;
 
-    // ── Day-wise Itinerary Table ──
+    // ── Section Title Helper ──
+    const sectionTitle = (emoji, title) =>
+      `<div style="font-size: 16px; font-weight: 700; color: ${C.primary}; margin: 28px 0 14px 0; padding-bottom: 8px; border-bottom: 2px solid ${C.border};">${emoji} &nbsp;${title}</div>`;
+
+    // Table styles
+    const thStyle = `background-color: ${C.primaryLight}; color: ${C.primaryDark}; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.8px; padding: 11px 14px; border: 1px solid ${C.border}; text-align: left;`;
+    const tdStyle = `padding: 10px 14px; border: 1px solid ${C.borderLight}; vertical-align: top; font-size: 13px;`;
+    const tdAltStyle = `padding: 10px 14px; border: 1px solid ${C.borderLight}; vertical-align: top; font-size: 13px; background-color: ${C.bgAlt};`;
+
+    // ── Day-wise Itinerary ──
     if (values.itinerary && packageData.planArr) {
-      html += `<div style="padding: 0 35px;">`;
-      html += `<h3 style="${styles.sectionTitle}">📋 Day-wise Itinerary</h3>`;
+      html += `<div style="padding: 0 40px;">`;
+      html += sectionTitle('📋', 'Day-wise Itinerary');
 
       const dayWise = getDayWiseItinerary();
       dayWise.forEach(({ dayIndex, dayDate, dayDestination, schedule }) => {
         const dayStr = dayDate.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
         const destLabel = dayDestination?.label || dayDestination?.name || "";
 
-        html += `<table style="${styles.table} margin-bottom: 20px;" cellpadding="0" cellspacing="0">`;
-        // Day header
-        html += `<tr><td colspan="4" style="background-color: #1a237e; color: #ffffff; padding: 10px 15px; font-weight: 700; font-size: 14px; border: 1px solid #1a237e;">`;
-        html += `Day ${dayIndex + 1} &mdash; ${dayStr}`;
-        if (destLabel) html += ` &nbsp;<span style="opacity: 0.8; font-weight: 400; font-size: 12px;">| ${destLabel}</span>`;
-        html += `</td></tr>`;
+        html += `<table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 18px;" cellpadding="0" cellspacing="0">`;
+
+        // Day header with left accent bar
+        html += `<tr><td colspan="4" style="background-color: ${C.primaryDark}; color: ${C.white}; padding: 0; border: 1px solid ${C.primaryDark};">`;
+        html += `<table cellpadding="0" cellspacing="0" style="width: 100%;"><tr>`;
+        html += `<td style="width: 5px; background-color: ${C.accent};"></td>`;
+        html += `<td style="padding: 10px 16px;">`;
+        html += `<span style="font-weight: 700; font-size: 14px;">Day ${dayIndex + 1}</span>`;
+        html += `<span style="opacity: 0.85; font-weight: 400; font-size: 13px;"> &mdash; ${dayStr}</span>`;
+        if (destLabel) html += `<span style="opacity: 0.7; font-size: 12px; margin-left: 8px;">| ${destLabel}</span>`;
+        html += `</td></tr></table></td></tr>`;
 
         if (schedule.length > 0) {
-          // Table header
           html += `<tr>`;
-          html += `<th style="${styles.th} width: 15%;">Time</th>`;
-          html += `<th style="${styles.th} width: 12%;">Type</th>`;
-          html += `<th style="${styles.th} width: 50%;">Details</th>`;
-          html += `<th style="${styles.th} width: 23%;">Location</th>`;
+          html += `<th style="${thStyle} width: 14%;">Time</th>`;
+          html += `<th style="${thStyle} width: 12%;">Type</th>`;
+          html += `<th style="${thStyle} width: 51%;">Details</th>`;
+          html += `<th style="${thStyle} width: 23%;">Location</th>`;
           html += `</tr>`;
 
           schedule.forEach((item, idx) => {
-            const rowStyle = idx % 2 === 0 ? styles.td : styles.tdAlt;
+            const rs = idx % 2 === 0 ? tdStyle : tdAltStyle;
             const timeStart = item.startTime ? parseTime(item.startTime) : '';
             const timeEnd = item.endTime ? parseTime(item.endTime) : '';
             const timeStr = (timeStart || timeEnd) ? `${timeStart} - ${timeEnd}` : '—';
@@ -326,69 +332,65 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
             const itemName = item.name || item.activity_name || item.vehicle_name || '';
             const location = item.subDestination?.label || item.subDestination?.name || item.destination?.label || destLabel || '';
 
-            let badgeColor = '#e65100'; let badgeBg = '#fff3e0';
-            if (typeLower === 'hotel') { badgeColor = '#2e7d32'; badgeBg = '#e8f5e9'; }
-            if (typeLower === 'transfer') { badgeColor = '#1565c0'; badgeBg = '#e3f2fd'; }
+            let bColor = C.badgeActivityTx, bBg = C.badgeActivityBg;
+            if (typeLower === 'hotel') { bColor = C.badgeHotelTx; bBg = C.badgeHotelBg; }
+            if (typeLower === 'transfer') { bColor = C.badgeTransferTx; bBg = C.badgeTransferBg; }
 
             html += `<tr>`;
-            html += `<td style="${rowStyle}">${timeStr}</td>`;
-            html += `<td style="${rowStyle}"><span style="display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; background-color: ${badgeBg}; color: ${badgeColor};">${item.insertType?.toUpperCase() || 'N/A'}</span></td>`;
+            html += `<td style="${rs} color: ${C.textMuted};">${timeStr}</td>`;
+            html += `<td style="${rs}"><span style="display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; background-color: ${bBg}; color: ${bColor};">${item.insertType?.toUpperCase() || 'N/A'}</span></td>`;
 
-            // Details cell
-            html += `<td style="${rowStyle}">`;
-            html += `<strong>${itemName}</strong>`;
-            if (item.description) html += `<br/><span style="color: #888; font-size: 12px;">${item.description}</span>`;
+            html += `<td style="${rs}">`;
+            html += `<strong style="color: ${C.text};">${itemName}</strong>`;
+            if (item.description) html += `<br/><span style="color: ${C.textLight}; font-size: 12px;">${item.description}</span>`;
             if (typeLower === 'hotel') {
-              html += `<br/><span style="color: #666; font-size: 12px;">`;
-              if (item.roomType?.label) html += `Room: ${item.roomType.label}`;
-              if (item.option?.label) html += ` &nbsp;|&nbsp; Meal: ${item.option.label}`;
+              html += `<br/><span style="color: ${C.textMuted}; font-size: 12px;">`;
+              if (item.roomType?.label) html += `🛏️ ${item.roomType.label}`;
+              if (item.option?.label) html += ` &nbsp;·&nbsp; 🍽️ ${item.option.label}`;
               html += `</span>`;
-              // Check-in / Check-out
               if (item.startDate || item.endDate) {
                 const cin = item.startDate ? formatFullDate(new Date(item.startDate)) : '';
                 const cout = item.endDate ? formatFullDate(new Date(item.endDate)) : '';
-                html += `<br/><span style="color: #888; font-size: 11px;">Check-in: ${cin} &bull; Check-out: ${cout}</span>`;
+                html += `<br/><span style="color: ${C.textLight}; font-size: 11px;">Check-in: ${cin} &bull; Check-out: ${cout}</span>`;
               }
             }
             if (typeLower === 'transfer' && item.type?.label) {
-              html += `<br/><span style="color: #666; font-size: 12px;">Transfer Type: ${item.type.label}</span>`;
+              html += `<br/><span style="color: ${C.textMuted}; font-size: 12px;">🚗 ${item.type.label}</span>`;
             }
             html += `</td>`;
-
-            html += `<td style="${rowStyle}">${location}</td>`;
+            html += `<td style="${rs} color: ${C.textMuted};">${location}</td>`;
             html += `</tr>`;
           });
         } else {
-          html += `<tr><td colspan="4" style="${styles.td} text-align: center; color: #999; font-style: italic;">No activities scheduled</td></tr>`;
+          html += `<tr><td colspan="4" style="${tdStyle} text-align: center; color: ${C.textLight}; font-style: italic; padding: 16px;">No activities scheduled for this day</td></tr>`;
         }
-
         html += `</table>`;
       });
 
-      // ── Hotel Summary Table ──
+      // ── Hotels Summary ──
       const hotelsGrouped = getGroupedHotels();
       if (hotelsGrouped.length > 0) {
-        html += `<h3 style="${styles.sectionTitle}">🏨 Accommodation Summary</h3>`;
-        html += `<table style="${styles.table}" cellpadding="0" cellspacing="0">`;
+        html += sectionTitle('🏨', 'Accommodation Summary');
+        html += `<table style="width: 100%; border-collapse: collapse; font-size: 13px;" cellpadding="0" cellspacing="0">`;
         html += `<tr>`;
-        html += `<th style="${styles.th}">Hotel</th>`;
-        html += `<th style="${styles.th}">Location</th>`;
-        html += `<th style="${styles.th}">Check-in</th>`;
-        html += `<th style="${styles.th}">Check-out</th>`;
-        html += `<th style="${styles.th}">Nights</th>`;
-        html += `<th style="${styles.th}">Room Type</th>`;
-        html += `<th style="${styles.th}">Meal Plan</th>`;
+        html += `<th style="${thStyle}">Hotel</th>`;
+        html += `<th style="${thStyle}">Location</th>`;
+        html += `<th style="${thStyle} text-align: center;">Check-in</th>`;
+        html += `<th style="${thStyle} text-align: center;">Check-out</th>`;
+        html += `<th style="${thStyle} text-align: center;">Nights</th>`;
+        html += `<th style="${thStyle}">Room Type</th>`;
+        html += `<th style="${thStyle}">Meal Plan</th>`;
         html += `</tr>`;
         hotelsGrouped.forEach((h, idx) => {
-          const rowStyle = idx % 2 === 0 ? styles.td : styles.tdAlt;
+          const rs = idx % 2 === 0 ? tdStyle : tdAltStyle;
           html += `<tr>`;
-          html += `<td style="${rowStyle}"><strong>${h.name}</strong>${h.star ? `<br/><span style="color: #888; font-size: 11px;">${h.star}</span>` : ''}</td>`;
-          html += `<td style="${rowStyle}">${h.location}</td>`;
-          html += `<td style="${rowStyle}">${formatShortDate(h.checkInDate)}</td>`;
-          html += `<td style="${rowStyle}">${formatShortDate(h.checkOutDate)}</td>`;
-          html += `<td style="${rowStyle} text-align: center; font-weight: 700;">${h.nights.length}</td>`;
-          html += `<td style="${rowStyle}">${h.room}</td>`;
-          html += `<td style="${rowStyle}">${h.meal}</td>`;
+          html += `<td style="${rs}"><strong style="color: ${C.primary};">${h.name}</strong>${h.star ? `<br/><span style="color: ${C.textLight}; font-size: 11px;">${h.star}</span>` : ''}</td>`;
+          html += `<td style="${rs}">${h.location}</td>`;
+          html += `<td style="${rs} text-align: center;">${formatShortDate(h.checkInDate)}</td>`;
+          html += `<td style="${rs} text-align: center;">${formatShortDate(h.checkOutDate)}</td>`;
+          html += `<td style="${rs} text-align: center; font-weight: 700; color: ${C.primary};">${h.nights.length}</td>`;
+          html += `<td style="${rs}">${h.room}</td>`;
+          html += `<td style="${rs}">${h.meal}</td>`;
           html += `</tr>`;
         });
         html += `</table>`;
@@ -399,36 +401,38 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
     // ── Pricing Section ──
     if (!values.hideTotalPrice) {
-      html += `<div style="padding: 0 35px;">`;
-      html += `<h3 style="${styles.sectionTitle}">💰 Pricing Summary</h3>`;
-      html += `<table style="${styles.table}" cellpadding="0" cellspacing="0">`;
+      html += `<div style="padding: 0 40px;">`;
+      html += sectionTitle('💰', 'Pricing Summary');
+
+      html += `<table style="width: 100%; border-collapse: collapse; font-size: 13px;" cellpadding="0" cellspacing="0">`;
       html += `<tr>`;
-      html += `<th style="${styles.th}">Description</th>`;
-      html += `<th style="${styles.th} text-align: right;">Amount (${currencyCode})</th>`;
+      html += `<th style="${thStyle}">Description</th>`;
+      html += `<th style="${thStyle} text-align: right;">Amount (${currencyCode})</th>`;
       html += `</tr>`;
 
       if (values.priceBreakup) {
         html += `<tr>`;
-        html += `<td style="${styles.td}">Per Person Cost (Double Sharing) × ${adultCount} Pax</td>`;
-        html += `<td style="${styles.td} text-align: right; font-weight: 600;">${parseFloat(pricePerPerson).toLocaleString()}</td>`;
+        html += `<td style="${tdStyle}">Per Person Cost (Double Sharing) × ${adultCount} Pax</td>`;
+        html += `<td style="${tdStyle} text-align: right; font-weight: 600; color: ${C.text};">${parseFloat(pricePerPerson).toLocaleString()}</td>`;
         html += `</tr>`;
       }
 
-      html += `<tr style="${styles.totalRow}">`;
-      html += `<td style="padding: 14px 15px; border: 1px solid #1a237e; font-size: 15px;">Grand Total</td>`;
-      html += `<td style="padding: 14px 15px; border: 1px solid #1a237e; text-align: right; font-size: 16px;">${currencyCode} ${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-</td>`;
+      // Grand total row — brand red accent border
+      html += `<tr>`;
+      html += `<td style="padding: 14px; border: 1px solid ${C.accent}; background: linear-gradient(135deg, ${C.primaryDark}, ${C.primary}); color: ${C.white}; font-weight: 700; font-size: 15px;">Grand Total</td>`;
+      html += `<td style="padding: 14px; border: 1px solid ${C.accent}; background: linear-gradient(135deg, ${C.primaryDark}, ${C.primary}); color: ${C.white}; text-align: right; font-weight: 700; font-size: 17px; letter-spacing: 0.3px;">${currencyCode} ${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-</td>`;
       html += `</tr>`;
       html += `</table>`;
 
-      html += `<p style="color: #888; font-size: 11px; margin-top: 6px; font-style: italic;">* Prices are exclusive of applicable taxes/VAT unless mentioned otherwise.</p>`;
+      html += `<p style="color: ${C.textLight}; font-size: 11px; margin-top: 8px; font-style: italic;">* Prices are exclusive of applicable taxes/VAT unless mentioned otherwise.</p>`;
       html += `</div>`;
     }
 
     // ── Terms ──
     if (values.terms) {
-      html += `<div style="padding: 0 35px 10px 35px;">`;
-      html += `<h3 style="${styles.sectionTitle}">📝 Terms & Conditions</h3>`;
-      html += `<ul style="color: #555; font-size: 13px; padding-left: 20px; margin: 0;">`;
+      html += `<div style="padding: 0 40px 10px 40px;">`;
+      html += sectionTitle('📝', 'Terms & Conditions');
+      html += `<ul style="color: ${C.textMuted}; font-size: 13px; padding-left: 20px; margin: 0;">`;
       html += `<li style="margin-bottom: 6px;">Standard cancellation and refund policies apply.</li>`;
       html += `<li style="margin-bottom: 6px;">All bookings are subject to availability.</li>`;
       html += `<li style="margin-bottom: 6px;">Prices may vary based on seasonal changes.</li>`;
@@ -437,9 +441,11 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     }
 
     // ── Footer ──
-    html += `<div style="${styles.footer}">`;
-    html += `<p style="margin: 0 0 5px 0;">For any queries, please feel free to reach out to us.</p>`;
-    html += `<p style="margin: 0; font-weight: 600; color: #1a237e;">Warm Regards,<br/>TIC Tours Team</p>`;
+    html += `<div style="background-color: ${C.primaryLight}; padding: 22px 40px; border-top: 1px solid ${C.border}; font-size: 12px; color: ${C.textMuted};">`;
+    html += `<p style="margin: 0 0 6px 0;">For any queries, please feel free to reach out to us.</p>`;
+    html += `<p style="margin: 0; font-weight: 700; color: ${C.primary}; font-size: 13px;">Warm Regards,<br/>TIC Tours Team</p>`;
+    // Red accent divider (matches logo swoosh)
+    html += `<div style="width: 40px; height: 2px; background-color: ${C.accent}; margin-top: 12px; border-radius: 1px;"></div>`;
     html += `</div>`;
 
     html += `</div>`;
