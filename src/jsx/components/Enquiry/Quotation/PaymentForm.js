@@ -1018,10 +1018,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                    } else {
                      snapCurrencySymbol = ""; // Mask raw database UUIDs
                    }
-                   snapExchangeRate = parseFloat(snapshot.exchange_rate || itinData.exchange_rate) || 1;
+                   snapExchangeRate = parseFloat(snapshot.exchange_rate || snapData.exchange_rate || itinData.exchange_rate) || 1;
                 }
                 const snapConvert = (val) => snapExchangeRate > 0 ? getRoundOfValue((val || 0) / snapExchangeRate) : val;
-                const convertedGrandTotal = snapshot.converted_total || snapConvert(snapshot.grand_total);
+                const convertedGrandTotal = snapConvert(snapshot.grand_total);
 
 
                 return (
@@ -1177,7 +1177,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                     if (matchedCur) snapCurrencySymbol = getSymbol(matchedCur.to_currency || matchedCur.code);
                     else if (previewSnapshot.currency.length < 10) snapCurrencySymbol = getSymbol(previewSnapshot.currency);
                     else snapCurrencySymbol = ""; 
-                    snapExchangeRate = parseFloat(previewSnapshot.exchange_rate || snapData.itinerary?.exchange_rate) || 1;
+                    snapExchangeRate = parseFloat(previewSnapshot.exchange_rate || snapData.exchange_rate || snapData.itinerary?.exchange_rate) || 1;
                   }
                   const snapConvert = (val) => snapExchangeRate > 0 ? getRoundOfValue((val || 0) / snapExchangeRate) : val;
 
