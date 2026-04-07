@@ -83,7 +83,19 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       currencyCode = packageData.currency;
     }
 
-    const grandTotal = parseFloat(packageData.converted_total || packageData.grand_total || packageData.total_amount || 0);
+    // Determine base grand total
+    const baseGrandTotal = parseFloat(packageData.grand_total || packageData.total_amount || 0);
+    let grandTotal = baseGrandTotal;
+
+    // Apply dynamic conversion if a converted currency (with exchange_rate) is selected
+    const exchangeRate = parseFloat(packageData.priceIn?.exchange_rate) || 0;
+    if (!isBase && exchangeRate > 0) {
+      grandTotal = baseGrandTotal / exchangeRate;
+    } else if (packageData.converted_total && !isBase) {
+      // Fallback to pre-calculated converted_total if available and we know it's not base
+      grandTotal = parseFloat(packageData.converted_total);
+    }
+
     const pricePerPerson = adultCount > 0 ? (grandTotal / adultCount).toFixed(0) : 0;
 
     return {
@@ -545,19 +557,42 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     setShowModal(false);
   };
 
+  /*
   const handleEmailSend = () => {
     setFieldValue("subject", generateEmailSubject());
     setShowMailSetup(true);
   };
 
   const confirmEmailSend = () => {
-    const subject = encodeURIComponent(values.subject || generateEmailSubject());
-    const body = encodeURIComponent(generatedText);
-    const toEmail = values.email ? encodeURIComponent(values.email) : "";
-    const mailtoUrl = `mailto:${toEmail}?subject=${subject}&body=${body}`;
-    window.open(mailtoUrl, "_self");
-    setShowMailSetup(false);
+    const subject = values.subject || generateEmailSubject();
+    const toEmail = values.email || "";
+    
+    // mailto only supports plain text. To support tables/colors, 
+    // we copy the HTML content so the user can paste it into their mail app.
+    try {
+      const blob = new Blob([generatedHtml], { type: 'text/html' });
+      const plainBlob = new Blob([generatedText], { type: 'text/plain' });
+      const clipboardItem = new ClipboardItem({
+        'text/html': blob,
+        'text/plain': plainBlob,
+      });
+      navigator.clipboard.write([clipboardItem]).then(() => {
+        notifyCreate("Formatted email copied! Please paste (Ctrl+V) into your mail app body.", true);
+        
+        // Now open mail client with just to and subject
+        const mailtoUrl = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}`;
+        window.open(mailtoUrl, "_self");
+        setShowMailSetup(false);
+      });
+    } catch (err) {
+      console.error("Clipboard copy failed:", err);
+      // Fallback: just open mail client with plain text if copy fails
+      const mailtoUrl = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(generatedText)}`;
+      window.open(mailtoUrl, "_self");
+      setShowMailSetup(false);
+    }
   };
+  */
 
   const handleCopy = () => {
     if (values.mode === "whatsapp") {
@@ -608,7 +643,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       showModal={showModal}
       title={"Share Package"}
       handleModalClose={() => setShowModal(false)}
-      className="modal-xl"
+      size="xl"
+      centered
     >
       <div className="card-body p-4">
           <>
@@ -696,7 +732,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
         )}
 
         {/* ── Mail Setup Popup ── */}
-        {showMailSetup && (
+        {/* {showMailSetup && (
           <div
             style={{
               position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -760,7 +796,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* ── Action Buttons ── */}
         <div className="d-flex align-items-center flex-wrap gap-2">
@@ -770,7 +806,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
                 <i className="fa-brands fa-whatsapp me-2"></i> Send on WhatsApp
               </button>
               <button className="btn btn-outline-secondary" onClick={handleCopy}>
-                <i className="fa-regular fa-copy me-2"></i> Copy
+                <i className="fa-regular fa-copy me-2"></i> Copy for WhatsApp
               </button>
               <span
                 className="ms-auto text-primary small"
@@ -783,11 +819,11 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           ) : (
             <>
               <button className="btn btn-primary" onClick={handleCopy}>
-                <i className="fa-regular fa-copy me-2"></i> Copy Formatted
+                <i className="fa-regular fa-copy me-2"></i> Copy for Email
               </button>
-              <button className="btn btn-outline-primary" onClick={handleEmailSend}>
+              {/* <button className="btn btn-outline-primary" onClick={handleEmailSend}>
                 <i className="fa-regular fa-paper-plane me-2"></i> Open in Mail Client
-              </button>
+              </button> */}
               <span
                 className="ms-auto text-success small"
                 style={{ cursor: "pointer" }}
