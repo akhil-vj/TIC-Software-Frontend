@@ -1008,6 +1008,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 const totalTax = (Number(itinData.cgst_percentage) || 0) + (Number(itinData.sgst_percentage) || 0) + (Number(itinData.igst_percentage) || 0);
 
                 let snapCurrencySymbol = getSymbol(baseCode);
+                let snapExchangeRate = 1;
                 if (snapshot.currency && snapshot.currency !== 'base' && snapshot.currency !== baseCode) {
                    const matchedCur = currencyOptions.find(c => c.value === snapshot.currency);
                    if (matchedCur) {
@@ -1017,7 +1018,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                    } else {
                      snapCurrencySymbol = ""; // Mask raw database UUIDs
                    }
+                   snapExchangeRate = parseFloat(snapshot.exchange_rate || itinData.exchange_rate) || 1;
                 }
+                const snapConvert = (val) => snapExchangeRate > 0 ? getRoundOfValue((val || 0) / snapExchangeRate) : val;
+                const convertedGrandTotal = snapshot.converted_total || snapConvert(snapshot.grand_total);
+
 
                 return (
                   <div key={snapshot.id} className="position-relative mb-4">
@@ -1067,7 +1072,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                           <div className="text-md-end text-start mt-2 mt-md-0">
                             <span className="text-muted d-block fw-bold" style={{ fontSize: "11px", textTransform:"uppercase", letterSpacing:"1px" }}>Total Overview</span>
                             <h3 className="fw-bolder text-dark mb-0 mt-1" style={{ letterSpacing: "-0.5px" }}>
-                              <span className="text-primary me-1">{snapCurrencySymbol}</span>{snapshot.grand_total}
+                              <span className="text-primary me-1">{snapCurrencySymbol}</span>{convertedGrandTotal}
                             </h3>
                           </div>
                         </div>
@@ -1092,7 +1097,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                             <div className="col-6 col-md-3">
                               <div className="text-muted fw-bold mb-1" style={{ fontSize: "10px", textTransform:"uppercase", letterSpacing: "0.5px" }}>Discount</div>
                               <div className="fw-bold text-danger" style={{ fontSize: "13px" }}>
-                                - {snapCurrencySymbol} {itinData.discount_amount || 0}
+                                - {snapCurrencySymbol} {snapConvert(itinData.discount_amount || 0)}
                               </div>
                             </div>
                             <div className="col-6 col-md-3">
@@ -1166,12 +1171,15 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                   const markup = Number(snapEntry.markup) || 0;
 
                   let snapCurrencySymbol = getSymbol(baseCode);
+                  let snapExchangeRate = 1;
                   if (previewSnapshot.currency && previewSnapshot.currency !== 'base' && previewSnapshot.currency !== baseCode) {
                     const matchedCur = currencyOptions.find(c => c.value === previewSnapshot.currency);
                     if (matchedCur) snapCurrencySymbol = getSymbol(matchedCur.to_currency || matchedCur.code);
                     else if (previewSnapshot.currency.length < 10) snapCurrencySymbol = getSymbol(previewSnapshot.currency);
                     else snapCurrencySymbol = ""; 
+                    snapExchangeRate = parseFloat(previewSnapshot.exchange_rate || snapData.itinerary?.exchange_rate) || 1;
                   }
+                  const snapConvert = (val) => snapExchangeRate > 0 ? getRoundOfValue((val || 0) / snapExchangeRate) : val;
 
                   return (
                     <tr key={ind} className="border-bottom" style={{ transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fcfdff'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -1179,9 +1187,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                          <div className="fw-bold fs-14 text-dark">{item.name}</div>
                          <div className="text-muted text-capitalize mt-1" style={{ fontSize: "11px", letterSpacing: "0.2px" }}>{item.insertType}</div>
                        </td>
-                       <td className="px-4 py-3 align-middle text-end fw-medium">{snapCurrencySymbol} {net}</td>
-                       <td className="px-4 py-3 align-middle text-end fw-medium">{snapCurrencySymbol} {markup}</td>
-                       <td className="px-4 py-3 align-middle text-end fw-bold text-dark fs-15">{snapCurrencySymbol} {getRoundOfValue(net + markup)}</td>
+                       <td className="px-4 py-3 align-middle text-end fw-medium">{snapCurrencySymbol} {snapConvert(net)}</td>
+                       <td className="px-4 py-3 align-middle text-end fw-medium">{snapCurrencySymbol} {snapConvert(markup)}</td>
+                       <td className="px-4 py-3 align-middle text-end fw-bold text-dark fs-15">{snapCurrencySymbol} {snapConvert(net + markup)}</td>
                     </tr>
                   )
                 })}
