@@ -233,11 +233,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     (acc, { item }) => {
       if (item.insertType !== "hotel") {
         acc.totalAmount += item.amount;
+        acc.trueTotalAmount = (acc.trueTotalAmount || 0) + (item.baseAmount !== undefined ? item.baseAmount : item.amount);
         acc.totalMarkup += item.markup;
       }
       return acc;
     },
-    { totalAmount: 0, totalMarkup: 0 }
+    { totalAmount: 0, trueTotalAmount: 0, totalMarkup: 0 }
   );
 
   const getPerPersonCost = (item) => {
@@ -277,6 +278,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         : -1;
       if (idx >= 0) {
         acc[idx].amount += Number(item.amount || 0);
+        acc[idx].trueBaseAmount = (acc[idx].trueBaseAmount || 0) + Number(item.baseAmount !== undefined ? item.baseAmount : item.amount);
         acc[idx].markup += Number(item.markup || 0);
 
         // Accurate weighted distribution based on hotel room rates
@@ -318,6 +320,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         acc[idx].extra  += counts.extra;
         acc[idx].childW += counts.childW;
         acc[idx].childN += counts.childN;
+
+        acc[idx].singleDisplay = Math.max(acc[idx].singleDisplay || 0, counts.single);
+        acc[idx].doubleDisplay = Math.max(acc[idx].doubleDisplay || 0, counts.double);
+        acc[idx].tripleDisplay = Math.max(acc[idx].tripleDisplay || 0, counts.triple);
+        acc[idx].extraDisplay  = Math.max(acc[idx].extraDisplay || 0, counts.extra);
+        acc[idx].childWDisplay = Math.max(acc[idx].childWDisplay || 0, counts.childW);
+        acc[idx].childNDisplay = Math.max(acc[idx].childNDisplay || 0, counts.childN);
 
         acc[idx].singleTotalCost += (counts.single * rates.single) * ratio;
         acc[idx].doubleTotalCost += (counts.double * rates.double) * ratio;
@@ -371,6 +380,23 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     );
   };
 
+  const calculateTrueInputMarkup = (trueAmount, markup) => {
+    if (values.baseMarkup) {
+      const optionTotal = trueAmount + markup + (totals.trueTotalAmount || 0) + totals.totalMarkup;
+      return getRoundOfValue(optionTotal * values.baseMarkup * 0.01);
+    }
+    return values.extraMarkup;
+  };
+
+  const calculateTrueTotal = (trueAmount, markup) => {
+    const optionTotal    = (totals.trueTotalAmount || 0) + totals.totalMarkup + trueAmount + markup;
+    const discountAmount = optionTotal * checkFormValue(values.discount, "number") * 0.01;
+    const gTotal         = optionTotal - discountAmount;
+    const selectedTaxPct = parseFloat(values.taxType?.percentage || 0);
+    const taxAmount      = gTotal * selectedTaxPct * 0.01;
+    return getRoundOfValue(gTotal + calculateTrueInputMarkup(trueAmount, markup) + taxAmount);
+  };
+
   const getVatDisplay = () => values.taxType?.percentage || 0;
 
   /**
@@ -387,11 +413,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     return PERSON_TYPES.map((pt) => {
       const count = safeCount(item[pt.key]);
+      const displayCount = safeCount(item[`${pt.key}Display`]);
       if (count <= 0) return null;
 
       // hotelRowCost is the TOTAL cost for ALL pax of this type (count * rate * ratio)
       const hotelRowCostAll = item[`${pt.key}TotalCost`] || 0;
-      // Per-person hotel cost
+      // Per-person hotel cost uses the true math count
       const hotelCostPerPerson = count > 0 ? hotelRowCostAll / count : 0;
 
       // Non-hotel costs per person of this type
@@ -415,7 +442,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         markup: rowMarkupAll,
         vat,
         total: rowTotalAll,
-        count
+        count: displayCount
       };
     }).filter(row => row !== null);
   };
@@ -722,9 +749,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                     : getSymbol(baseCode);
                   const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
-                  const grandTotal = getRoundOfValue(
-                    personRows.reduce((sum, pt) => sum + convert(pt.total), 0)
-                  );
+                  const grandTotal = convert(calculateTrueTotal(item.trueBaseAmount, item.markup));
 
                   return (
                     <React.Fragment key={optIdx}>
@@ -759,14 +784,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                           {/* Person type label + per-person cost */}
                           <td style={{ paddingLeft: "16px", color: "#333", borderRight: '1px solid #eee' }}>
                             <span className="fw-medium">{pt.label}</span>
-                            {pt.count > 1
-                              ? <span className="text-muted ms-2">(x{pt.count})</span>
-                              : <span className="text-muted ms-2">—</span>}
-                            {pt.count > 1 && (
-                              <div className="text-muted" style={{ fontSize: '11px' }}>
-                                {currSymbol} {convert(pt.perPersonCost)} / person
-                              </div>
-                            )}
+                            <span className="text-muted ms-2">(x{pt.count})</span>
+                            <div className="text-muted" style={{ fontSize: '11px' }}>
+                              {currSymbol} {convert(pt.perPersonCost)} / person
+                            </div>
                           </td>
 
                           {/* Markup */}
