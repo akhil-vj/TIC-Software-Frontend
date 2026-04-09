@@ -258,13 +258,11 @@ const Quotation = () => {
                                 required=""
                               />
                             </th>
-                            <th>ID</th>
+                            <th>Ref No.</th>
                             <th>Package Name</th>
                             <th>Pax</th>
                             <th>From Date</th>
-                            <th>To Date</th>
-                            {/* <th>Created By</th> */}
-                            <th>Valid Until</th>
+                            <th>Edited by</th>
                             {/* <th>Title</th> */}
                             <th>Price</th>
                             {/* <th>Status</th> */}
@@ -293,13 +291,11 @@ const Quotation = () => {
                                   </div>
                                 </div>
                               </td>
-                              <td>{ind+1}</td>
+                              <td>{item.enquiry_ref_no || item.enquiry?.ref_no || '-'}</td>
                               <td>{item.package_name}</td>
                               <td>{`${item.adult_count} adult , ${item.child_count} child`}</td>
                               <td>{item.start_date}</td>
-                              <td>{item.end_date}</td>
-                              {/* <td>sahid</td> */}
-                              <td>{item.valid_until}</td>
+                              <td>{item.edited_by || '-'}</td>
                               {/* <td>Option 1</td> */}
                               <td>{item.net_amount}</td>
                               {/* <td>
