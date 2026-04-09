@@ -263,9 +263,9 @@ const Quotation = () => {
                             <th>Pax</th>
                             <th>From Date</th>
                             <th>Edited by</th>
-                            <th>Date of creation</th>
+                            {/* <th>Date of creation</th> */}
                             {/* <th>Created By</th> */}
-                            {/* <th>Title</th> */}
+                            <th>Title</th>
                             <th>Price</th>
                             {/* <th>Status</th> */}
                             <th className="text-end">Actions</th>
@@ -273,34 +273,34 @@ const Quotation = () => {
                         </thead>
                         <tbody>
                           {
-                          !!tableData?.length ?
-                          tableData?.map((item, ind) => (
-                            <tr key={ind}>
-                              <td className="sorting_1 ps-3">
-                                <div className="checkbox me-0 align-self-center">
-                                  <div className="custom-control custom-checkbox ">
-                                    <input
-                                      type="checkbox"
-                                      className="form-check-input"
-                                      id={"customCheckBox2" + ind}
-                                      required=""
-                                      onClick={() => chackboxFun()}
-                                    />
-                                    <label
-                                      className="custom-control-label"
-                                      htmlFor={"customCheckBox2" + ind}
-                                    ></label>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>{item.enquiry_ref_no || item.enquiry?.ref_no || '-'}</td>
-                              <td>{item.package_name}</td>
-                              <td>{`${item.adult_count} adult , ${item.child_count} child`}</td>
-                              <td>{item.start_date}</td>
-                              <td>{item.edited_by || '-'}</td>
-                              {/* <td>Option 1</td> */}
-                              <td>{item.net_amount}</td>
-                              {/* <td>
+                            !!tableData?.length ?
+                              tableData?.map((item, ind) => (
+                                <tr key={ind}>
+                                  <td className="sorting_1 ps-3">
+                                    <div className="checkbox me-0 align-self-center">
+                                      <div className="custom-control custom-checkbox ">
+                                        <input
+                                          type="checkbox"
+                                          className="form-check-input"
+                                          id={"customCheckBox2" + ind}
+                                          required=""
+                                          onClick={() => chackboxFun()}
+                                        />
+                                        <label
+                                          className="custom-control-label"
+                                          htmlFor={"customCheckBox2" + ind}
+                                        ></label>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>{item.enquiry_ref_no || item.enquiry?.ref_no || '-'}</td>
+                                  <td>{item.package_name}</td>
+                                  <td>{`${item.adult_count} adult , ${item.child_count} child`}</td>
+                                  <td>{item.start_date}</td>
+                                  <td>{item.edited_by || '-'}</td>
+                                  {/* <td>Option 1</td> */}
+                                  <td>{item.net_amount}</td>
+                                  {/* <td>
 =======
                             !!tableData?.length ?
                               tableData?.map((item, ind) => (
@@ -327,31 +327,31 @@ const Quotation = () => {
                                   <td>{`${item.adult_count} adult , ${item.child_count} child`}</td>
                                   <td>{item.start_date}</td>
                                   {/* <td>sahid</td> */}
-                              {/* <td>Option 1</td> */}
-                              <td>
-                                {(() => {
-                                  const baseTotal = parseFloat(item.grand_total || item.total_amount || item.net_amount || 0);
+                                  {/* <td>Option 1</td> */}
+                                  <td>
+                                    {(() => {
+                                      const baseTotal = parseFloat(item.grand_total || item.total_amount || item.net_amount || 0);
 
-                                  let priceInObj = item.priceIn || item.price_in;
-                                  if (typeof priceInObj === 'string') {
-                                    try { priceInObj = JSON.parse(priceInObj); } catch (e) { }
-                                  }
+                                      let priceInObj = item.priceIn || item.price_in;
+                                      if (typeof priceInObj === 'string') {
+                                        try { priceInObj = JSON.parse(priceInObj); } catch (e) { }
+                                      }
 
-                                  const isBase = priceInObj?.value === 'base' || String(priceInObj?.label).toLowerCase() === 'base';
-                                  const exchangeRate = parseFloat(priceInObj?.exchange_rate) || 0;
+                                      const isBase = priceInObj?.value === 'base' || String(priceInObj?.label).toLowerCase() === 'base';
+                                      const exchangeRate = parseFloat(priceInObj?.exchange_rate) || 0;
 
-                                  let displayTotal = baseTotal;
-                                  if (!isBase && exchangeRate > 0) {
-                                    displayTotal = baseTotal / exchangeRate;
-                                  } else if (item.converted_total && !isBase) {
-                                    displayTotal = parseFloat(item.converted_total);
-                                  }
+                                      let displayTotal = baseTotal;
+                                      if (!isBase && exchangeRate > 0) {
+                                        displayTotal = baseTotal / exchangeRate;
+                                      } else if (item.converted_total && !isBase) {
+                                        displayTotal = parseFloat(item.converted_total);
+                                      }
 
-                                  return displayTotal.toLocaleString(undefined, { maximumFractionDigits: 2 });
-                                })()}
-                              </td>
-                              {/* <td>
-                                <Badge bg="" className="light badge-warning">
+                                      return displayTotal.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                                    })()}
+                                  </td>
+                                  {/* <td>
+Edited by                                <Badge bg="" className="light badge-warning">
                                   Pending
                                 </Badge>
                               </td> */}
