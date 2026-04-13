@@ -594,7 +594,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {scheduleArr.map(({ item, planArrInd, scheduleInd }, ind) => (
+                  {scheduleArr.map(({ item, planArrInd, scheduleInd }, ind) => {
+                    const displayAmount = (val) => {
+                      if (val == null || val === "") return val;
+                      const num = Number(val);
+                      if (Math.abs((num * 100) % 1) > 0.00001) {
+                        return parseFloat(num.toFixed(2));
+                      }
+                      return val;
+                    };
+                    return (
                     <tr key={ind} className="border-bottom" style={{ transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fcfdff'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                       <td className="px-4 py-3 align-middle">
                         <div className="d-flex align-items-center">
@@ -621,7 +630,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         <input
                           className="form-control text-end fw-bold text-dark"
                           type="number"
-                          value={item.amount}
+                          value={displayAmount(item.amount)}
                           disabled={readOnly}
                           onChange={(e) => handleInputChange(planArrInd, scheduleInd, e.target.value)}
                           style={{ border: "1px solid transparent", backgroundColor: "#f8f9fa", borderRadius: "6px", transition: "all 0.2s" }}
@@ -633,7 +642,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                          {getRoundOfValue(item.amount + item.markup)}
                       </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>
