@@ -306,7 +306,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       const itineraryId = packageData?.itineraryId || packageData?.id;
       if (itineraryId) {
         setGeneratedHtml("<p class='text-muted p-3'>Loading original PDF template...</p>");
-        axiosGet(`${URLS.ITINERARY_URL}/${itineraryId}/preview-html`)
+        const queryParams = `?priceBreakup=${values.priceBreakup}&hideTotalPrice=${values.hideTotalPrice}&itinerary=${values.itinerary}&terms=${values.terms}`;
+        axiosGet(`${URLS.ITINERARY_URL}/${itineraryId}/preview-html${queryParams}`)
           .then((res) => {
             if (res?.success && res?.data?.html) {
               setGeneratedHtml(res.data.html);
@@ -419,6 +420,9 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   ];
 
   const isWhatsApp = values.mode === "whatsapp";
+  const visibleOptions = isWhatsApp 
+    ? toggleOptions 
+    : toggleOptions.filter(opt => opt.id !== "priceBreakup" && opt.id !== "hideTotalPrice");
 
   return (
     <CustomModal
@@ -462,23 +466,21 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
         </p>
 
         {/* ── Toggle Options ── */}
-        {isWhatsApp && (
-          <div className="d-flex flex-wrap align-items-center gap-3 mb-3 pb-3" style={{ borderBottom: "1px solid #e9ecef" }}>
-            {toggleOptions.map((opt) => (
-              <div className="form-check form-switch" key={opt.id}>
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id={`${opt.id}_${values.mode}`}
-                  checked={values[opt.field]}
-                  onChange={(e) => setFieldValue(opt.field, e.target.checked)}
-                  role="switch"
-                />
-                <label className="form-check-label ms-1 small" htmlFor={`${opt.id}_${values.mode}`}>{opt.label}</label>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="d-flex flex-wrap align-items-center gap-3 mb-3 pb-3" style={{ borderBottom: "1px solid #e9ecef" }}>
+          {visibleOptions.map((opt) => (
+            <div className="form-check form-switch" key={opt.id}>
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id={`${opt.id}_${values.mode}`}
+                checked={values[opt.field]}
+                onChange={(e) => setFieldValue(opt.field, e.target.checked)}
+                role="switch"
+              />
+              <label className="form-check-label ms-1 small" htmlFor={`${opt.id}_${values.mode}`}>{opt.label}</label>
+            </div>
+          ))}
+        </div>
 
             {/* ── Email "To" field removed from standard view as requested ── */}
 
