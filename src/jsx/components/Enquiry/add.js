@@ -329,15 +329,15 @@ const EditProfile = ({ setShowModal }) => {
   }, [selectedTypeValue?.id, selectedTypeData?.id, values.typeValue?.label]);
   useEffect(() => {
     if (!readOnly && !isEdit) {
-      const agentName = values.typeValue?.name || values.typeValue?.label || "";
-      const assignedName = values.assigned?.first_name || values.assigned?.label || "";
-      const destinationName = values.destination?.name || values.destination?.label || "";
-      
+      const agentName = values.typeValue?.name || "";
+      const assignedName = values.assigned?.first_name || "";
+      const destinationName = values.destination?.name || "";
+
       const getTwoLetters = (name) => {
         if (!name) return "XX";
         const words = String(name).trim().split(/\s+/);
         if (words.length > 1) {
-           return (words[0][0] + words[1][0]).toUpperCase();
+          return (words[0][0] + words[1][0]).toUpperCase();
         }
         return String(name).padEnd(2, 'X').substring(0, 2).toUpperCase();
       };
@@ -346,58 +346,44 @@ const EditProfile = ({ setShowModal }) => {
       const assignedPart = getTwoLetters(assignedName);
       const destinationPart = getTwoLetters(destinationName);
 
-      // Parse the startDate securely
-      let parsedDate;
-      if (values.startDate) {
-         parsedDate = new Date(values.startDate);
-         if (isNaN(parsedDate)) parsedDate = new Date();
-      } else {
-         parsedDate = new Date();
-      }
-
-      const yy = String(parsedDate.getFullYear()).slice(-2);
-      const mm = String(parsedDate.getMonth() + 1).padStart(2, "0");
-      const dd = String(parsedDate.getDate()).padStart(2, "0");
-      
+      const now = new Date(values.startDate || new Date());
+      const yy = String(now.getFullYear()).slice(-2);
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
       const datePart = `${yy}${mm}${dd}`;
       const yymm = `${yy}${mm}`;
 
       let highestNum = 0;
       const existingEnquiries = allEnquiriesData?.data?.data || [];
-      
+
       existingEnquiries.forEach(enq => {
-         const ref = String(enq.ref_no || "");
-         const parts = ref.split('/');
-         
-         // Match format: agent/assigned/dest/yymmdd/##
-         if (parts.length >= 5) {
-            const pDate = parts[3];
-            const pNum = parts.slice(4).join('/'); // In case there are extra slashes
-            
-            // Increment the counter uniquely based on the current Month across ALL enquiries
-            if (pDate.startsWith(yymm)) {
-                const num = parseInt(pNum, 10);
-                if (!isNaN(num) && num > highestNum) {
-                   highestNum = num;
-                }
+        const ref = String(enq.ref_no || "");
+        const parts = ref.split('/');
+
+        // Match format: agent/assigned/dest/yymmdd/##
+        if (parts.length >= 5) {
+          const pDate = parts[3];
+          const pNum = parts.slice(4).join('/'); // In case there are extra slashes
+
+          // Increment the counter uniquely based on the current Month across ALL enquiries
+          if (pDate.startsWith(yymm)) {
+            const num = parseInt(pNum, 10);
+            if (!isNaN(num) && num > highestNum) {
+              highestNum = num;
             }
-         }
+          }
+        }
       });
-      
+
       const sequentialNum = String(highestNum + 1).padStart(2, "0");
       const generatedRef = `${agentPart}/${assignedPart}/${destinationPart}/${datePart}/${sequentialNum}`;
-      
+
       // Update the reference state only if it actually differs
       if (values.refNo !== generatedRef) {
-         setFieldValue("refNo", generatedRef);
+        setFieldValue("refNo", generatedRef);
       }
     }
-  }, [
-      values.typeValue?.name, values.typeValue?.label, 
-      values.assigned?.first_name, values.assigned?.label, 
-      values.destination?.name, values.destination?.label, 
-      values.startDate, isEdit, readOnly, allEnquiriesData?.data?.data
-  ]);
+  }, [values.typeValue?.name, values.assigned?.first_name, values.destination?.name, values.startDate, isEdit, readOnly, allEnquiriesData?.data?.data]);
 
   return (
     <>

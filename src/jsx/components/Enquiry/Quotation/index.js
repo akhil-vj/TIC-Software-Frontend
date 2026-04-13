@@ -265,7 +265,7 @@ const Quotation = () => {
                             <th>Edited by</th>
                             {/* <th>Date of creation</th> */}
                             {/* <th>Created By</th> */}
-                            <th>Title</th>
+                            {/* <th>Title</th> */}
                             <th>Price</th>
                             {/* <th>Status</th> */}
                             <th className="text-end">Actions</th>
@@ -299,7 +299,7 @@ const Quotation = () => {
                                   <td>{item.start_date}</td>
                                   <td>{item.edited_by || '-'}</td>
                                   {/* <td>Option 1</td> */}
-                                  <td>{item.net_amount}</td>
+                                  {/* <td>{item.net_amount}</td> */}
                                   {/* <td>
 =======
                             !!tableData?.length ?
