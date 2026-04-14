@@ -475,46 +475,47 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
    * Adjust the distribution keys here once real per-type data is available.
    */
   const getPersonTypeRows = (item) => {
-    const totalPersons = (item.single || 0) + (item.double || 0) + (item.triple || 0) + (item.extra || 0) + (item.childW || 0) + (item.childN || 0);
-
-    const totalMarkup = calculateInputMarkup(item.amount, item.markup);
-    const totalPrice = calculateTotal(item.amount, item.markup);
-    const vat = getVatDisplay();
-
-    return PERSON_TYPES.map((pt) => {
+    // 1. Calculate Hotel rows (Net Hotel Cost per person type)
+    const hotelRows = PERSON_TYPES.map((pt) => {
       const count = safeCount(item[pt.key]);
       const displayCount = safeCount(item[`${pt.key}Display`]);
       if (count <= 0) return null;
 
-      // hotelRowCost is the TOTAL cost for ALL pax of this type (count * rate * ratio)
-      const hotelRowCostAll = item[`${pt.key}TotalCost`] || 0;
-      // Per-person hotel cost uses the true math count
-      const hotelCostPerPerson = count > 0 ? hotelRowCostAll / count : 0;
+      // hotelRowCostAll is the TOTAL base cost for ALL travelers of this type in this option
+      const hotelRowCostAll = Number(item[`${pt.key}TotalCost`] || 0);
+      
+      // Calculate what fraction of the hotel base this type represents 
+      const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
+      
+      // Markup for this specific hotel row (line-item markup only)
+      const hotelMarkupAll = Number(item.markup || 0) * hotelFraction;
+      
+      let rowPriceTotal = (hotelRowCostAll + hotelMarkupAll);
+      let rowMarkupTotal = hotelMarkupAll;
 
-      // Non-hotel costs per person of this type
-      const nonHotelPerPerson = totalPersons > 0 ? totals.totalAmount / totalPersons : 0;
+      // ADJUSTMENT FOR "TOTAL PRICE" MODE
+      // As requested: Child rows remain same (aggregate), but Sharing rows (Double/Triple) 
+      // change to show the unit/room rate in TOTAL mode.
+      const isTotalMode = values.priceOption?.value === "TOTAL";
+      const isSharingType = ['single', 'double', 'triple'].includes(pt.key);
 
-      // Net cost per person = hotel cost per person + non-hotel cost per person
-      const perPersonNet = hotelCostPerPerson + nonHotelPerPerson;
-
-      // Fraction this row's TOTAL (all pax) represents of the overall base
-      const rowAllPaxNet = perPersonNet * count;
-      const overallBase = item.amount + totals.totalAmount;
-      const fraction = overallBase > 0 ? rowAllPaxNet / overallBase : 0;
-
-      // Aggregate markup and total (for ALL pax of this type)
-      const rowMarkupAll = getRoundOfValue(totalMarkup * fraction);
-      const rowTotalAll = getRoundOfValue(totalPrice * fraction);
-
+      if (isTotalMode && isSharingType) {
+        const divisor = (pt.key === 'double' ? 2 : pt.key === 'triple' ? 3 : 1);
+        rowPriceTotal = rowPriceTotal / (count > 0 ? (count / divisor) : 1); 
+        rowMarkupTotal = rowMarkupTotal / (count > 0 ? (count / divisor) : 1);
+      }
+      
       return {
+        key: pt.key,
         label: pt.label,
-        perPersonCost: getRoundOfValue(perPersonNet),
-        markup: rowMarkupAll,
-        vat,
-        total: rowTotalAll,
-        count: displayCount
+        count: displayCount,
+        markup: getRoundOfValue(rowMarkupTotal),
+        vat: getVatDisplay(),
+        total: getRoundOfValue(rowPriceTotal)
       };
     }).filter(row => row !== null);
+
+    return hotelRows;
   };
 
   // ─── Handle billing submission ────────────────────────────────────────────────
