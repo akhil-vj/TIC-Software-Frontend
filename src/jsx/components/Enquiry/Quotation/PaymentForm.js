@@ -173,9 +173,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   const handleBack = () => setFormComponent("packageForm");
 
   const handleInputChange = (planIndex, index, newValue, type = "amount") => {
-    const exchangeRate = Number(values.priceIn?.exchange_rate || 1);
-    const rate = (values.priceIn?.value === "base" || !values.priceIn?.value || exchangeRate === 0) ? 1 : exchangeRate;
-    const inputValue = Number(newValue) * rate;
+    // Itemized table always shows base currency — no conversion needed
+    const inputValue = Number(newValue);
     const newData = values.planArr?.map((item, planArrInd) =>
       planArrInd === planIndex
         ? {
@@ -204,9 +203,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   };
 
   const handleHotelPaxPriceChange = (planIndex, scheduleIndex, occupancyKey, newPaxValue) => {
-    const exchangeRate = Number(values.priceIn?.exchange_rate || 1);
-    const rate = (values.priceIn?.value === "base" || !values.priceIn?.value || exchangeRate === 0) ? 1 : exchangeRate;
-    const basePaxValue = Number(newPaxValue) * rate;
+    // Itemized table always shows base currency — no conversion needed
+    const basePaxValue = Number(newPaxValue);
 
     const divisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
     const divisor = divisors[occupancyKey] || 1;
@@ -655,9 +653,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
         {/* ── Itemized Pricing Table ── */}
         {(() => {
-          const exchangeRate = Number(values.priceIn?.exchange_rate || 1);
-          const activeRate = (values.priceIn?.value === "base" || !values.priceIn?.value || exchangeRate === 0) ? 1 : exchangeRate;
-          const activeSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
+          // Itemized table always shows base currency — no conversion
+          const activeRate = 1;
+          const activeSymbol = getSymbol(baseCode);
 
           const categoryTotals = scheduleArr.reduce((acc, { item }) => {
             const rawType = (item.insertType || 'other').toLowerCase();
