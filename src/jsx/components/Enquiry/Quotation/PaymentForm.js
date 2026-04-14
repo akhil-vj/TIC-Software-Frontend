@@ -123,13 +123,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           ...item,
           schedule: item.schedule.map(scheduleItem => {
             if (scheduleItem.baseAmount !== undefined) return scheduleItem;
+            
+            const shouldDivide = scheduleItem.insertType !== 'hotel';
             const person = scheduleItem.insertType === 'activity'
               ? (scheduleItem.person || 1)
               : ((values.adult || 0) + (values.child || 0)) || 1;
+            
             return {
               ...scheduleItem,
               baseAmount: scheduleItem.amount,
-              amount: getRoundOfValue(scheduleItem.amount / person),
+              amount: shouldDivide ? getRoundOfValue(scheduleItem.amount / person) : scheduleItem.amount,
             };
           }),
         }));
@@ -165,7 +168,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   const handleBack = () => setFormComponent("packageForm");
 
   const handleInputChange = (planIndex, index, newValue, type = "amount") => {
-    const inputValue = Number(newValue);
+    const exchangeRate = Number(values.priceIn?.exchange_rate || 1);
+    const rate = (values.priceIn?.value === "base" || !values.priceIn?.value || exchangeRate === 0) ? 1 : exchangeRate;
+    const inputValue = Number(newValue) * rate;
     const newData = values.planArr?.map((item, planArrInd) =>
       planArrInd === planIndex
         ? {
@@ -193,22 +198,87 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     setFieldValue("planArr", newData);
   };
 
+  const handleHotelPaxPriceChange = (planIndex, scheduleIndex, occupancyKey, newPaxValue) => {
+    const exchangeRate = Number(values.priceIn?.exchange_rate || 1);
+    const rate = (values.priceIn?.value === "base" || !values.priceIn?.value || exchangeRate === 0) ? 1 : exchangeRate;
+    const basePaxValue = Number(newPaxValue) * rate;
+
+    const divisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+    const divisor = divisors[occupancyKey] || 1;
+    const newBaseRate = basePaxValue * divisor;
+
+    const newData = values.planArr?.map((item, pIdx) =>
+      pIdx === planIndex
+        ? {
+            ...item,
+            schedule: item.schedule.map((scheduleItem, sIdx) => {
+              if (sIdx === scheduleIndex) {
+                // 1. Update roomOption (specific rates for this row)
+                const updatedRoomOption = scheduleItem.roomOption?.map(r => 
+                  String(r.id) === String(scheduleItem.roomType?.value)
+                    ? { ...r, [`${occupancyKey}_bed_amount`]: newBaseRate }
+                    : r
+                );
+
+                // 2. Recalculate Total Amount
+                const selectedRoom = updatedRoomOption?.find(r => String(r.id) === String(scheduleItem.roomType?.value));
+                const rates = {
+                  single: Number(selectedRoom?.single_bed_amount || 0),
+                  double: Number(selectedRoom?.double_bed_amount || 0),
+                  triple: Number(selectedRoom?.triple_bed_amount || 0),
+                  extra: Number(selectedRoom?.extra_bed_amount || 0),
+                  childW: Number(selectedRoom?.child_w_bed_amount || 0),
+                  childN: Number(selectedRoom?.child_n_bed_amount || 0),
+                };
+                const counts = {
+                  single: safeCount(scheduleItem.single),
+                  double: safeCount(scheduleItem.double),
+                  triple: safeCount(scheduleItem.triple),
+                  extra: safeCount(scheduleItem.extra),
+                  childW: safeCount(scheduleItem.childW),
+                  childN: safeCount(scheduleItem.childN),
+                };
+
+                const newTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
+                
+                return {
+                  ...scheduleItem,
+                  roomOption: updatedRoomOption,
+                  amount: getRoundOfValue(newTotalWeight),
+                  baseAmount: getRoundOfValue(newTotalWeight),
+                };
+              }
+              return scheduleItem;
+            }),
+          }
+        : item
+    );
+    setFieldValue("planArr", newData);
+  };
+
   const handlePriceMode = (type) => {
     if (values.priceOption.value !== type) {
       const newData = values.planArr?.map((item) => ({
         ...item,
         schedule: item.schedule.map((scheduleItem) => {
-          const person =
-            scheduleItem.insertType === "activity"
-              ? scheduleItem.person
-              : values.adult + values.child;
+          let person = values.adult + values.child;
+          
+          if (scheduleItem.insertType === "activity") {
+            person = scheduleItem.person;
+          }
+
           const currentBaseAmount =
             scheduleItem.baseAmount !== undefined
               ? scheduleItem.baseAmount
               : scheduleItem.amount;
+          
+          // For Hotels, we keep the amount as TOTAL (Option A)
+          // For Activities/Transfers, we continue to divide for PER mode
+          const shouldDivide = scheduleItem.insertType !== "hotel";
+
           return {
             ...scheduleItem,
-            amount: type === "TOTAL" ? currentBaseAmount : currentBaseAmount / person,
+            amount: (type === "TOTAL" || !shouldDivide) ? currentBaseAmount : currentBaseAmount / (person || 1),
             baseAmount: currentBaseAmount,
           };
         }),
@@ -561,16 +631,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     <>
       <form>
         {/* ── Page Header & Controls ── */}
-        <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-          <div className="d-flex align-items-center">
-            <button className="btn btn-outline-primary btn-sm me-3" type="button" onClick={handleBack} style={{ borderRadius: "8px" }}>
+        <div className="d-flex justify-content-between align-items-center mb-5" style={{ backgroundColor: "#f8fafc", padding: "16px 24px", borderRadius: "12px" }}>
+          <div className="d-flex align-items-center gap-3">
+            <button className="btn btn-outline-secondary btn-sm" type="button" onClick={handleBack} style={{ borderRadius: "8px", border: "0.5px solid #e2e8f0" }}>
               <i className="fa fa-arrow-left" aria-hidden="true"></i> Back
             </button>
-            <button className="btn btn-outline-info btn-sm me-3" type="button" onClick={handleOpenHistory} style={{ borderRadius: "8px" }} disabled={!isEdit}>
+            <button className="btn btn-outline-secondary btn-sm" type="button" onClick={handleOpenHistory} style={{ borderRadius: "8px", border: "0.5px solid #e2e8f0" }} disabled={!isEdit}>
               <i className="fa fa-history" aria-hidden="true"></i> History
             </button>
             <div>
-              <h4 className="mb-0 text-dark fw-bold">Quotation Strategy</h4>
+              <h4 className="mb-0 text-dark" style={{ fontSize: "20px", fontWeight: 600 }}>Quotation Strategy</h4>
               <span className="text-muted" style={{ fontSize: "13px" }}>Review and finalize pricing details</span>
             </div>
           </div>
@@ -578,85 +648,252 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         </div>
 
         {/* ── Itemized Pricing Table ── */}
-        <div className="card shadow-sm border-0 mb-4">
-          <div className="card-header bg-white border-bottom py-3">
-            <h5 className="card-title fw-bold mb-0 text-dark" style={{ fontSize: "16px" }}>Itemized Breakdown</h5>
-          </div>
-          <div className="card-body p-0">
-            <div className="table-responsive">
-              <table className="table mb-0 text-dark" style={{ borderCollapse: "collapse" }}>
-                <thead style={{ backgroundColor: "#f8f9fa", borderBottom: "2px solid #dee2e6" }}>
-                  <tr>
-                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px" }}>Tours / Hotels</th>
-                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px", width: "15%" }}>Type</th>
-                    <th className="py-3 px-4 fw-bold text-uppercase text-dark text-end" style={{ fontSize: "12px", letterSpacing: "1px", width: "15%" }}>Net Price</th>
-                    <th className="py-3 px-4 fw-bold text-uppercase text-dark text-end" style={{ fontSize: "12px", letterSpacing: "1px", width: "15%" }}>Gross Price</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scheduleArr.map(({ item, planArrInd, scheduleInd }, ind) => {
-                    const displayAmount = (val) => {
-                      if (val == null || val === "") return val;
-                      const num = Number(val);
-                      if (Math.abs((num * 100) % 1) > 0.00001) {
-                        return parseFloat(num.toFixed(2));
-                      }
-                      return val;
-                    };
+        {(() => {
+          const exchangeRate = Number(values.priceIn?.exchange_rate || 1);
+          const activeRate = (values.priceIn?.value === "base" || !values.priceIn?.value || exchangeRate === 0) ? 1 : exchangeRate;
+          const activeSymbol = values.priceIn?.symbol || getSymbol(baseCode);
+
+          const categoryTotals = scheduleArr.reduce((acc, { item }) => {
+            const type = item.insertType || 'other';
+            const total = Number(item.amount || 0) + Number(item.markup || 0);
+            acc[type] = (acc[type] || 0) + total;
+            return acc;
+          }, {});
+
+          return (
+            <>
+              <div className="card border-0 mb-4" style={{ border: "0.5px solid #e2e8f0", borderRadius: "12px" }}>
+                <div className="card-header bg-white border-0 py-3" style={{ borderBottom: "0.5px solid #e2e8f0", borderRadius: "12px 12px 0 0" }}>
+                  <h5 className="card-title mb-0 text-dark" style={{ fontSize: "15px", fontWeight: 600 }}>Itemized Breakdown</h5>
+                </div>
+                <div className="card-body p-0">
+                  <div className="table-responsive">
+                    <table className="table mb-0 text-dark" style={{ borderCollapse: "collapse" }}>
+                      <thead style={{ backgroundColor: "#f8faff", borderBottom: "2px solid #e2e8f0" }}>
+                        <tr>
+                          <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>Tours / Hotels</th>
+                          <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "15%" }}>Type</th>
+                          <th className="py-3 px-4 text-dark text-end" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "15%" }}>Net Price ({activeSymbol})</th>
+                          <th className="py-3 px-4 text-dark text-end" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "15%" }}>Gross Price ({activeSymbol})</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scheduleArr.map(({ item, planArrInd, scheduleInd }, ind) => {
+                          const displayAmount = (val) => {
+                            if (val == null || val === "") return val;
+                            const converted = Number(val) / activeRate;
+                            if (Math.abs((converted * 100) % 1) > 0.00001) {
+                              return parseFloat(converted.toFixed(2));
+                            }
+                            return converted;
+                          };
+
+                    const isPer = values.priceOption.value === "PER";
+                    const isHotel = item.insertType === "hotel";
+                    let breakdownData = [];
+
+                    if (isHotel && isPer) {
+                      const selectedRoom = item.roomOption?.find(r => r.id == item.roomType?.value);
+                      const rates = {
+                        single: Number(selectedRoom?.single_bed_amount || 0),
+                        double: Number(selectedRoom?.double_bed_amount || 0),
+                        triple: Number(selectedRoom?.triple_bed_amount || 0),
+                        extra: Number(selectedRoom?.extra_bed_amount || 0),
+                        childW: Number(selectedRoom?.child_w_bed_amount || 0),
+                        childN: Number(selectedRoom?.child_n_bed_amount || 0),
+                      };
+                      const counts = {
+                        single: safeCount(item.single),
+                        double: safeCount(item.double),
+                        triple: safeCount(item.triple),
+                        extra: safeCount(item.extra),
+                        childW: safeCount(item.childW),
+                        childN: safeCount(item.childN),
+                      };
+                      const weight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
+                      const ratio = weight > 0 ? (Number(item.amount || 0) / weight) : 0;
+                      const markupRatio = Number(item.amount || 0) > 0 ? (Number(item.markup || 0) / Number(item.amount || 0)) : 0;
+
+                      const types = [
+                        { k: 'single', l: 'Single', d: 1 },
+                        { k: 'double', l: 'Double Sharing', d: 2 },
+                        { k: 'triple', l: 'Triple Sharing', d: 3 },
+                        { k: 'extra',  l: 'Extra Bed', d: 1 },
+                        { k: 'childW', l: 'Child With Bed', d: 1 },
+                        { k: 'childN', l: 'Child No Bed', d: 1 },
+                      ];
+
+                      breakdownData = types
+                        .filter(t => counts[t.k] > 0)
+                        .map(t => {
+                          const netPerPax = (rates[t.k] * ratio) / t.d;
+                          const grossPerPax = netPerPax * (1 + markupRatio);
+                          return {
+                            key: t.k,
+                            label: t.l,
+                            net: displayAmount(netPerPax),
+                            gross: displayAmount(grossPerPax)
+                          };
+                        });
+                    }
+
+                    const firstBreakdown = breakdownData[0];
+                    const otherBreakdowns = breakdownData.slice(1);
+                    const showMainBorder = !(isHotel && isPer) || otherBreakdowns.length === 0;
+                    const isBreakdown = isHotel && isPer && breakdownData.length > 0;
+
+                    const groupBg = isBreakdown ? "#f0f7ff" : "#fff";
+
                     return (
-                    <tr key={ind} className="border-bottom" style={{ transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fcfdff'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                      <td className="px-4 py-3 align-middle">
-                        <div className="d-flex align-items-center">
-                          <div className="bg-light rounded d-flex align-items-center justify-content-center me-3" style={{ width: "40px", height: "40px" }}>
-                            <i className={`fa fa-lg ${item.insertType === 'hotel' ? 'fa-building text-primary' : item.insertType === 'activity' ? 'fa-ticket text-warning' : 'fa-car text-success'}`}></i>
-                          </div>
-                          <div>
-                            <h6 className="fw-bold text-dark mb-1" style={{ fontSize: "14px" }}>
-                              {item.name}
-                              {item.insertType === "hotel" && item.option?.label && (
-                                <span className="badge bg-success ms-2 fw-medium" style={{ fontSize: "10px", letterSpacing: "0.5px" }}>{item.option.label}</span>
-                              )}
-                            </h6>
-                            <span className="text-muted" style={{ fontSize: "12px" }}>
-                              {`${item.roomType?.label || item.type?.label || "Service"} • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
+                      <React.Fragment key={ind}>
+                        <tr className={showMainBorder ? "" : ""} style={{ transition: "background-color 0.2s", backgroundColor: groupBg, borderBottom: isBreakdown ? "none" : "1px solid #f1f5f9" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e8f2ff'} onMouseOut={(e) => { e.currentTarget.style.backgroundColor = groupBg }}>
+                          <td className={`px-4 align-middle ${isBreakdown ? "pt-1 pb-1" : "py-3"}`} style={{ border: "none" }}>
+                            <div className="d-flex align-items-center">
+                              <div className="rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: "36px", height: "36px", backgroundColor: item.insertType === 'hotel' ? '#EEF4FF' : item.insertType === 'activity' ? '#FFF9E6' : '#E6FCF5' }}>
+                                <i className={`fa fa-lg ${item.insertType === 'hotel' ? 'fa-building text-primary' : item.insertType === 'activity' ? 'fa-ticket' : 'fa-car text-success'}`} style={{ color: item.insertType === 'hotel' ? '#185FA5' : item.insertType === 'activity' ? '#D97706' : '#16A34A' }}></i>
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <h6 className="text-dark mb-1" style={{ fontSize: "14px", fontWeight: 600 }}>
+                                  {item.name}
+                                  {isHotel && item.option?.label && (
+                                    <span className="badge ms-2" style={{ fontSize: "11px", letterSpacing: "0.5px", backgroundColor: "#EEF4FF", color: "#185FA5", padding: "4px 12px", borderRadius: "999px", fontWeight: 500 }}>{item.option.label}</span>
+                                  )}
+                                </h6>
+                                <div className="d-flex flex-column">
+                                  <span className="text-muted" style={{ fontSize: "12px" }}>
+                                    {`${item.roomType?.label || item.type?.label || "Service"} • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
+                                  </span>
+                                  {isHotel && isPer && firstBreakdown && (
+                                    <span style={{ fontSize: "11px", fontWeight: 500, marginTop: "8px", color: "#64748b", display: "block" }}>
+                                      <i className="fa-solid fa-turn-up fa-rotate-90 me-2 opacity-50"></i> {firstBreakdown.label}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className={`px-4 align-middle ${isBreakdown ? "pt-1 pb-1" : "py-3"}`} style={{ fontSize: "13px", border: "none" }}>
+                            <span className="badge" style={{ backgroundColor: item.insertType === 'hotel' ? '#EEF4FF' : item.insertType === 'activity' ? '#FFF9E6' : '#E6FCF5', color: item.insertType === 'hotel' ? '#185FA5' : item.insertType === 'activity' ? '#995600' : '#187E5B', padding: "4px 12px", borderRadius: "999px", fontWeight: 500, fontSize: "11px", textTransform: "capitalize" }}>
+                              {item.insertType}
                             </span>
+                          </td>
+                          <td className={`px-4 text-end ${isBreakdown ? "pt-1 pb-1 align-bottom" : "py-3 align-middle"}`} style={{ border: "none" }}>
+                            {!(isHotel && isPer) ? (
+                              <input
+                                className="form-control text-end fw-bold text-dark"
+                                type="number"
+                                value={displayAmount(item.amount)}
+                                disabled={readOnly}
+                                onChange={(e) => handleInputChange(planArrInd, scheduleInd, e.target.value)}
+                                style={{ border: "1px solid transparent", backgroundColor: "transparent", borderRadius: "6px", transition: "all 0.2s" }}
+                                onFocus={(e) => { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; }}
+                                onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "transparent"; handleBlur(e); }}
+                              />
+                            ) : (
+                              firstBreakdown && (
+                                <input
+                                  className="form-control form-control-sm text-end fw-bold text-dark"
+                                  type="number"
+                                  value={firstBreakdown.net}
+                                  disabled={readOnly}
+                                  onChange={(e) => handleHotelPaxPriceChange(planArrInd, scheduleInd, firstBreakdown.key, e.target.value)}
+                                  style={{ border: "1px solid transparent", backgroundColor: "#f8f9fa", borderRadius: "4px", width: "100%", fontSize: "12px" }}
+                                  onFocus={(e) => { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; }}
+                                  onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "#f8f9fa"; handleBlur(e); }}
+                                />
+                              )
+                            )}
+                          </td>
+                          <td className={`px-4 text-end fw-bold text-dark fs-15 ${isBreakdown ? "pt-1 pb-1 align-bottom" : "py-3 align-middle"}`} style={{ border: "none" }}>
+                             {!(isHotel && isPer) ? (
+                               getRoundOfValue(item.amount + item.markup)
+                             ) : (
+                               firstBreakdown && (
+                                 <span className="text-dark fw-bold" style={{ fontSize: "12px" }}>
+                                   {firstBreakdown.gross}
+                                 </span>
+                               )
+                             )}
+                          </td>
+                        </tr>
+
+                        {/* Additional Breakdown Sub-Rows */}
+                        {isHotel && isPer && otherBreakdowns.map((row, i) => {
+                          const isLastBreakdown = i === otherBreakdowns.length - 1;
+                          return (
+                            <tr key={`${ind}_${i}`} className={`${isLastBreakdown ? "" : ""}`} style={{ backgroundColor: "#f0f7ff", borderBottom: isLastBreakdown ? "1px solid #f1f5f9" : "none", transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e8f2ff'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f0f7ff'}>
+                              <td className="px-4 py-1 border-0 align-middle" style={{ border: "none" }}>
+                                <span className="text-dark" style={{ fontSize: "11px", fontWeight: 500, paddingLeft: "48px", color: "#64748b" }}>
+                                  <i className="fa-solid fa-turn-up fa-rotate-90 me-2 opacity-50"></i>
+                                  {row.label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-1 border-0 align-middle" style={{ border: "none" }}></td>
+                              <td className="px-4 py-1 border-0 align-middle text-end" style={{ border: "none" }}>
+                                <input
+                                  className="form-control form-control-sm text-end fw-bold text-dark"
+                                  type="number"
+                                  value={row.net}
+                                  disabled={readOnly}
+                                  onChange={(e) => handleHotelPaxPriceChange(planArrInd, scheduleInd, row.key, e.target.value)}
+                                  style={{ border: "1px solid transparent", backgroundColor: "transparent", borderRadius: "4px", width: "100%", fontSize: "12px" }}
+                                  onFocus={(e) => { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; }}
+                                  onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "transparent"; handleBlur(e); }}
+                                />
+                              </td>
+                              <td className="px-4 py-2 border-0 align-middle text-end">
+                                <span className="text-dark fw-bold" style={{ fontSize: "12px" }}>
+                                  {row.gross}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Category-wise Total Summary ── */}
+              <div className="mb-5 h-100" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                {[
+                  { label: 'Hotels', icon: 'fa-building', type: 'hotel', color: 'primary' },
+                  { label: 'Activities', icon: 'fa-ticket', type: 'activity', color: 'warning' },
+                  { label: 'Transfers', icon: 'fa-car', type: 'car', color: 'success' },
+                ].map((cat) => (
+                  <div key={cat.type}>
+                    <div className="bg-white h-100" style={{ border: "0.5px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
+                      <div className="d-flex align-items-center">
+                        <div className={`rounded-circle d-flex align-items-center justify-content-center me-3`} style={{ width: '40px', height: '40px', backgroundColor: cat.color === 'primary' ? '#EEF4FF' : cat.color === 'warning' ? '#FFF9E6' : '#E6FCF5' }}>
+                          <i className={`fa ${cat.icon} text-${cat.color} fs-4`}></i>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94a3b8' }}>Total {cat.label}</div>
+                          <div className="text-dark" style={{ fontSize: '18px', fontWeight: 600, marginTop: '4px' }}>
+                            {activeSymbol} {getRoundOfValue((categoryTotals[cat.type] || 0) / activeRate)}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 align-middle text-capitalize fw-medium text-dark" style={{ fontSize: "13px" }}>
-                        {item.insertType}
-                      </td>
-                      <td className="px-4 py-3 align-middle text-end">
-                        <input
-                          className="form-control text-end fw-bold text-dark"
-                          type="number"
-                          value={displayAmount(item.amount)}
-                          disabled={readOnly}
-                          onChange={(e) => handleInputChange(planArrInd, scheduleInd, e.target.value)}
-                          style={{ border: "1px solid transparent", backgroundColor: "#f8f9fa", borderRadius: "6px", transition: "all 0.2s" }}
-                          onFocus={(e) => { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; }}
-                          onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "#f8f9fa"; handleBlur(e); }}
-                        />
-                      </td>
-                      <td className="px-4 py-3 align-middle text-end fw-bold text-dark fs-15">
-                         {getRoundOfValue(item.amount + item.markup)}
-                      </td>
-                    </tr>
-                  )})}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
 
         {/* ── Pricing Mode & Extra Markup Bar ── */}
-        <div className="card shadow-sm border-0 mb-5 bg-white">
+        <div className="card border-0 mb-5" style={{ backgroundColor: "#f8faff", border: "0.5px solid #e2e8f0", borderRadius: "12px" }}>
           <div className="card-body p-3 px-4 d-flex justify-content-between align-items-center flex-wrap">
             
             {/* Mode & Tax Toggles */}
             <div className="d-flex align-items-center gap-4">
               <div>
-                <span className="text-dark fw-bold d-block mb-1" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>CALCULATION MODE</span>
+                <span className="text-dark d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Calculation Mode</span>
                 <div style={{ width: "200px" }}>
                   <ReactSelect
                     options={priceOption}
@@ -676,7 +913,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               </div>
 
               <div className="border-start ps-4">
-                <span className="text-dark fw-bold d-block mb-1" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>TAX TYPE</span>
+                <span className="text-dark d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Tax Type</span>
                 <div style={{ width: "160px" }}>
                   <ReactSelect
                     options={taxTypeOption}
@@ -695,23 +932,23 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
             {/* Markup Info & Edit */}
             <div className="d-flex align-items-center gap-4 mt-3 mt-md-0">
-              <div className="text-end">
-                <span className="text-muted fw-bold d-block mb-1" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>BASE MARKUP</span>
-                <span className="fw-bold text-dark fs-5">{values.baseMarkup}%</span>
+              <div className="text-end" style={{ backgroundColor: "#fff", border: "0.5px solid #e2e8f0", borderRadius: "8px", padding: "8px 16px" }}>
+                <span className="text-muted d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Base Markup</span>
+                <span className="text-dark" style={{ fontWeight: 600, fontSize: "15px" }}>{values.baseMarkup}%</span>
               </div>
-              <div className="text-end border-start ps-4">
-                <span className="text-muted fw-bold d-block mb-1" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>EXTRA MARKUP</span>
-                <span className="fw-bold text-dark fs-5">{getSymbol(baseCode)} {values.extraMarkup || 0}</span>
+              <div className="text-end" style={{ backgroundColor: "#fff", border: "0.5px solid #e2e8f0", borderRadius: "8px", padding: "8px 16px" }}>
+                <span className="text-muted d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Extra Markup</span>
+                <span className="text-dark" style={{ fontWeight: 600, fontSize: "15px" }}>{getSymbol(baseCode)} {values.extraMarkup || 0}</span>
               </div>
               <button
                 type="button"
-                className="btn btn-outline-primary ms-3 d-flex justify-content-center align-items-center"
+                className="btn ms-3 d-flex justify-content-center align-items-center"
                 onClick={() => setShowMarkup(true)}
                 disabled={readOnly}
-                style={{ borderRadius: "8px", width: "42px", height: "42px" }}
+                style={{ borderRadius: "8px", width: "40px", height: "40px", border: "0.5px solid #e2e8f0", backgroundColor: "#fff" }}
                 title="Edit Markup"
               >
-                <i className="fa fa-pencil fa-lg"></i>
+                <i className="fa fa-pencil fa-lg" style={{ color: "#64748b" }}></i>
               </button>
             </div>
             
@@ -723,20 +960,20 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             Header : Options | Person | Markup | VAT | Total
             Each option row is split into 4 person-type sub-rows
         ════════════════════════════════════════════════════ */}
-        <div className="card shadow-sm border-0 mb-4 mt-5">
-          <div className="card-header bg-white border-bottom py-3">
-            <h5 className="card-title fw-bold mb-0 text-dark" style={{ fontSize: "16px" }}>Quoted Options Breakdown</h5>
+        <div className="card border-0 mb-4 mt-5" style={{ border: "0.5px solid #e2e8f0", borderRadius: "12px" }}>
+          <div className="card-header bg-white border-0 py-3" style={{ borderBottom: "0.5px solid #e2e8f0" }}>
+            <h5 className="card-title mb-0 text-dark" style={{ fontSize: "15px", fontWeight: 600 }}>Quoted Options Breakdown</h5>
           </div>
           <div className="card-body p-0">
             <div className="table-responsive" id="pricing_table_wrapper">
               <table className="table mb-0 text-dark" style={{ borderCollapse: "collapse" }}>
-                <thead style={{ backgroundColor: "#f8f9fa", borderBottom: "2px solid #dee2e6" }}>
+                <thead style={{ backgroundColor: "#f8faff", borderBottom: "2px solid #e2e8f0" }}>
                   <tr>
-                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px", width: "120px" }}>Options</th>
-                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px" }}>Person</th>
-                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px" }}>Markup</th>
-                    <th className="py-3 px-4 fw-bold text-uppercase text-dark" style={{ fontSize: "12px", letterSpacing: "1px" }}>{values.taxType?.name || "TAX"} (%)</th>
-                    <th className="py-3 px-4 fw-bold text-uppercase text-dark text-end" style={{ fontSize: "12px", letterSpacing: "1px" }}>Total</th>
+                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "120px" }}>Options</th>
+                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>Person</th>
+                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>Markup</th>
+                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>{values.taxType?.name || "Tax"} (%)</th>
+                    <th className="py-3 px-4 text-dark text-end" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>Total</th>
                   </tr>
                 </thead>
 
@@ -766,65 +1003,61 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         <tr
                           key={`${optIdx}-${ptIdx}`}
                           style={{
-                            backgroundColor: ptIdx % 2 === 0 ? "#ffffff" : "#f9fbff",
-                            borderBottom: "1px solid #f0f0f0",
+                            backgroundColor: ptIdx % 2 === 0 ? "#fff" : "#f8faff",
+                            borderBottom: "1px solid #f1f5f9",
                           }}
                         >
                           {/* Option label — merged cell spanning person rows + grand total row */}
                           {ptIdx === 0 && (
                             <td
                               rowSpan={personRows.length + 1}
-                              className="align-middle text-center fw-bold"
+                              className="align-middle text-center"
                               style={{
                                 verticalAlign: "middle",
-                                borderRight: "2px solid #dee2e6",
-                                backgroundColor: "#f8f9fa",
+                                borderRight: "0.5px solid #e2e8f0",
+                                backgroundColor: "#f8faff",
                               }}
                             >
                               <span
-                                className="badge bg-primary px-3 py-2"
-                                style={{ fontSize: "12px" }}
+                                className="badge px-3 py-2"
+                                style={{ fontSize: "12px", backgroundColor: "#EEF4FF", color: "#185FA5", padding: "4px 12px", borderRadius: "999px", fontWeight: 500 }}
                               >
                                 {item.name}
                               </span>
                             </td>
                           )}
 
-                          {/* Person type label + per-person cost */}
-                          <td style={{ paddingLeft: "16px", color: "#333", borderRight: '1px solid #eee' }}>
-                            <span className="fw-medium">{pt.label}</span>
-                            <span className="text-muted ms-2">(x{pt.count})</span>
-                            <div className="text-muted" style={{ fontSize: '11px' }}>
-                              {currSymbol} {convert(pt.perPersonCost)} / person
-                            </div>
+                          {/* Person type label */}
+                          <td style={{ paddingLeft: "16px", color: "#333", borderRight: '0.5px solid #e2e8f0', fontWeight: 500 }}>
+                            <span>{pt.label}</span>
                           </td>
 
                           {/* Markup */}
-                          <td style={{ borderRight: '1px solid #eee' }}>{currSymbol} {convert(pt.markup)}</td>
+                          <td style={{ borderRight: '0.5px solid #e2e8f0' }}>{currSymbol} {convert(pt.markup)}</td>
 
                           {/* VAT */}
-                          <td style={{ borderRight: '1px solid #eee' }}>{pt.vat} %</td>
+                          <td style={{ borderRight: '0.5px solid #e2e8f0' }}>{pt.vat} %</td>
 
                           {/* Total (aggregate for all pax of this type) */}
-                          <td className="fw-bold text-dark">{currSymbol} {convert(pt.total)}</td>
+                          <td className="text-dark" style={{ fontWeight: 600 }}>{currSymbol} {convert(pt.total)}</td>
                         </tr>
                       ))}
 
                       {/* Grand Total row */}
                       <tr
                         style={{
-                          backgroundColor: "#e8f4fd",
-                          borderBottom: "3px solid #dee2e6",
+                          backgroundColor: "#f0f7ff",
+                          borderBottom: "1px solid #e2e8f0",
                         }}
                       >
                         <td
                           colSpan={3}
-                          className="text-end fw-bold pe-3"
-                          style={{ color: "#0d6efd", fontSize: "14px" }}
+                          className="text-end pe-3"
+                          style={{ color: "#185FA5", fontSize: "14px", fontWeight: 600 }}
                         >
                           Grand Total:
                         </td>
-                        <td className="fw-bold" style={{ color: "#0d6efd", fontSize: "15px" }}>
+                        <td style={{ color: "#185FA5", fontSize: "15px", fontWeight: 600 }}>
                           {currSymbol} {grandTotal}
                         </td>
                       </tr>
@@ -840,17 +1073,17 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
         {/* ── Summary / billing controls ── */}
         <div className="mt-5">
-          <div className="card shadow-sm border-0 w-100" style={{ backgroundColor: "#fcfdff" }}>
+          <div className="card border-0 w-100" style={{ backgroundColor: "#fff" }}>
             <div className="card-body p-4 p-md-5">
               <div className="row">
                 
                 {/* ── Left Column: Settings ── */}
                 <div className="col-lg-5 col-xl-4 border-end pe-lg-4 mb-4 mb-lg-0">
-                  <h5 className="card-title fw-bold mb-4 text-dark pb-2">Billing Settings</h5>
+                  <h5 className="card-title mb-4 text-dark pb-2" style={{ fontSize: "15px", fontWeight: 600 }}>Billing Settings</h5>
 
                   {/* Price In */}
                   <div className="mb-4">
-                    <label className="text-secondary fw-medium mb-2 d-block">Display Price In Currency</label>
+                    <label className="text-secondary mb-2 d-block" style={{ fontSize: "14px", fontWeight: 500, color: "#64748b" }}>Display Price In Currency</label>
                     <ReactSelect
                       options={currencyOptions}
                       value={values.priceIn}
@@ -865,11 +1098,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                   {/* Discount % */}
                   <div>
-                    <label className="text-secondary fw-medium mb-2 d-block">Apply Discount (%)</label>
-                    <div className="input-group mb-3 shadow-sm border-0 rounded">
+                    <label className="text-secondary mb-2 d-block" style={{ fontSize: "14px", fontWeight: 500, color: "#64748b" }}>Apply Discount (%)</label>
+                    <div className="input-group mb-3" style={{ border: "0.5px solid #e2e8f0", borderRadius: "8px", overflow: "hidden" }}>
                       <input
                         type="number"
-                        className="form-control fw-bold text-primary"
+                        className="form-control text-primary"
                         name="discount"
                         onChange={handleChange}
                         disabled={readOnly}
@@ -878,22 +1111,22 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         min="0"
                         step="0.01"
                         placeholder="0.00"
-                        style={{ height: "45px", backgroundColor: "#fff", borderRight: "none" }}
+                        style={{ height: "42px", backgroundColor: "#fff", border: "none", fontWeight: 600 }}
                       />
-                      <span className="input-group-text bg-white text-muted" style={{ borderLeft: "none" }}>%</span>
+                      <span className="input-group-text" style={{ backgroundColor: "#f8faff", border: "none", color: "#64748b", fontWeight: 500 }}>%</span>
                     </div>
                   </div>
                 </div>
 
                 {/* ── Right Column: Summary & Actions ── */}
                 <div className="col-lg-7 col-xl-8 ps-lg-5">
-                  <h5 className="card-title fw-bold mb-4 text-dark pb-2">Converted Output</h5>
+                  <h5 className="card-title mb-4 text-dark pb-2" style={{ fontSize: "15px", fontWeight: 600 }}>Converted Output</h5>
 
                   {/* Converted totals (only shown when exchange rate exists) */}
                   {values.priceIn?.exchange_rate ? (
                     <div className="mb-4">
                       
-                      <div className="card shadow-sm border-0 rounded-3 overflow-hidden" style={{ borderLeft: "4px solid #0d6efd" }}>
+                      <div className="card border-0 rounded-3 overflow-hidden" style={{ border: "0.5px solid #e2e8f0", borderRadius: "12px" }}>
                         <div className="card-body p-0 bg-white">
                           {hotelOption.map((item, ind) => {
                             if (item.amount === 0) return null;
@@ -907,16 +1140,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                             const isLast = ind === hotelOption.length - 1 || hotelOption.slice(ind + 1).every(h => h.amount === 0);
                             
                             return (
-                              <div key={ind} className={`p-4 ${isLast ? '' : 'border-bottom border-light'}`}>
+                              <div key={ind} className={`p-4 ${isLast ? '' : 'border-bottom'}`} style={{ borderBottom: isLast ? "none" : "0.5px solid #e2e8f0" }}>
                                 <div className="d-flex justify-content-between align-items-center mb-1">
-                                  <span className="fw-bold text-dark text-truncate pe-3" style={{ fontSize: "16px", maxWidth: "60%" }}>{item.name}</span>
-                                  <h4 className="mb-0 text-primary fw-bold text-end">
+                                  <span className="text-dark text-truncate pe-3" style={{ fontSize: "15px", maxWidth: "60%", fontWeight: 600 }}>{item.name}</span>
+                                  <h4 className="mb-0" style={{ color: "#185FA5", fontWeight: 600, fontSize: "18px" }}>
                                     {getSymbol(values.priceIn.to_currency || values.priceIn.label)} {convertedTotal}
                                   </h4>
                                 </div>
                                 <div className="d-flex justify-content-between align-items-center mt-1">
                                   <span className="text-secondary" style={{ fontSize: "13px" }}>Final Option Total</span>
-                                  <span className="text-muted fw-medium" style={{ fontSize: "12px" }}>
+                                  <span className="text-muted" style={{ fontSize: "12px", fontWeight: 500 }}>
                                     Rate: 1 {toCurrency} = {rate} {baseCode}
                                   </span>
                                 </div>
@@ -937,10 +1170,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                   <div className="d-flex justify-content-end mt-auto pt-3">
                     <button
                       type="button"
-                      className="btn btn-primary px-5 py-3 fw-bold shadow-sm w-100 w-md-auto"
+                      className="btn w-100"
                       onClick={handleBilling}
                       disabled={readOnly}
-                      style={{ borderRadius: "8px", letterSpacing: "0.5px", fontSize: "15px" }}
+                      style={{ backgroundColor: "#185FA5", border: "none", borderRadius: "8px", padding: "12px 24px", fontSize: "14px", fontWeight: 500, color: "#fff" }}
                     >
                       <i className="fa fa-refresh me-2"></i> Update Billing
                     </button>
