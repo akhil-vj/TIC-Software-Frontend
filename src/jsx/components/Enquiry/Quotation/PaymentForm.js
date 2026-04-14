@@ -91,7 +91,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     },
     ...(currencyData?.data?.data
       ?.filter((c) => c.from_currency === baseCode)
-      ?.map((c) => ({ ...c, label: c.to_currency || c.code, value: c.id })) || []),
+      ?.map((c) => ({
+        ...c,
+        label: c.to_currency || c.code,
+        value: c.id,
+        symbol: getSymbol(c.to_currency || c.code)
+      })) || []),
   ];
 
   useEffect(() => {
@@ -652,7 +657,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         {(() => {
           const exchangeRate = Number(values.priceIn?.exchange_rate || 1);
           const activeRate = (values.priceIn?.value === "base" || !values.priceIn?.value || exchangeRate === 0) ? 1 : exchangeRate;
-          const activeSymbol = values.priceIn?.symbol || getSymbol(baseCode);
+          const activeSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
 
           const categoryTotals = scheduleArr.reduce((acc, { item }) => {
             const rawType = (item.insertType || 'other').toLowerCase();
@@ -1065,9 +1070,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       const personRows = getPersonTypeRows(item);
                       const exchangeRate = parseFloat(values.priceIn?.exchange_rate) || 0;
                       const hasConversion = exchangeRate > 0;
-                      const currSymbol = hasConversion
-                        ? getSymbol(values.priceIn?.to_currency || values.priceIn?.label)
-                        : getSymbol(baseCode);
+                      const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
                       const grandTotal = convert(calculateTrueTotal(item.trueBaseAmount, item.markup));
@@ -1219,7 +1222,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                   <span className="text-dark text-truncate pe-3" style={{ fontSize: "15px", maxWidth: "60%", fontWeight: 600 }}>{item.name}</span>
                                   <h4 className="mb-0" style={{ color: "#185FA5", fontWeight: 600, fontSize: "18px" }}>
-                                    {getSymbol(values.priceIn.to_currency || values.priceIn.label)} {convertedTotal}
+                                    {values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode)} {convertedTotal}
                                   </h4>
                                 </div>
                                 <div className="d-flex justify-content-between align-items-center mt-1">
