@@ -654,8 +654,75 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           const activeSymbol = values.priceIn?.symbol || getSymbol(baseCode);
 
           const categoryTotals = scheduleArr.reduce((acc, { item }) => {
-            const type = item.insertType || 'other';
-            const total = Number(item.amount || 0) + Number(item.markup || 0);
+            const rawType = (item.insertType || 'other').toLowerCase();
+            const type = (rawType === 'transfer' || rawType === 'car') ? 'car' : rawType;
+            
+            // For Hotels, only sum Option 1 totals (which match the default Grand Total)
+            if (rawType === 'hotel') {
+              const optLabel = item.option?.label || (typeof item.option === 'string' ? item.option : '');
+              if (optLabel !== "Option 1" && optLabel !== "") return acc; 
+            }
+
+            let total = 0;
+            const itemAmount = Number(item.amount || 0);
+            const itemMarkup = Number(item.markup || 0);
+
+            if (values.priceOption?.value === "PER") {
+              if (rawType === "hotel") {
+                const totalPax = (Number(values.adult || 0) + Number(values.child || 0)) || 1;
+                const divisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+                const counts = {
+                  single: safeCount(item.single),
+                  double: safeCount(item.double),
+                  triple: safeCount(item.triple),
+                  extra: safeCount(item.extra),
+                  childW: safeCount(item.childW),
+                  childN: safeCount(item.childN),
+                };
+
+                const perPaxMarkup = itemMarkup / totalPax;
+                const roomTypeId = item.roomType?.value || item.roomType?.id || item.roomType;
+                const selectedRoom = item.roomOption?.find(r => String(r.id) === String(roomTypeId));
+                
+                let perPaxEntrySum = 0;
+                const fieldMap = {
+                  single: 'single_bed_amount',
+                  double: 'double_bed_amount',
+                  triple: 'triple_bed_amount',
+                  extra: 'extra_bed_amount',
+                  childW: 'child_w_bed_amount',
+                  childN: 'child_n_bed_amount'
+                };
+
+                ['single', 'double', 'triple', 'extra', 'childW', 'childN'].forEach(key => {
+                  if (counts[key] > 0) {
+                    const rateField = fieldMap[key];
+                    const rawRate = selectedRoom ? Number(selectedRoom[rateField] || 0) : 0;
+                    const divisor = divisors[key] || 1;
+                    perPaxEntrySum += (rawRate / divisor);
+                  }
+                });
+                
+                if (perPaxEntrySum > 0) {
+                  const itemTotalWeight = (counts.single * Number(selectedRoom?.single_bed_amount || 0)) +
+                                         (counts.double * Number(selectedRoom?.double_bed_amount || 0)) +
+                                         (counts.triple * Number(selectedRoom?.triple_bed_amount || 0)) +
+                                         (counts.extra * Number(selectedRoom?.extra_bed_amount || 0)) +
+                                         (counts.childW * Number(selectedRoom?.child_w_bed_amount || 0)) +
+                                         (counts.childN * Number(selectedRoom?.child_n_bed_amount || 0));
+                  const ratio = itemTotalWeight > 0 ? (itemAmount / itemTotalWeight) : 1;
+                  total = (perPaxEntrySum * ratio) + perPaxMarkup;
+                } else {
+                  const hotelPaxCount = (counts.single * 1) + (counts.double * 2) + (counts.triple * 3) + counts.extra + counts.childW + counts.childN;
+                  total = (itemAmount / (hotelPaxCount || 1)) + perPaxMarkup;
+                }
+              } else {
+                total = itemAmount + itemMarkup;
+              }
+            } else {
+              total = itemAmount + itemMarkup;
+            }
+
             acc[type] = (acc[type] || 0) + total;
             return acc;
           }, {});
