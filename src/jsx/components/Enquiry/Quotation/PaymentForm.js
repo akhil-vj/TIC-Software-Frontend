@@ -728,6 +728,48 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             }
 
             acc[type] = (acc[type] || 0) + total;
+
+            // ── Hotel sub-totals by occupancy type ──
+            if (rawType === 'hotel') {
+              const roomTypeId = item.roomType?.value || item.roomType?.id || item.roomType;
+              const selectedRoom = item.roomOption?.find(r => String(r.id) === String(roomTypeId));
+              const rates = {
+                single: Number(selectedRoom?.single_bed_amount || 0),
+                double: Number(selectedRoom?.double_bed_amount || 0),
+                triple: Number(selectedRoom?.triple_bed_amount || 0),
+                extra: Number(selectedRoom?.extra_bed_amount || 0),
+                childW: Number(selectedRoom?.child_w_bed_amount || 0),
+                childN: Number(selectedRoom?.child_n_bed_amount || 0),
+              };
+              const counts = {
+                single: safeCount(item.single),
+                double: safeCount(item.double),
+                triple: safeCount(item.triple),
+                extra: safeCount(item.extra),
+                childW: safeCount(item.childW),
+                childN: safeCount(item.childN),
+              };
+              const totalWeight = (counts.single * rates.single) + (counts.double * rates.double) +
+                (counts.triple * rates.triple) + (counts.extra * rates.extra) +
+                (counts.childW * rates.childW) + (counts.childN * rates.childN);
+              const itemGross = itemAmount + itemMarkup;
+              const ratio = totalWeight > 0 ? itemGross / totalWeight : 0;
+
+              // Room Rate = single + double + triple sharing
+              const roomRateCost = ((counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple)) * ratio;
+              // Adult Extra Bed
+              const extraBedCost = (counts.extra * rates.extra) * ratio;
+              // Child Extra Bed
+              const childWCost = (counts.childW * rates.childW) * ratio;
+              // Child Without Bed
+              const childNCost = (counts.childN * rates.childN) * ratio;
+
+              acc.hotelRoom = (acc.hotelRoom || 0) + roomRateCost;
+              acc.hotelExtra = (acc.hotelExtra || 0) + extraBedCost;
+              acc.hotelChildW = (acc.hotelChildW || 0) + childWCost;
+              acc.hotelChildN = (acc.hotelChildN || 0) + childNCost;
+            }
+
             return acc;
           }, {});
 
@@ -939,20 +981,23 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               {/* ── Category-wise Total Summary ── */}
               <div className="mb-5 h-100" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
                 {[
-                  { label: 'Hotels', icon: 'fa-building', type: 'hotel', color: 'primary' },
-                  { label: 'Activities', icon: 'fa-ticket', type: 'activity', color: 'warning' },
-                  { label: 'Transfers', icon: 'fa-car', type: 'car', color: 'success' },
-                ].map((cat) => (
+                  { label: 'Room Rate', icon: 'fa-bed', type: 'hotelRoom', bg: '#EEF4FF', iconColor: '#185FA5' },
+                  { label: 'Adult Extra Bed', icon: 'fa-user-plus', type: 'hotelExtra', bg: '#F0EEFF', iconColor: '#5B47D0' },
+                  { label: 'Child Extra Bed', icon: 'fa-child', type: 'hotelChildW', bg: '#FFF4E6', iconColor: '#D97706' },
+                  { label: 'Child Without Bed', icon: 'fa-child-reaching', type: 'hotelChildN', bg: '#FFF0F0', iconColor: '#DC2626' },
+                  { label: 'Activities', icon: 'fa-ticket', type: 'activity', bg: '#FFF9E6', iconColor: '#D97706' },
+                  { label: 'Transfers', icon: 'fa-car', type: 'car', bg: '#E6FCF5', iconColor: '#16A34A' },
+                ].filter(cat => (categoryTotals[cat.type] || 0) > 0).map((cat) => (
                   <div key={cat.type}>
                     <div className="bg-white h-100" style={{ border: "0.5px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
                       <div className="d-flex align-items-center">
-                        <div className={`rounded-circle d-flex align-items-center justify-content-center me-3`} style={{ width: '40px', height: '40px', backgroundColor: cat.color === 'primary' ? '#EEF4FF' : cat.color === 'warning' ? '#FFF9E6' : '#E6FCF5' }}>
-                          <i className={`fa ${cat.icon} text-${cat.color} fs-4`}></i>
+                        <div className="rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px', backgroundColor: cat.bg }}>
+                          <i className={`fa ${cat.icon} fs-4`} style={{ color: cat.iconColor }}></i>
                         </div>
                         <div>
                           <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94a3b8' }}>Total {cat.label}</div>
                           <div className="text-dark" style={{ fontSize: '18px', fontWeight: 600, marginTop: '4px' }}>
-                            {activeSymbol} {getRoundOfValue((categoryTotals[cat.type] || 0) / activeRate)}
+                            {activeSymbol} {getRoundOfValue(categoryTotals[cat.type] || 0)}
                           </div>
                         </div>
                       </div>
