@@ -729,6 +729,19 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
             acc[type] = (acc[type] || 0) + total;
 
+            // ── Activity sub-totals by adult / child ──
+            if (rawType === 'activity') {
+              const adultCount = Number(values.adult || 0);
+              const childCount = Number(values.child || 0);
+              const totalPax = adultCount + childCount;
+              if (totalPax > 0) {
+                acc.activityAdult = (acc.activityAdult || 0) + getRoundOfValue(total * (adultCount / totalPax));
+                acc.activityChild = (acc.activityChild || 0) + getRoundOfValue(total * (childCount / totalPax));
+              } else {
+                acc.activityAdult = (acc.activityAdult || 0) + total;
+              }
+            }
+
             // ── Hotel sub-totals by occupancy type ──
             if (rawType === 'hotel') {
               const roomTypeId = item.roomType?.value || item.roomType?.id || item.roomType;
@@ -755,8 +768,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               const itemGross = itemAmount + itemMarkup;
               const ratio = totalWeight > 0 ? itemGross / totalWeight : 0;
 
-              // Room Rate = single + double + triple sharing
-              const roomRateCost = ((counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple)) * ratio;
+              // Room Rates — split by sharing type
+              const singleRoomCost = (counts.single * rates.single) * ratio;
+              const doubleRoomCost = (counts.double * rates.double) * ratio;
+              const tripleRoomCost = (counts.triple * rates.triple) * ratio;
               // Adult Extra Bed
               const extraBedCost = (counts.extra * rates.extra) * ratio;
               // Child Extra Bed
@@ -764,7 +779,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               // Child Without Bed
               const childNCost = (counts.childN * rates.childN) * ratio;
 
-              acc.hotelRoom = (acc.hotelRoom || 0) + roomRateCost;
+              acc.hotelSingle = (acc.hotelSingle || 0) + singleRoomCost;
+              acc.hotelDouble = (acc.hotelDouble || 0) + doubleRoomCost;
+              acc.hotelTriple = (acc.hotelTriple || 0) + tripleRoomCost;
+              acc.hotelRoom = (acc.hotelRoom || 0) + singleRoomCost + doubleRoomCost + tripleRoomCost;
               acc.hotelExtra = (acc.hotelExtra || 0) + extraBedCost;
               acc.hotelChildW = (acc.hotelChildW || 0) + childWCost;
               acc.hotelChildN = (acc.hotelChildN || 0) + childNCost;
@@ -981,11 +999,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               {/* ── Category-wise Total Summary ── */}
               <div className="mb-5 h-100" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
                 {[
-                  { label: 'Room Rate', icon: 'fa-bed', type: 'hotelRoom', bg: '#EEF4FF', iconColor: '#185FA5' },
+                  { label: 'Single Room', icon: 'fa-bed', type: 'hotelSingle', bg: '#EEF4FF', iconColor: '#185FA5' },
+                  { label: 'Double Room', icon: 'fa-bed', type: 'hotelDouble', bg: '#E8F0FE', iconColor: '#1A73E8' },
+                  { label: 'Triple Room', icon: 'fa-bed', type: 'hotelTriple', bg: '#E0ECFF', iconColor: '#1565C0' },
+                  { label: 'Total Room Rate', icon: 'fa-hotel', type: 'hotelRoom', bg: '#DBEAFE', iconColor: '#0F4C9A' },
                   { label: 'Adult Extra Bed', icon: 'fa-user-plus', type: 'hotelExtra', bg: '#F0EEFF', iconColor: '#5B47D0' },
                   { label: 'Child Extra Bed', icon: 'fa-child', type: 'hotelChildW', bg: '#FFF4E6', iconColor: '#D97706' },
                   { label: 'Child Without Bed', icon: 'fa-child-reaching', type: 'hotelChildN', bg: '#FFF0F0', iconColor: '#DC2626' },
-                  { label: 'Activities', icon: 'fa-ticket', type: 'activity', bg: '#FFF9E6', iconColor: '#D97706' },
+                  { label: 'Adult Activities', icon: 'fa-ticket', type: 'activityAdult', bg: '#FFF9E6', iconColor: '#D97706' },
+                  { label: 'Child Activities', icon: 'fa-ticket', type: 'activityChild', bg: '#FFF5EB', iconColor: '#EA580C' },
+                  { label: 'Total Activities', icon: 'fa-ticket', type: 'activity', bg: '#FEF3C7', iconColor: '#B45309' },
                   { label: 'Transfers', icon: 'fa-car', type: 'car', bg: '#E6FCF5', iconColor: '#16A34A' },
                 ].filter(cat => (categoryTotals[cat.type] || 0) > 0).map((cat) => (
                   <div key={cat.type}>
