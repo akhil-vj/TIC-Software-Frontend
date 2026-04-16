@@ -276,6 +276,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               ? scheduleItem.baseAmount
               : scheduleItem.amount;
 
+          const currentBaseMarkup =
+            scheduleItem.baseMarkup !== undefined
+              ? scheduleItem.baseMarkup
+              : (scheduleItem.markup || 0);
+
           // For Hotels, we keep the amount as TOTAL (Option A)
           // For Activities/Transfers, we continue to divide for PER mode
           const shouldDivide = scheduleItem.insertType !== "hotel";
@@ -283,7 +288,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           return {
             ...scheduleItem,
             amount: (type === "TOTAL" || !shouldDivide) ? currentBaseAmount : currentBaseAmount / (person || 1),
+            markup: (type === "TOTAL" || !shouldDivide) ? currentBaseMarkup : currentBaseMarkup / (person || 1),
             baseAmount: currentBaseAmount,
+            baseMarkup: currentBaseMarkup,
           };
         }),
       }));
@@ -497,16 +504,19 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       let rowPriceTotal = (hotelRowCostAll + hotelMarkupAll);
       let rowMarkupTotal = hotelMarkupAll;
 
-      // ADJUSTMENT FOR "TOTAL PRICE" MODE
-      // As requested: Child rows remain same (aggregate), but Sharing rows (Double/Triple) 
-      // change to show the unit/room rate in TOTAL mode.
-      const isTotalMode = values.priceOption?.value === "TOTAL";
+      // ADJUSTMENT FOR mode-based display
+      const isPerMode = values.priceOption?.value === "PER";
       const isSharingType = ['single', 'double', 'triple'].includes(pt.key);
 
-      if (isTotalMode && isSharingType) {
+      if (isPerMode) {
+        // In PER mode, show the cost per Person
+        rowPriceTotal = rowPriceTotal / count;
+        rowMarkupTotal = rowMarkupTotal / count;
+      } else if (isSharingType) {
+        // In TOTAL mode, for sharing types, show the Rate Per Room (unit rate)
         const divisor = (pt.key === 'double' ? 2 : pt.key === 'triple' ? 3 : 1);
-        rowPriceTotal = rowPriceTotal / (count > 0 ? (count / divisor) : 1); 
-        rowMarkupTotal = rowMarkupTotal / (count > 0 ? (count / divisor) : 1);
+        rowPriceTotal = (rowPriceTotal / count) * divisor;
+        rowMarkupTotal = (rowMarkupTotal / count) * divisor;
       }
       
       return {
@@ -654,9 +664,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
         {/* ── Itemized Pricing Table ── */}
         {(() => {
-          // Itemized table always shows base currency — no conversion
-          const activeRate = 1;
-          const activeSymbol = getSymbol(baseCode);
+          // Display currency conversion
+          const exchangeRate = parseFloat(values.priceIn?.exchange_rate) || 0;
+          const hasConversion = exchangeRate > 0;
+          const activeRate = hasConversion ? exchangeRate : 1;
+          const activeSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
 
           const categoryTotals = scheduleArr.reduce((acc, { item }) => {
             const rawType = (item.insertType || 'other').toLowerCase();
@@ -665,98 +677,52 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             // For Hotels, only sum Option 1 totals (which match the default Grand Total)
             if (rawType === 'hotel') {
               const optLabel = item.option?.label || (typeof item.option === 'string' ? item.option : '');
-              if (optLabel !== "Option 1" && optLabel !== "") return acc; 
+              if (optLabel !== "" && optLabel !== "Option 1") return acc; 
             }
 
-            let total = 0;
-            const itemAmount = Number(item.amount || 0);
-            const itemMarkup = Number(item.markup || 0);
+            // In ALL summary cards, we show the TOTAL aggregate gross cost (Net + Markup) for all travelers
+            // Regardless of whether active mode is PER or TOTAL.
+            let itemNetTotal = 0;
+            let itemMarkupTotal = 0;
 
-            if (values.priceOption?.value === "PER") {
-              if (rawType === "hotel") {
-                const totalPax = (Number(values.adult || 0) + Number(values.child || 0)) || 1;
-                const divisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
-                const counts = {
-                  single: safeCount(item.single),
-                  double: safeCount(item.double),
-                  triple: safeCount(item.triple),
-                  extra: safeCount(item.extra),
-                  childW: safeCount(item.childW),
-                  childN: safeCount(item.childN),
-                };
+            const isPer = values.priceOption?.value === "PER";
+            const person = (rawType === 'activity') ? (item.person || 1) : ((values.adult || 0) + (values.child || 0)) || 1;
 
-                const perPaxMarkup = itemMarkup / totalPax;
-                const roomTypeId = item.roomType?.value || item.roomType?.id || item.roomType;
-                const selectedRoom = item.roomOption?.find(r => String(r.id) === String(roomTypeId));
-                
-                let perPaxEntrySum = 0;
-                const fieldMap = {
-                  single: 'single_bed_amount',
-                  double: 'double_bed_amount',
-                  triple: 'triple_bed_amount',
-                  extra: 'extra_bed_amount',
-                  childW: 'child_w_bed_amount',
-                  childN: 'child_n_bed_amount'
-                };
+            if (isPer && rawType !== 'hotel') {
+              // Convert per-person back to total for the summary
+              itemNetTotal = (Number(item.amount || 0)) * person;
+              itemMarkupTotal = (Number(item.markup || 0)) * person;
+            } else {
+              // Already total
+              itemNetTotal = Number(item.amount || 0);
+              itemMarkupTotal = Number(item.markup || 0);
+            }
 
-                ['single', 'double', 'triple', 'extra', 'childW', 'childN'].forEach(key => {
-                  if (counts[key] > 0) {
-                    const rateField = fieldMap[key];
-                    const rawRate = selectedRoom ? Number(selectedRoom[rateField] || 0) : 0;
-                    const divisor = divisors[key] || 1;
-                    perPaxEntrySum += (rawRate / divisor);
-                  }
-                });
-                
-                if (perPaxEntrySum > 0) {
-                  const itemTotalWeight = (counts.single * Number(selectedRoom?.single_bed_amount || 0)) +
-                                         (counts.double * Number(selectedRoom?.double_bed_amount || 0)) +
-                                         (counts.triple * Number(selectedRoom?.triple_bed_amount || 0)) +
-                                         (counts.extra * Number(selectedRoom?.extra_bed_amount || 0)) +
-                                         (counts.childW * Number(selectedRoom?.child_w_bed_amount || 0)) +
-                                         (counts.childN * Number(selectedRoom?.child_n_bed_amount || 0));
-                  const ratio = itemTotalWeight > 0 ? (itemAmount / itemTotalWeight) : 1;
-                  total = (perPaxEntrySum * ratio) + perPaxMarkup;
+            const itemGrossTotal = itemNetTotal + itemMarkupTotal;
+            acc[type] = (acc[type] || 0) + itemGrossTotal;
+
+            // ── Adult / Child Split for Activities & Transfers ──
+            if (rawType === 'activity' || type === 'car') {
+              const adultCount = Number(values.adult || 0);
+              const childCount = Number(values.child || 0);
+              const totalPax = adultCount + childCount;
+              if (totalPax > 0) {
+                const adultPart = (itemGrossTotal * adultCount) / totalPax;
+                const childPart = (itemGrossTotal * childCount) / totalPax;
+                if (rawType === 'activity') {
+                  acc.activityAdult = (acc.activityAdult || 0) + adultPart;
+                  acc.activityChild = (acc.activityChild || 0) + childPart;
                 } else {
-                  const hotelPaxCount = (counts.single * 1) + (counts.double * 2) + (counts.triple * 3) + counts.extra + counts.childW + counts.childN;
-                  total = (itemAmount / (hotelPaxCount || 1)) + perPaxMarkup;
+                  acc.carAdult = (acc.carAdult || 0) + adultPart;
+                  acc.carChild = (acc.carChild || 0) + childPart;
                 }
               } else {
-                total = itemAmount + itemMarkup;
-              }
-            } else {
-              total = itemAmount + itemMarkup;
-            }
-
-            acc[type] = (acc[type] || 0) + total;
-
-            // ── Activity sub-totals by adult / child ──
-            if (rawType === 'activity') {
-              const adultCount = Number(values.adult || 0);
-              const childCount = Number(values.child || 0);
-              const totalPax = adultCount + childCount;
-              if (totalPax > 0) {
-                acc.activityAdult = (acc.activityAdult || 0) + getRoundOfValue(total * (adultCount / totalPax));
-                acc.activityChild = (acc.activityChild || 0) + getRoundOfValue(total * (childCount / totalPax));
-              } else {
-                acc.activityAdult = (acc.activityAdult || 0) + total;
+                if (rawType === 'activity') acc.activityAdult = (acc.activityAdult || 0) + itemGrossTotal;
+                else acc.carAdult = (acc.carAdult || 0) + itemGrossTotal;
               }
             }
 
-            // ── Transfer sub-totals by adult / child ──
-            if (type === 'car') {
-              const adultCount = Number(values.adult || 0);
-              const childCount = Number(values.child || 0);
-              const totalPax = adultCount + childCount;
-              if (totalPax > 0) {
-                acc.carAdult = (acc.carAdult || 0) + getRoundOfValue(total * (adultCount / totalPax));
-                acc.carChild = (acc.carChild || 0) + getRoundOfValue(total * (childCount / totalPax));
-              } else {
-                acc.carAdult = (acc.carAdult || 0) + total;
-              }
-            }
-
-            // ── Hotel sub-totals by occupancy type ──
+            // ── Hotel sub-totals breakdown ──
             if (rawType === 'hotel') {
               const roomTypeId = item.roomType?.value || item.roomType?.id || item.roomType;
               const selectedRoom = item.roomOption?.find(r => String(r.id) === String(roomTypeId));
@@ -779,13 +745,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               const totalWeight = (counts.single * rates.single) + (counts.double * rates.double) +
                 (counts.triple * rates.triple) + (counts.extra * rates.extra) +
                 (counts.childW * rates.childW) + (counts.childN * rates.childN);
-              const itemGross = itemAmount + itemMarkup;
-              const ratio = totalWeight > 0 ? itemGross / totalWeight : 0;
+              
+              const ratio = totalWeight > 0 ? itemGrossTotal / totalWeight : 0;
 
-              // Room Rates — split by sharing type
-              const singleRoomCost = (counts.single * rates.single) * ratio;
-              const doubleRoomCost = (counts.double * rates.double) * ratio;
-              const tripleRoomCost = (counts.triple * rates.triple) * ratio;
+              // Room Rates — sum of sharing types
+              const roomCost = ((counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple)) * ratio;
               // Adult Extra Bed
               const extraBedCost = (counts.extra * rates.extra) * ratio;
               // Child Extra Bed
@@ -793,10 +757,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               // Child Without Bed
               const childNCost = (counts.childN * rates.childN) * ratio;
 
-              acc.hotelSingle = (acc.hotelSingle || 0) + singleRoomCost;
-              acc.hotelDouble = (acc.hotelDouble || 0) + doubleRoomCost;
-              acc.hotelTriple = (acc.hotelTriple || 0) + tripleRoomCost;
-              acc.hotelRoom = (acc.hotelRoom || 0) + singleRoomCost + doubleRoomCost + tripleRoomCost;
+              acc.hotelRoom = (acc.hotelRoom || 0) + roomCost;
               acc.hotelExtra = (acc.hotelExtra || 0) + extraBedCost;
               acc.hotelChildW = (acc.hotelChildW || 0) + childWCost;
               acc.hotelChildN = (acc.hotelChildN || 0) + childNCost;
@@ -804,6 +765,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
             return acc;
           }, {});
+
+          const convert = (val) => getRoundOfValue(val / activeRate);
 
           return (
             <>
@@ -1010,56 +973,81 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 </div>
               </div>
 
-              {/* ── Category-wise Total Summary ── */}
-              <div className="mb-5 h-100" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-                {[
-                  { label: 'Single Room', icon: 'fa-bed', type: 'hotelSingle', bg: '#EEF4FF', iconColor: '#185FA5' },
-                  { label: 'Double Room', icon: 'fa-bed', type: 'hotelDouble', bg: '#E8F0FE', iconColor: '#1A73E8' },
-                  { label: 'Triple Room', icon: 'fa-bed', type: 'hotelTriple', bg: '#E0ECFF', iconColor: '#1565C0' },
-                  { label: 'Total Room Rate', icon: 'fa-hotel', type: 'hotelRoom', bg: '#DBEAFE', iconColor: '#0F4C9A' },
-                  { label: 'Adult Extra Bed', icon: 'fa-user-plus', type: 'hotelExtra', bg: '#F0EEFF', iconColor: '#5B47D0' },
-                  { label: 'Child Extra Bed', icon: 'fa-child', type: 'hotelChildW', bg: '#FFF4E6', iconColor: '#D97706' },
-                  { label: 'Child Without Bed', icon: 'fa-child-reaching', type: 'hotelChildN', bg: '#FFF0F0', iconColor: '#DC2626' },
-                  { label: 'Adult Activities', icon: 'fa-ticket', type: 'activityAdult', bg: '#FFF9E6', iconColor: '#D97706' },
-                  { label: 'Child Activities', icon: 'fa-ticket', type: 'activityChild', bg: '#FFF5EB', iconColor: '#EA580C' },
-                  { label: 'Total Activities', icon: 'fa-ticket', type: 'activity', bg: '#FEF3C7', iconColor: '#B45309' },
-                  ...(includeChildTransfer
-                    ? [
-                        { label: 'Adult Transfers', icon: 'fa-car', type: 'carAdult', bg: '#E6FCF5', iconColor: '#16A34A' },
-                        { label: 'Child Transfers', icon: 'fa-car', type: 'carChild', bg: '#ECFDF5', iconColor: '#059669' },
-                      ]
-                    : []),
-                  { label: 'Transfers', icon: 'fa-car', type: 'car', bg: '#D1FAE5', iconColor: '#047857', hasCheckbox: true },
-                ].filter(cat => (categoryTotals[cat.type] || 0) > 0).map((cat) => (
-                  <div key={cat.type}>
-                    <div className="bg-white h-100" style={{ border: "0.5px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
-                      <div className="d-flex align-items-center">
-                        <div className="rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px', backgroundColor: cat.bg }}>
-                          <i className={`fa ${cat.icon} fs-4`} style={{ color: cat.iconColor }}></i>
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94a3b8' }}>Total {cat.label}</div>
-                          <div className="text-dark" style={{ fontSize: '18px', fontWeight: 600, marginTop: '4px' }}>
-                            {activeSymbol} {getRoundOfValue(categoryTotals[cat.type] || 0)}
-                          </div>
-                        </div>
-                        {cat.hasCheckbox && (
-                          <div className="ms-2 d-flex align-items-center" style={{ cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              id="includeChildTransfer"
-                              checked={includeChildTransfer}
-                              onChange={(e) => setIncludeChildTransfer(e.target.checked)}
-                              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                            />
-                            <label htmlFor="includeChildTransfer" className="ms-1 mb-0" style={{ fontSize: '10px', fontWeight: 500, color: '#64748b', cursor: 'pointer', whiteSpace: 'nowrap' }}>Include Child</label>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              {/* ── Executive Summary Table ── */}
+              <div className="card border-0 mb-5 shadow-sm" style={{ borderRadius: "16px", overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                <div className="card-header bg-white py-3 border-bottom">
+                  <h6 className="mb-0 text-dark fw-bold" style={{ fontSize: "15px" }}>
+                    <i className="fa fa-list-ul me-2 text-primary"></i> Executive Summary
+                  </h6>
+                </div>
+                <div className="table-responsive">
+                  <table className="table mb-0">
+                    <thead style={{ backgroundColor: "#f8faff" }}>
+                      <tr>
+                        <th className="ps-4 py-3" style={{ fontSize: "11px", textTransform: "uppercase", color: "#64748b", fontWeight: 600, width: "25%" }}>Category</th>
+                        <th className="py-3" style={{ fontSize: "11px", textTransform: "uppercase", color: "#64748b", fontWeight: 600 }}>Description</th>
+                        <th className="pe-4 py-3 text-end" style={{ fontSize: "11px", textTransform: "uppercase", color: "#64748b", fontWeight: 600, width: "20%" }}>Total Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Hotels Section */}
+                      {[
+                        { label: 'Main Room Rate', value: categoryTotals.hotelRoom, type: 'Hotels' },
+                        { label: 'Adult Extra Bed', value: categoryTotals.hotelExtra, type: 'Hotels' },
+                        { label: 'Child With Bed', value: categoryTotals.hotelChildW, type: 'Hotels' },
+                        { label: 'Child Without Bed', value: categoryTotals.hotelChildN, type: 'Hotels' },
+                      ].filter(row => row.value > 0).map((row, idx, arr) => (
+                        <tr key={`hotel-${idx}`} style={{ borderBottom: idx === arr.length - 1 ? "2px solid #f1f5f9" : "1px solid #f1f5f9" }}>
+                          {idx === 0 && (
+                            <td rowSpan={arr.length} className="ps-4 align-middle fw-bold text-primary" style={{ backgroundColor: "#fcfdff" }}>
+                              <i className="fa fa-hotel me-2"></i> Hotels
+                            </td>
+                          )}
+                          <td className="text-dark fw-medium" style={{ fontSize: "13px" }}>{row.label}</td>
+                          <td className="pe-4 text-end text-dark fw-bold" style={{ fontSize: "14px" }}>
+                            {activeSymbol} {convert(row.value)}
+                          </td>
+                        </tr>
+                      ))}
+
+                      {/* Activities Section */}
+                      {[
+                        { label: 'Adult Activities', value: categoryTotals.activityAdult },
+                        { label: 'Child Activities', value: categoryTotals.activityChild },
+                      ].filter(row => row.value > 0).map((row, idx, arr) => (
+                        <tr key={`act-${idx}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          {idx === 0 && (
+                            <td rowSpan={arr.length} className="ps-4 align-middle fw-bold" style={{ color: "#D97706", backgroundColor: "#fffcf5" }}>
+                              <i className="fa fa-ticket me-2"></i> Activities
+                            </td>
+                          )}
+                          <td className="text-dark fw-medium" style={{ fontSize: "13px" }}>{row.label}</td>
+                          <td className="pe-4 text-end text-dark fw-bold" style={{ fontSize: "14px" }}>
+                            {activeSymbol} {convert(row.value)}
+                          </td>
+                        </tr>
+                      ))}
+
+                      {/* Transfers Section */}
+                      {[
+                        { label: 'Adult Transfers', value: categoryTotals.carAdult },
+                        { label: 'Child Transfers', value: categoryTotals.carChild },
+                      ].filter(row => row.value > 0).map((row, idx, arr) => (
+                        <tr key={`car-${idx}`}>
+                          {idx === 0 && (
+                            <td rowSpan={arr.length} className="ps-4 align-middle fw-bold" style={{ color: "#16A34A", backgroundColor: "#f6fff9" }}>
+                              <i className="fa fa-car me-2"></i> Transfers
+                            </td>
+                          )}
+                          <td className="text-dark fw-medium" style={{ fontSize: "13px" }}>{row.label}</td>
+                          <td className="pe-4 text-end text-dark fw-bold" style={{ fontSize: "14px" }}>
+                            {activeSymbol} {convert(row.value)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </>
           );
