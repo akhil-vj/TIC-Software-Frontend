@@ -664,11 +664,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
         {/* ── Itemized Pricing Table ── */}
         {(() => {
-          // Display currency conversion
-          const exchangeRate = parseFloat(values.priceIn?.exchange_rate) || 0;
-          const hasConversion = exchangeRate > 0;
-          const activeRate = hasConversion ? exchangeRate : 1;
-          const activeSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
+          // Itemized Breakdown and Executive Summary always show base currency
+          const activeRate = 1;
+          const activeSymbol = getSymbol(baseCode);
 
           const categoryTotals = scheduleArr.reduce((acc, { item }) => {
             const rawType = (item.insertType || 'other').toLowerCase();
