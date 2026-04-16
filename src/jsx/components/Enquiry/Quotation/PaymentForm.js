@@ -494,13 +494,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
       // hotelRowCostAll is the TOTAL base cost for ALL travelers of this type in this option
       const hotelRowCostAll = Number(item[`${pt.key}TotalCost`] || 0);
-      
+
       // Calculate what fraction of the hotel base this type represents 
       const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
-      
+
       // Markup for this specific hotel row (line-item markup only)
       const hotelMarkupAll = Number(item.markup || 0) * hotelFraction;
-      
+
       let rowPriceTotal = (hotelRowCostAll + hotelMarkupAll);
       let rowMarkupTotal = hotelMarkupAll;
 
@@ -518,7 +518,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         rowPriceTotal = (rowPriceTotal / count) * divisor;
         rowMarkupTotal = (rowMarkupTotal / count) * divisor;
       }
-      
+
       return {
         key: pt.key,
         label: pt.label,
@@ -671,11 +671,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           const categoryTotals = scheduleArr.reduce((acc, { item }) => {
             const rawType = (item.insertType || 'other').toLowerCase();
             const type = (rawType === 'transfer' || rawType === 'car') ? 'car' : rawType;
-            
+
             // For Hotels, only sum Option 1 totals (which match the default Grand Total)
             if (rawType === 'hotel') {
               const optLabel = item.option?.label || (typeof item.option === 'string' ? item.option : '');
-              if (optLabel !== "" && optLabel !== "Option 1") return acc; 
+              if (optLabel !== "" && optLabel !== "Option 1") return acc;
             }
 
             // In ALL summary cards, we show the TOTAL aggregate gross cost (Net + Markup) for all travelers
@@ -743,7 +743,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               const totalWeight = (counts.single * rates.single) + (counts.double * rates.double) +
                 (counts.triple * rates.triple) + (counts.extra * rates.extra) +
                 (counts.childW * rates.childW) + (counts.childN * rates.childN);
-              
+
               const ratio = totalWeight > 0 ? itemGrossTotal / totalWeight : 0;
 
               // Room Rates — sum of sharing types
@@ -904,16 +904,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                     />
                                   ) : (
                                     firstBreakdown && (
-                                        <input
-                                          className="form-control form-control-sm text-end fw-bold text-dark"
-                                          type="number"
-                                          value={firstBreakdown.net}
-                                          disabled={readOnly}
-                                          onChange={(e) => handleHotelPaxPriceChange(planArrInd, scheduleInd, firstBreakdown.key, e.target.value)}
-                                          style={{ border: "1px solid transparent", backgroundColor: "transparent", borderRadius: "4px", width: "100%", fontSize: "12px" }}
-                                          onFocus={(e) => { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; }}
-                                          onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "transparent"; handleBlur(e); }}
-                                        />
+                                      <input
+                                        className="form-control form-control-sm text-end fw-bold text-dark"
+                                        type="number"
+                                        value={firstBreakdown.net}
+                                        disabled={readOnly}
+                                        onChange={(e) => handleHotelPaxPriceChange(planArrInd, scheduleInd, firstBreakdown.key, e.target.value)}
+                                        style={{ border: "1px solid transparent", backgroundColor: "transparent", borderRadius: "4px", width: "100%", fontSize: "12px" }}
+                                        onFocus={(e) => { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; }}
+                                        onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "transparent"; handleBlur(e); }}
+                                      />
                                     )
                                   )}
                                 </td>
