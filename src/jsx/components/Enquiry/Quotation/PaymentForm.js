@@ -55,6 +55,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   const itineraryId = values.itineraryId;
   const isEdit = !!itineraryId;
   const [readOnly, setReadOnly] = useState(isEdit);
+  const [includeChildTransfer, setIncludeChildTransfer] = useState(false);
 
   const taxSettings = useSelector((state) => state.tax);
 
@@ -742,6 +743,19 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               }
             }
 
+            // ── Transfer sub-totals by adult / child ──
+            if (type === 'car') {
+              const adultCount = Number(values.adult || 0);
+              const childCount = Number(values.child || 0);
+              const totalPax = adultCount + childCount;
+              if (totalPax > 0) {
+                acc.carAdult = (acc.carAdult || 0) + getRoundOfValue(total * (adultCount / totalPax));
+                acc.carChild = (acc.carChild || 0) + getRoundOfValue(total * (childCount / totalPax));
+              } else {
+                acc.carAdult = (acc.carAdult || 0) + total;
+              }
+            }
+
             // ── Hotel sub-totals by occupancy type ──
             if (rawType === 'hotel') {
               const roomTypeId = item.roomType?.value || item.roomType?.id || item.roomType;
@@ -1009,7 +1023,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                   { label: 'Adult Activities', icon: 'fa-ticket', type: 'activityAdult', bg: '#FFF9E6', iconColor: '#D97706' },
                   { label: 'Child Activities', icon: 'fa-ticket', type: 'activityChild', bg: '#FFF5EB', iconColor: '#EA580C' },
                   { label: 'Total Activities', icon: 'fa-ticket', type: 'activity', bg: '#FEF3C7', iconColor: '#B45309' },
-                  { label: 'Transfers', icon: 'fa-car', type: 'car', bg: '#E6FCF5', iconColor: '#16A34A' },
+                  ...(includeChildTransfer
+                    ? [
+                        { label: 'Adult Transfers', icon: 'fa-car', type: 'carAdult', bg: '#E6FCF5', iconColor: '#16A34A' },
+                        { label: 'Child Transfers', icon: 'fa-car', type: 'carChild', bg: '#ECFDF5', iconColor: '#059669' },
+                      ]
+                    : []),
+                  { label: 'Transfers', icon: 'fa-car', type: 'car', bg: '#D1FAE5', iconColor: '#047857', hasCheckbox: true },
                 ].filter(cat => (categoryTotals[cat.type] || 0) > 0).map((cat) => (
                   <div key={cat.type}>
                     <div className="bg-white h-100" style={{ border: "0.5px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
@@ -1017,12 +1037,25 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         <div className="rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px', backgroundColor: cat.bg }}>
                           <i className={`fa ${cat.icon} fs-4`} style={{ color: cat.iconColor }}></i>
                         </div>
-                        <div>
+                        <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94a3b8' }}>Total {cat.label}</div>
                           <div className="text-dark" style={{ fontSize: '18px', fontWeight: 600, marginTop: '4px' }}>
                             {activeSymbol} {getRoundOfValue(categoryTotals[cat.type] || 0)}
                           </div>
                         </div>
+                        {cat.hasCheckbox && (
+                          <div className="ms-2 d-flex align-items-center" style={{ cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              className="form-check-input"
+                              id="includeChildTransfer"
+                              checked={includeChildTransfer}
+                              onChange={(e) => setIncludeChildTransfer(e.target.checked)}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                            />
+                            <label htmlFor="includeChildTransfer" className="ms-1 mb-0" style={{ fontSize: '10px', fontWeight: 500, color: '#64748b', cursor: 'pointer', whiteSpace: 'nowrap' }}>Include Child</label>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
