@@ -1214,8 +1214,28 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
-                      const grandTotal = convert(calculateTrueTotal(item.trueBaseAmount, item.markup));
+                      const calculateHotelOnlyGrandTotal = () => {
+                        const hotelAmount = item.trueBaseAmount || item.amount || 0;
+                        const hotelMarkup = item.markup || 0;
+                        const optionTotal = hotelAmount + hotelMarkup;
+                        const discountAmount = optionTotal * checkFormValue(values.discount, "number") * 0.01;
+                        const gTotal = optionTotal - discountAmount;
+                        
+                        let baseM = 0;
+                        if (values.baseMarkup) {
+                          baseM = optionTotal * values.baseMarkup * 0.01;
+                        }
+                        // Note: If using Extra Markup (flat), we don't apply it here to avoid double-charging it across multiple segments incorrectly, 
+                        // as flat extra markup is usually considered a global fee, OR we could optionally prorate it.
+                        // We will just use baseMarkup if present.
+                        
+                        const selectedTaxPct = parseFloat(values.taxType?.percentage || 0);
+                        const taxAmount = gTotal * selectedTaxPct * 0.01;
+                        
+                        return getRoundOfValue(gTotal + baseM + taxAmount);
+                      };
 
+                      const grandTotal = convert(calculateHotelOnlyGrandTotal());
                       return (
                         <React.Fragment key={optIdx}>
                           {personRows.map((pt, ptIdx) => (
