@@ -9,26 +9,30 @@ function TabComponent({ menu, mainPath = "/enquiry/" }) {
   const handleClick = (path) => {
     navigate(path);
   };
+  const hideTabs = pathname.includes("quotation/itinerary");
+
   return (
     <>
       <div className="row">
         <div className="col-xl-12">
-          <Tabs
-            defaultActiveKey="profile"
-            id="fill-tab-example"
-            className="mb-3"
-            fill
-            onSelect={handleClick}
-            activeKey={activePath}
-          >
-            {menu.map((menu) => (
-              <Tab
-                key={menu.name}
-                eventKey={menu.name.split(/[\s]+/).join("-")}
-                title={menu.name.toUpperCase()}
-              />
-            ))}
-          </Tabs>
+          {!hideTabs && (
+            <Tabs
+              defaultActiveKey="profile"
+              id="fill-tab-example"
+              className="mb-3"
+              fill
+              onSelect={handleClick}
+              activeKey={activePath}
+            >
+              {menu.map((menu) => (
+                <Tab
+                  key={menu.name}
+                  eventKey={menu.name.split(/[\s]+/).join("-")}
+                  title={menu.name.toUpperCase()}
+                />
+              ))}
+            </Tabs>
+          )}
           <Outlet />
         </div>
       </div>
