@@ -336,7 +336,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     return { adultCost: 0, childCost: 0 };
   };
 
-  const optionInitialValue = [
+  const createOptionInitialValue = () => [
     { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
     { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
     { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
@@ -418,7 +418,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       }
     }
     return acc;
-  }, optionInitialValue);
+  }, createOptionInitialValue());
 
   const getTotalPerPersonCosts = () => {
     let totalAdultCost = 0;
@@ -486,7 +486,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
    * Adjust the distribution keys here once real per-type data is available.
    */
   const getPersonTypeRows = (item) => {
-    // 1. Calculate Hotel rows (Net Hotel Cost per person type)
     const hotelRows = PERSON_TYPES.map((pt) => {
       const count = safeCount(item[pt.key]);
       const displayCount = safeCount(item[`${pt.key}Display`]);
@@ -501,23 +500,26 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       // Markup for this specific hotel row (line-item markup only)
       const hotelMarkupAll = Number(item.markup || 0) * hotelFraction;
 
-      let rowPriceTotal = (hotelRowCostAll + hotelMarkupAll);
+      // Base value: total hotel cost + markup for this person type
+      let rowPriceTotal = hotelRowCostAll + hotelMarkupAll;
       let rowMarkupTotal = hotelMarkupAll;
 
-      // ADJUSTMENT FOR mode-based display
+      // Division rules:
+      // - TOTAL mode: no division for any type (show raw values)
+      // - PER mode: only Double ÷ 2 and Triple ÷ 3 (others stay same)
       const isPerMode = values.priceOption?.value === "PER";
-      const isSharingType = ['single', 'double', 'triple'].includes(pt.key);
 
       if (isPerMode) {
-        // In PER mode, show the cost per Person
-        rowPriceTotal = rowPriceTotal / count;
-        rowMarkupTotal = rowMarkupTotal / count;
-      } else if (isSharingType) {
-        // In TOTAL mode, for sharing types, show the Rate Per Room (unit rate)
-        const divisor = (pt.key === 'double' ? 2 : pt.key === 'triple' ? 3 : 1);
-        rowPriceTotal = (rowPriceTotal / count) * divisor;
-        rowMarkupTotal = (rowMarkupTotal / count) * divisor;
+        if (pt.key === 'double') {
+          rowPriceTotal = rowPriceTotal / 2;
+          rowMarkupTotal = rowMarkupTotal / 2;
+        } else if (pt.key === 'triple') {
+          rowPriceTotal = rowPriceTotal / 3;
+          rowMarkupTotal = rowMarkupTotal / 3;
+        }
+        // Single, Extra, ChildW, ChildN: no division
       }
+      // TOTAL mode: no division at all
 
       return {
         key: pt.key,
@@ -1096,25 +1098,79 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             </div>
 
             {/* Markup Info & Edit */}
-            <div className="d-flex align-items-center gap-4 mt-3 mt-md-0">
-              <div className="text-end" style={{ backgroundColor: "#fff", border: "0.5px solid #e2e8f0", borderRadius: "8px", padding: "8px 16px" }}>
-                <span className="text-muted d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Base Markup</span>
-                <span className="text-dark" style={{ fontWeight: 600, fontSize: "15px" }}>{values.baseMarkup}%</span>
-              </div>
-              <div className="text-end" style={{ backgroundColor: "#fff", border: "0.5px solid #e2e8f0", borderRadius: "8px", padding: "8px 16px" }}>
-                <span className="text-muted d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Extra Markup</span>
-                <span className="text-dark" style={{ fontWeight: 600, fontSize: "15px" }}>{getSymbol(baseCode)} {values.extraMarkup || 0}</span>
-              </div>
-              <button
-                type="button"
-                className="btn ms-3 d-flex justify-content-center align-items-center"
-                onClick={() => setShowMarkup(true)}
-                disabled={readOnly}
-                style={{ borderRadius: "8px", width: "40px", height: "40px", border: "0.5px solid #e2e8f0", backgroundColor: "#fff" }}
-                title="Edit Markup"
-              >
-                <i className="fa fa-pencil fa-lg" style={{ color: "#64748b" }}></i>
-              </button>
+            <div className="d-flex align-items-center gap-3 mt-3 mt-md-0">
+              {showMarkup ? (
+                <>
+                  <div style={{ backgroundColor: "#fff", border: "1.5px solid #0d6efd", borderRadius: "8px", padding: "4px 10px", minWidth: "80px" }}>
+                    <span className="text-muted d-block mb-1" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Base Markup %</span>
+                    <input
+                      type="number"
+                      className="form-control form-control-sm text-dark fw-bold p-0"
+                      name="baseMarkupInput"
+                      value={values.baseMarkupInput || ""}
+                      onChange={(e) => { handleChange(e); setFieldValue("extraMarkupInput", 0); }}
+                      onBlur={handleBlur}
+                      placeholder="0"
+                      style={{ border: "none", backgroundColor: "transparent", fontSize: "14px", height: "20px", boxShadow: "none" }}
+                      autoFocus
+                    />
+                  </div>
+                  <div style={{ backgroundColor: "#fff", border: "1.5px solid #0d6efd", borderRadius: "8px", padding: "4px 10px", minWidth: "90px" }}>
+                    <span className="text-muted d-block mb-1" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Extra Markup ({getSymbol(baseCode)})</span>
+                    <input
+                      type="number"
+                      className="form-control form-control-sm text-dark fw-bold p-0"
+                      name="extraMarkupInput"
+                      value={values.extraMarkupInput || ""}
+                      onChange={(e) => { handleChange(e); setFieldValue("baseMarkupInput", 0); }}
+                      onBlur={handleBlur}
+                      placeholder="0"
+                      style={{ border: "none", backgroundColor: "transparent", fontSize: "14px", height: "20px", boxShadow: "none" }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm d-flex align-items-center"
+                    onClick={handleMarkup}
+                    style={{ borderRadius: "8px", padding: "8px 16px", fontSize: "13px", fontWeight: 500 }}
+                  >
+                    <i className="fa fa-check me-1"></i> Save
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm d-flex align-items-center"
+                    onClick={() => setShowMarkup(false)}
+                    style={{ borderRadius: "8px", padding: "8px 12px", fontSize: "13px" }}
+                  >
+                    <i className="fa fa-times"></i>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="text-end" style={{ backgroundColor: "#fff", border: "0.5px solid #e2e8f0", borderRadius: "8px", padding: "8px 16px" }}>
+                    <span className="text-muted d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Base Markup</span>
+                    <span className="text-dark" style={{ fontWeight: 600, fontSize: "15px" }}>{values.baseMarkup}%</span>
+                  </div>
+                  <div className="text-end" style={{ backgroundColor: "#fff", border: "0.5px solid #e2e8f0", borderRadius: "8px", padding: "8px 16px" }}>
+                    <span className="text-muted d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Extra Markup</span>
+                    <span className="text-dark" style={{ fontWeight: 600, fontSize: "15px" }}>{getSymbol(baseCode)} {values.extraMarkup || 0}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn d-flex justify-content-center align-items-center"
+                    onClick={() => {
+                      setFieldValue("baseMarkupInput", values.baseMarkup || 0);
+                      setFieldValue("extraMarkupInput", values.extraMarkup || 0);
+                      setShowMarkup(true);
+                    }}
+                    disabled={readOnly}
+                    style={{ borderRadius: "8px", width: "40px", height: "40px", border: "0.5px solid #e2e8f0", backgroundColor: "#fff" }}
+                    title="Edit Markup"
+                  >
+                    <i className="fa fa-pencil fa-lg" style={{ color: "#64748b" }}></i>
+                  </button>
+                </>
+              )}
             </div>
 
           </div>
@@ -1131,14 +1187,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           </div>
           <div className="card-body p-0">
             <div className="table-responsive" id="pricing_table_wrapper">
-              <table className="table mb-0 text-dark" style={{ borderCollapse: "collapse" }}>
+              <table className="table mb-0 text-dark" style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
                 <thead style={{ backgroundColor: "#f8faff", borderBottom: "2px solid #e2e8f0" }}>
                   <tr>
                     <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "120px" }}>Options</th>
-                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>Person</th>
-                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>Markup</th>
-                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>{values.taxType?.name || "Tax"} (%)</th>
-                    <th className="py-3 px-4 text-dark text-end" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>Total</th>
+                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "30%" }}>Person</th>
+                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "20%" }}>Markup</th>
+                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "15%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{values.taxType?.name || "Tax"} (%)</th>
+                    <th className="py-3 px-4 text-dark text-end" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "20%" }}>Total</th>
                   </tr>
                 </thead>
 
@@ -1349,52 +1405,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         </div>
       </form>
 
-      {/* ── Markup modal ── */}
-      <CustomModal
-        showModal={showMarkup}
-        title="Add Extra Markup"
-        handleModalClose={() => setShowMarkup(false)}
-      >
-        <div className="card-body">
-          <div className="basic-form">
-            <form onSubmit={formik.handleSubmit}>
-              <div className="row">
-                <div className="mb-3 col-md-12">
-                  <InputField
-                    label="Base Markup %"
-                    name="baseMarkupInput"
-                    type="number"
-                    onChange={(e) => {
-                      handleChange(e);
-                      setFieldValue("extraMarkupInput", 0);
-                    }}
-                    onBlur={handleBlur}
-                    values={values}
-                    inputClassName="w-25"
-                  />
-                </div>
-                <div className="mb-3 col-md-12">
-                  <InputField
-                    label="Extra Markup"
-                    name="extraMarkupInput"
-                    type="number"
-                    onChange={(e) => {
-                      handleChange(e);
-                      setFieldValue("baseMarkupInput", 0);
-                    }}
-                    onBlur={handleBlur}
-                    values={values}
-                    inputClassName="w-25"
-                  />
-                </div>
-              </div>
-              <button type="button" className="btn btn-primary" onClick={handleMarkup}>
-                Update
-              </button>
-            </form>
-          </div>
-        </div>
-      </CustomModal>
+
 
       {/* ── History Modal ── */}
       <CustomModal
