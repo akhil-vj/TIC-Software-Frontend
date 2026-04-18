@@ -1046,6 +1046,20 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot style={{ backgroundColor: "#f0f7ff", borderTop: "2px solid #e2e8f0" }}>
+                      <tr>
+                        <td colSpan={2} className="text-end pe-3 py-3" style={{ color: "#185FA5", fontSize: "14px", fontWeight: 600 }}>
+                          Grand Total :
+                        </td>
+                        <td className="pe-4 py-3 text-end" style={{ color: "#185FA5", fontSize: "15px", fontWeight: 600 }}>
+                          {(() => {
+                            const firstOpt = hotelOption.find(opt => opt.name === 'Option 1') || hotelOption[0] || { trueBaseAmount: 0, markup: 0, amount: 0 };
+                            const trueGrandTotal = calculateTrueTotal(firstOpt.trueBaseAmount || firstOpt.amount || 0, firstOpt.markup || 0);
+                            return <>{activeSymbol} {convert(trueGrandTotal)}</>;
+                          })()}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
