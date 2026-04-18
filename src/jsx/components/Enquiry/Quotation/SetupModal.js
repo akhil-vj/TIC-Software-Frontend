@@ -355,7 +355,7 @@ function SetupModal() {
                 isEdit={isEdit}
               />
             ) : (
-              <div className="bg-white mt-4 p-4 rounded">
+              <div className="bg-white px-4 pb-4 pt-2 rounded">
                 {formComponent === "packageForm" ? (
                   <PackageForm
                     formik={formik}

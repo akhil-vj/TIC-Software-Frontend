@@ -648,7 +648,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     <>
       <form>
         {/* ── Page Header & Controls ── */}
-        <div className="d-flex justify-content-between align-items-center mb-5" style={{ backgroundColor: "#f8fafc", padding: "16px 24px", borderRadius: "12px" }}>
+        <div className="d-flex justify-content-between align-items-center mb-3" style={{ backgroundColor: "#f8fafc", padding: "16px 24px", borderRadius: "12px" }}>
           <div className="d-flex align-items-center gap-3">
             <button className="btn btn-outline-secondary btn-sm" type="button" onClick={handleBack} style={{ borderRadius: "8px", border: "0.5px solid #e2e8f0" }}>
               <i className="fa fa-arrow-left" aria-hidden="true"></i> Back
