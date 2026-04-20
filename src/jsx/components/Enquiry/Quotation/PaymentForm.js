@@ -439,12 +439,15 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     getRoundOfValue(amount + markup + totals.totalAmount + totals.totalMarkup);
 
   const calculateInputMarkup = (amount, markup) => {
-    if (values.baseMarkup) {
+    if (Number(values.baseMarkup) > 0) {
       return getRoundOfValue(
-        getHotelOptionTotal(amount, markup) * values.baseMarkup * 0.01
+        getHotelOptionTotal(amount, markup) * Number(values.baseMarkup) * 0.01
       );
     }
-    return values.extraMarkup;
+    if (Number(values.extraMarkup) > 0) {
+      return Number(values.extraMarkup);
+    }
+    return 0;
   };
 
   const calculateTotal = (amount, markup) => {
@@ -462,11 +465,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   };
 
   const calculateTrueInputMarkup = (trueAmount, markup) => {
-    if (values.baseMarkup) {
+    if (Number(values.baseMarkup) > 0) {
       const optionTotal = trueAmount + markup + (totals.trueTotalAmount || 0) + totals.totalMarkup;
-      return getRoundOfValue(optionTotal * values.baseMarkup * 0.01);
+      return getRoundOfValue(optionTotal * Number(values.baseMarkup) * 0.01);
     }
-    return values.extraMarkup;
+    if (Number(values.extraMarkup) > 0) {
+      return Number(values.extraMarkup);
+    }
+    return 0;
   };
 
   const calculateTrueTotal = (trueAmount, markup) => {
@@ -486,23 +492,56 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
    * Adjust the distribution keys here once real per-type data is available.
    */
   const getPersonTypeRows = (item) => {
-    const hotelRows = PERSON_TYPES.map((pt) => {
+    // Pre-compute which person types are active and their costs to calculate fractions
+    const activeTypes = PERSON_TYPES.map((pt) => {
       const count = safeCount(item[pt.key]);
       const displayCount = safeCount(item[`${pt.key}Display`]);
       if (count <= 0) return null;
-
-      // hotelRowCostAll is the TOTAL base cost for ALL travelers of this type in this option
       const hotelRowCostAll = Number(item[`${pt.key}TotalCost`] || 0);
+      return { pt, count, displayCount, hotelRowCostAll };
+    }).filter(Boolean);
 
+    // Calculate total hotel base for this option (sum of all active person-type costs)
+    const totalHotelBase = activeTypes.reduce((sum, t) => sum + t.hotelRowCostAll, 0);
+
+    // Determine markup mode
+    const useBaseMarkup = Number(values.baseMarkup) > 0;
+    const useExtraMarkup = !useBaseMarkup && Number(values.extraMarkup) > 0;
+    const extraMarkupValue = useExtraMarkup ? Number(values.extraMarkup) : 0;
+
+    // For Base Markup %, calculate total percentage-based markup to distribute proportionally
+    let totalBaseMarkup = 0;
+    if (useBaseMarkup) {
+      const hotelAmount = item.trueBaseAmount || item.amount || 0;
+      const hotelLineMarkup = item.markup || 0;
+      const optionSubtotal = hotelAmount + hotelLineMarkup;
+      totalBaseMarkup = optionSubtotal * Number(values.baseMarkup) * 0.01;
+    }
+
+    const hotelRows = activeTypes.map(({ pt, count, displayCount, hotelRowCostAll }) => {
       // Calculate what fraction of the hotel base this type represents 
       const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
 
-      // Markup for this specific hotel row (line-item markup only)
+      // Line-item markup for this person type
       const hotelMarkupAll = Number(item.markup || 0) * hotelFraction;
 
-      // Base value: total hotel cost + markup for this person type
-      let rowPriceTotal = hotelRowCostAll + hotelMarkupAll;
-      let rowMarkupTotal = hotelMarkupAll;
+      // Input markup for this row:
+      // - Base Markup %: distribute proportionally based on hotel cost share
+      // - Extra Markup (flat): show the EXACT entered value per row (not distributed)
+      let inputMarkupShare = 0;
+      if (useBaseMarkup) {
+        inputMarkupShare = totalHotelBase > 0
+          ? totalBaseMarkup * (hotelRowCostAll / totalHotelBase)
+          : (activeTypes.length > 0 ? totalBaseMarkup / activeTypes.length : 0);
+      } else if (useExtraMarkup) {
+        inputMarkupShare = extraMarkupValue;
+      }
+
+      // Total markup = line-item markup + input markup share
+      let rowMarkupTotal = hotelMarkupAll + inputMarkupShare;
+
+      // Base value: total hotel cost + all markup for this person type
+      let rowPriceTotal = hotelRowCostAll + rowMarkupTotal;
 
       // Division rules:
       // - TOTAL mode: no division for any type (show raw values)
@@ -529,7 +568,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         vat: getVatDisplay(),
         total: getRoundOfValue(rowPriceTotal)
       };
-    }).filter(row => row !== null);
+    });
 
     return hotelRows;
   };
@@ -1234,19 +1273,18 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         const optionTotal = hotelAmount + hotelMarkup;
                         const discountAmount = optionTotal * checkFormValue(values.discount, "number") * 0.01;
                         const gTotal = optionTotal - discountAmount;
-                        
-                        let baseM = 0;
-                        if (values.baseMarkup) {
-                          baseM = optionTotal * values.baseMarkup * 0.01;
+
+                        let inputMarkup = 0;
+                        if (Number(values.baseMarkup) > 0) {
+                          inputMarkup = optionTotal * Number(values.baseMarkup) * 0.01;
+                        } else if (Number(values.extraMarkup) > 0) {
+                          inputMarkup = Number(values.extraMarkup);
                         }
-                        // Note: If using Extra Markup (flat), we don't apply it here to avoid double-charging it across multiple segments incorrectly, 
-                        // as flat extra markup is usually considered a global fee, OR we could optionally prorate it.
-                        // We will just use baseMarkup if present.
-                        
+
                         const selectedTaxPct = parseFloat(values.taxType?.percentage || 0);
                         const taxAmount = gTotal * selectedTaxPct * 0.01;
-                        
-                        return getRoundOfValue(gTotal + baseM + taxAmount);
+
+                        return getRoundOfValue(gTotal + inputMarkup + taxAmount);
                       };
 
                       const grandTotal = convert(calculateHotelOnlyGrandTotal());
