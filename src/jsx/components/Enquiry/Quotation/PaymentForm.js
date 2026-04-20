@@ -663,6 +663,36 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       formData.append("converted_total", convertedTotal);
       formData.append("exchange_rate", rate);
 
+      // --- NEW: Calculate and append Quoted Options Breakdown ---
+      const visibleOptionsData = hotelOption.filter((item) => {
+        const personRows = getPersonTypeRows(item);
+        return personRows.length > 0;
+      }).map(item => {
+        const pRows = getPersonTypeRows(item);
+        const hasConversion = rate > 0;
+        const convert = (val) => hasConversion ? getRoundOfValue(val / rate) : val;
+        
+        const optGrandTotal = convert(calculateTrueTotal(
+          item.trueBaseAmount || item.amount || 0,
+          item.markup || 0
+        ));
+
+        return {
+          optionName: item.name,
+          grandTotal: optGrandTotal,
+          rows: pRows.map(pt => ({
+            key: pt.key,
+            label: pt.label,
+            markup: convert(pt.markup),
+            vat: pt.vat,
+            total: convert(pt.total)
+          }))
+        };
+      });
+      formData.append("quoted_options", JSON.stringify(visibleOptionsData));
+      // ------------------------------------------------------------
+
+
       let entryIndex = 0;
       values.planArr?.forEach(({ schedule }) => {
         schedule.forEach((data) => {
