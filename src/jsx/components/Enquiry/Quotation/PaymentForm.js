@@ -507,8 +507,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     // Total trip travelers (adult + child) for per-person activity/transfer cost
     const totalTripPersons = ((values.adult || 0) + (values.child || 0)) || 1;
 
-    // Activity + Transfer canonical total cost (for ALL travelers combined)
-    const activityTransferTotal = (totals.trueTotalAmount || 0);
+    // Activity + Transfer canonical total cost (for ALL travelers combined) including their line-item markup
+    const activityTransferTotal = (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0);
 
     // Per-person activity/transfer cost (same for every person type)
     const actTransferPerPerson = activityTransferTotal / totalTripPersons;
@@ -567,11 +567,18 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         }
         // Single, Extra, ChildW, ChildN: no division
       }
-      // TOTAL mode: no division at all
+      // Activity + Transfer cost to add:
+      // - PER mode: add only 1 person's share
+      // - TOTAL mode: add share for ALL persons of this type (multiply by sharing factor)
+      const personShareDivisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+      const sharingFactor = personShareDivisors[pt.key] || 1;
+      const actTransferToAdd = isPerMode 
+        ? actTransferPerPerson 
+        : (actTransferPerPerson * sharingFactor);
 
-      // Activity + Transfer per-person cost (NOT divided by sharing factor)
-      // Added after hotel division since activities/transfers are per-person
-      const rowPriceTotal = hotelPart + actTransferPerPerson;
+      const rowPriceTotal = hotelPart + actTransferToAdd;
+
+      console.log(`[DEBUG_ROW] ${pt.key} | Mode:${isPerMode ? 'PER' : 'TOTAL'} | dispCount:${displayCount} | actTransferPerPerson:${actTransferPerPerson} | actTransferToAdd:${actTransferToAdd} | hotelPart:${hotelPart} | FinalTotal:${rowPriceTotal}`);
 
       return {
         key: pt.key,
