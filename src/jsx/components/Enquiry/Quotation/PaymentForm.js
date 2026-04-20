@@ -1450,7 +1450,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         <div className="card-body p-0 bg-white">
                           {hotelOption.map((item, ind) => {
                             if (item.amount === 0) return null;
-                            const total = calculateTotal(item.amount, item.markup);
+                            const total = calculateTrueTotal(item.trueBaseAmount || item.amount || 0, item.markup || 0);
                             const rate = parseFloat(values.priceIn.exchange_rate) || 1;
                             const convertedTotal = getRoundOfValue(total / rate);
                             const toCurrency =
