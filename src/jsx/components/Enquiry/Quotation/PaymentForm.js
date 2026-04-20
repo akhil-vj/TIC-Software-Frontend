@@ -653,8 +653,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       formData.append("discount_amount", checkFormValue(values.discount_amount || values.discount || 0, "number"));
 
       const primaryOption = hotelOption[0];
-      const grandTotal = calculateTotal(primaryOption.amount, primaryOption.markup);
-      const totalAmount = (totals.totalAmount || 0) + (totals.totalMarkup || 0) + (primaryOption.amount || 0) + (primaryOption.markup || 0);
+      const truePrimaryAmount = primaryOption.trueBaseAmount !== undefined ? primaryOption.trueBaseAmount : (primaryOption.amount || 0);
+      const grandTotal = calculateTrueTotal(truePrimaryAmount, primaryOption.markup || 0);
+      const totalAmount = (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0) + truePrimaryAmount + (primaryOption.markup || 0);
       const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
       const convertedTotal = getRoundOfValue(grandTotal / rate);
       formData.append("total_amount", totalAmount);
