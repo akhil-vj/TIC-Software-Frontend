@@ -504,20 +504,34 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     // Calculate total hotel base for this option (sum of all active person-type costs)
     const totalHotelBase = activeTypes.reduce((sum, t) => sum + t.hotelRowCostAll, 0);
 
+    const adultCount = values.adult || 1;
+    const childCount = values.child || 0;
+    const totalTripPersons = adultCount + childCount;
+
     // Calculate separate activity/transfer costs for adults vs children
     let adultActivityTransferTotal = 0;
     let childActivityTransferTotal = 0;
+
     scheduleArr.forEach(({ item: schedItem }) => {
       if (schedItem.insertType !== "hotel") {
-        const ppc = getPerPersonCost(schedItem);
-        adultActivityTransferTotal += ppc.adultCost || 0;
-        childActivityTransferTotal += ppc.childCost || 0;
+        // Use true/base amounts to avoid double-division when in "PER" mode
+        const trueBaseAmount = schedItem.trueBaseAmount !== undefined ? schedItem.trueBaseAmount : (schedItem.baseAmount !== undefined ? schedItem.baseAmount : (schedItem.amount || 0));
+        const trueMarkup = schedItem.baseMarkup !== undefined ? schedItem.baseMarkup : (schedItem.markup || 0);
+        const itemTrueTotal = trueBaseAmount + trueMarkup;
+
+        // Find how much of this item's total belongs to adults vs children
+        let adultRatio = adultCount / totalTripPersons;
+        if (schedItem.adultCost !== undefined && schedItem.childCost !== undefined) {
+           const explicitTotal = schedItem.adultCost + schedItem.childCost;
+           if (explicitTotal > 0) adultRatio = schedItem.adultCost / explicitTotal;
+        }
+        
+        adultActivityTransferTotal += itemTrueTotal * adultRatio;
+        childActivityTransferTotal += itemTrueTotal * (1 - adultRatio);
       }
     });
 
     // Per-person activity/transfer costs (separate for adults and children)
-    const adultCount = values.adult || 1;
-    const childCount = values.child || 0;
     const actTransferPerAdult = adultCount > 0 ? adultActivityTransferTotal / adultCount : 0;
     const actTransferPerChild = childCount > 0 ? childActivityTransferTotal / childCount : 0;
 
@@ -586,7 +600,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       
       const actTransferToAdd = isPerMode 
         ? actTransferPerPersonType 
-        : (actTransferPerPersonType * sharingFactor);
+        : (actTransferPerPersonType * sharingFactor * displayCount);
 
       const rowPriceTotal = hotelPart + actTransferToAdd;
 
