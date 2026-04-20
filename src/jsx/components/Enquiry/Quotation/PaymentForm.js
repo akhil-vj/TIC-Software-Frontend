@@ -504,6 +504,15 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     // Calculate total hotel base for this option (sum of all active person-type costs)
     const totalHotelBase = activeTypes.reduce((sum, t) => sum + t.hotelRowCostAll, 0);
 
+    // Total trip travelers (adult + child) for per-person activity/transfer cost
+    const totalTripPersons = ((values.adult || 0) + (values.child || 0)) || 1;
+
+    // Activity + Transfer canonical total cost (for ALL travelers combined)
+    const activityTransferTotal = (totals.trueTotalAmount || 0);
+
+    // Per-person activity/transfer cost (same for every person type)
+    const actTransferPerPerson = activityTransferTotal / totalTripPersons;
+
     // Determine markup mode
     const useBaseMarkup = Number(values.baseMarkup) > 0;
     const useExtraMarkup = !useBaseMarkup && Number(values.extraMarkup) > 0;
@@ -540,25 +549,29 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       // Total markup = line-item markup + input markup share
       let rowMarkupTotal = hotelMarkupAll + inputMarkupShare;
 
-      // Base value: total hotel cost + all markup for this person type
-      let rowPriceTotal = hotelRowCostAll + rowMarkupTotal;
+      // Start with hotel cost + markup (these get divided by sharing factor)
+      let hotelPart = hotelRowCostAll + rowMarkupTotal;
 
-      // Division rules:
+      // Division rules (apply ONLY to hotel cost + markup):
       // - TOTAL mode: no division for any type (show raw values)
       // - PER mode: only Double ÷ 2 and Triple ÷ 3 (others stay same)
       const isPerMode = values.priceOption?.value === "PER";
 
       if (isPerMode) {
         if (pt.key === 'double') {
-          rowPriceTotal = rowPriceTotal / 2;
+          hotelPart = hotelPart / 2;
           rowMarkupTotal = rowMarkupTotal / 2;
         } else if (pt.key === 'triple') {
-          rowPriceTotal = rowPriceTotal / 3;
+          hotelPart = hotelPart / 3;
           rowMarkupTotal = rowMarkupTotal / 3;
         }
         // Single, Extra, ChildW, ChildN: no division
       }
       // TOTAL mode: no division at all
+
+      // Activity + Transfer per-person cost (NOT divided by sharing factor)
+      // Added after hotel division since activities/transfers are per-person
+      const rowPriceTotal = hotelPart + actTransferPerPerson;
 
       return {
         key: pt.key,
@@ -1267,27 +1280,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
-                      const calculateHotelOnlyGrandTotal = () => {
-                        const hotelAmount = item.trueBaseAmount || item.amount || 0;
-                        const hotelMarkup = item.markup || 0;
-                        const optionTotal = hotelAmount + hotelMarkup;
-                        const discountAmount = optionTotal * checkFormValue(values.discount, "number") * 0.01;
-                        const gTotal = optionTotal - discountAmount;
-
-                        let inputMarkup = 0;
-                        if (Number(values.baseMarkup) > 0) {
-                          inputMarkup = optionTotal * Number(values.baseMarkup) * 0.01;
-                        } else if (Number(values.extraMarkup) > 0) {
-                          inputMarkup = Number(values.extraMarkup);
-                        }
-
-                        const selectedTaxPct = parseFloat(values.taxType?.percentage || 0);
-                        const taxAmount = gTotal * selectedTaxPct * 0.01;
-
-                        return getRoundOfValue(gTotal + inputMarkup + taxAmount);
-                      };
-
-                      const grandTotal = convert(calculateHotelOnlyGrandTotal());
+                      const grandTotal = convert(calculateTrueTotal(
+                        item.trueBaseAmount || item.amount || 0,
+                        item.markup || 0
+                      ));
                       return (
                         <React.Fragment key={optIdx}>
                           {personRows.map((pt, ptIdx) => (
