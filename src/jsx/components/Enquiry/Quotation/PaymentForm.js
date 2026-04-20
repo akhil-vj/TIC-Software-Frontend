@@ -504,14 +504,22 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     // Calculate total hotel base for this option (sum of all active person-type costs)
     const totalHotelBase = activeTypes.reduce((sum, t) => sum + t.hotelRowCostAll, 0);
 
-    // Total trip travelers (adult + child) for per-person activity/transfer cost
-    const totalTripPersons = ((values.adult || 0) + (values.child || 0)) || 1;
+    // Calculate separate activity/transfer costs for adults vs children
+    let adultActivityTransferTotal = 0;
+    let childActivityTransferTotal = 0;
+    scheduleArr.forEach(({ item: schedItem }) => {
+      if (schedItem.insertType !== "hotel") {
+        const ppc = getPerPersonCost(schedItem);
+        adultActivityTransferTotal += ppc.adultCost || 0;
+        childActivityTransferTotal += ppc.childCost || 0;
+      }
+    });
 
-    // Activity + Transfer canonical total cost (for ALL travelers combined) including their line-item markup
-    const activityTransferTotal = (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0);
-
-    // Per-person activity/transfer cost (same for every person type)
-    const actTransferPerPerson = activityTransferTotal / totalTripPersons;
+    // Per-person activity/transfer costs (separate for adults and children)
+    const adultCount = values.adult || 1;
+    const childCount = values.child || 0;
+    const actTransferPerAdult = adultCount > 0 ? adultActivityTransferTotal / adultCount : 0;
+    const actTransferPerChild = childCount > 0 ? childActivityTransferTotal / childCount : 0;
 
     // Determine markup mode
     const useBaseMarkup = Number(values.baseMarkup) > 0;
@@ -570,15 +578,19 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       // Activity + Transfer cost to add:
       // - PER mode: add only 1 person's share
       // - TOTAL mode: add share for ALL persons of this type (multiply by sharing factor)
+      // - Use CHILD rates for childW/childN, ADULT rates for others
       const personShareDivisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
       const sharingFactor = personShareDivisors[pt.key] || 1;
+      const isChildType = pt.key === 'childW' || pt.key === 'childN';
+      const actTransferPerPersonType = isChildType ? actTransferPerChild : actTransferPerAdult;
+      
       const actTransferToAdd = isPerMode 
-        ? actTransferPerPerson 
-        : (actTransferPerPerson * sharingFactor);
+        ? actTransferPerPersonType 
+        : (actTransferPerPersonType * sharingFactor);
 
       const rowPriceTotal = hotelPart + actTransferToAdd;
 
-      console.log(`[DEBUG_ROW] ${pt.key} | Mode:${isPerMode ? 'PER' : 'TOTAL'} | dispCount:${displayCount} | actTransferPerPerson:${actTransferPerPerson} | actTransferToAdd:${actTransferToAdd} | hotelPart:${hotelPart} | FinalTotal:${rowPriceTotal}`);
+      console.log(`[DEBUG_ROW] ${pt.key} | Mode:${isPerMode ? 'PER' : 'TOTAL'} | dispCount:${displayCount} | ActTransferPerPerson:${actTransferPerPersonType} | actTransferToAdd:${actTransferToAdd} | hotelPart:${hotelPart} | FinalTotal:${rowPriceTotal}`);
 
       return {
         key: pt.key,
