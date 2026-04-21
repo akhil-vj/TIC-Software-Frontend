@@ -677,12 +677,26 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           item.markup || 0
         ));
 
+        // Map to convert room counts to person counts based on occupancy
+        // Only apply this multiplication in PER mode - in TOTAL mode, count is already correct
+        const occupancyFactors = {
+          single: 1,
+          double: 2,
+          triple: 3,
+          extra: 1,
+          childW: 1,
+          childN: 1
+        };
+        
+        const isPERMode = values.priceOption?.value === "PER";
+
         return {
           optionName: item.name,
           grandTotal: optGrandTotal,
           rows: pRows.map(pt => ({
             key: pt.key,
             label: pt.label,
+            count: isPERMode ? (pt.count * (occupancyFactors[pt.key] || 1)) : pt.count,
             markup: convert(pt.markup),
             vat: pt.vat,
             total: convert(pt.total)
@@ -690,6 +704,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         };
       });
       formData.append("quoted_options", JSON.stringify(visibleOptionsData));
+      // Store quoted_options in formik for ShareModal to access
+      setFieldValue("quoted_options", visibleOptionsData);
       // ------------------------------------------------------------
 
 

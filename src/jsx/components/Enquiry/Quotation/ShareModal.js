@@ -166,11 +166,32 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   // ═══════════════════════════════════════════════════
   // WhatsApp Text Generator (unchanged)
   // ═══════════════════════════════════════════════════
+  const getCurrencySymbol = (code) => {
+    const symbols = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'INR': '₹',
+      'THB': '฿',
+      'AUD': 'A$',
+      'CAD': 'C$',
+      'JPY': '¥',
+      'SGD': 'S$',
+      'HKD': 'HK$',
+      'MYR': 'RM',
+      'PHP': '₱',
+      'VND': '₫',
+      'IDR': 'Rp',
+    };
+    return symbols[code] || code;
+  };
+
   const generateWhatsAppText = () => {
     const info = extractPackageInfo();
     if (!info) return "";
 
     const { tripId, packageName, startDate, nightsCount, daysCount, adultCount, childCount, refId, clientName, currencyCode, grandTotal, pricePerPerson } = info;
+    const currencySymbol = getCurrencySymbol(currencyCode);
 
     let text = `Hi ${clientName},\n\n`;
     text += `Greetings from TIC Tours.\n\n`;
@@ -187,7 +208,36 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     if (!values.hideTotalPrice) {
       text += `*Price (${currencyCode}):*\n`;
       if (values.priceBreakup) {
-        text += `• *${parseFloat(pricePerPerson).toLocaleString()} / Person (Double Sharing)* x ${adultCount} Pax\n`;
+        // Try to use quoted_options breakdown if available
+        let breakdownUsed = false;
+        if (packageData?.quoted_options) {
+          try {
+            let quotedOptions = packageData.quoted_options;
+            if (typeof quotedOptions === 'string') {
+              quotedOptions = JSON.parse(quotedOptions);
+            }
+            if (Array.isArray(quotedOptions) && quotedOptions.length > 0 && quotedOptions[0]?.rows) {
+              const primaryRows = quotedOptions[0].rows;
+              primaryRows.forEach((row) => {
+                const personLabel = row.label || "";
+                const personTotal = parseFloat(row.total || 0);
+                const personCount = row.count || 0;
+                if (personCount > 0 && personTotal > 0) {
+                  const countDisplay = personCount > 1 ? ` x ${personCount}` : "";
+                  text += `• *${personLabel}* - ${currencySymbol}  ${personTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}${countDisplay}\n`;
+                  breakdownUsed = true;
+                }
+              });
+            }
+          } catch (e) {
+            // If parsing fails, fall back to simple format
+          }
+        }
+        
+        // Fallback to simple format if quoted_options not available
+        if (!breakdownUsed) {
+          text += `• *${parseFloat(pricePerPerson).toLocaleString()} / Person (Double Sharing)* x ${adultCount} Pax\n`;
+        }
       }
       text += `*Total: ${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-* _(exc. Vat)_\n\n`;
     }
@@ -238,6 +288,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     if (!info) return "";
 
     const { tripId, packageName, startDate, nightsCount, daysCount, adultCount, childCount, refId, clientName, currencyCode, grandTotal, pricePerPerson } = info;
+    const currencySymbol = getCurrencySymbol(currencyCode);
 
     let text = `Dear ${clientName},\n\n`;
     text += `Greetings from TIC Tours!\n\n`;
@@ -253,7 +304,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       if (values.priceBreakup) {
         text += `Per Person (Double Sharing): ${parseFloat(pricePerPerson).toLocaleString()} x ${adultCount} Pax\n`;
       }
-      text += `Grand Total: ${currencyCode} ${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /- (excl. VAT)\n\n`;
+      text += `Grand Total: ${currencySymbol} ${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /- (excl. VAT)\n\n`;
     }
 
     if (values.itinerary && packageData.planArr) {
