@@ -587,7 +587,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           hotelPart = hotelPart / 3;
           rowMarkupTotal = rowMarkupTotal / 3;
         }
-        // Single, Extra, ChildW, ChildN: no division
       }
       // Activity + Transfer cost to add:
       // - PER mode: add only 1 person's share
@@ -634,33 +633,45 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       formData.append("valid_until", values.formValidityDate ? new Date(values.formValidityDate).toLocaleDateString("en-CA") : "");
       formData.append("adult_count", checkFormValue(values.adult, "number") || 0);
       formData.append("child_count", checkFormValue(values.child, "number") || 0);
-      formData.append("extra_markup_percentage", checkFormValue(values.baseMarkup, "number"));
-      formData.append("extra_markup_amount", checkFormValue(values.extraMarkup, "number"));
+      formData.append("extra_markup_percentage", checkFormValue(values.baseMarkup, "number") || 0);
+      formData.append("extra_markup_amount", checkFormValue(values.extraMarkup, "number") || 0);
       formData.append("description", values.paymentDescription || ".");
-      const currencyValue = values?.priceIn?.value ?? values?.priceIn?.id;
-      formData.append("currency", checkFormValue(currencyValue));
-      formData.append("price_mode", checkFormValue(values.priceOption.value === "PER" ? "PER_PERSON" : "TOTAL_PRICE"));
+      
+      const currencyValue = values?.priceIn?.value ?? values?.priceIn?.id ?? values?.currency;
+      formData.append("currency", checkFormValue(currencyValue) || 1); // fallback to ID 1 if not set
+      
+      const pMode = values.priceOption?.value === "PER" || values.priceOption === "PER" ? "PER_PERSON" : "TOTAL_PRICE";
+      formData.append("price_mode", pMode);
       formData.append("per_person_amounts", values.perPersonAmount ? "1" : "0");
+      
       const destinationId = values.destination?.value || values.destination?.id;
       if (destinationId) formData.append("destination_id", destinationId);
+      
       const selectedTaxPct = parseFloat(values.taxType?.percentage || 0);
-      formData.append("tax_type_id", checkFormValue(values.taxType?.id));
-      formData.append("tax_type_name", checkFormValue(values.taxType?.name));
-      formData.append("cgst_percentage", checkFormValue(selectedTaxPct, "number"));
+      formData.append("tax_type_id", checkFormValue(values.taxType?.id) || 1);
+      formData.append("tax_type_name", checkFormValue(values.taxType?.name) || "GST");
+      formData.append("cgst_percentage", checkFormValue(selectedTaxPct, "number") || 0);
       formData.append("sgst_percentage", 0);
       formData.append("igst_percentage", 0);
       formData.append("tcs_percentage", 0);
-      formData.append("discount_amount", checkFormValue(values.discount_amount || values.discount || 0, "number"));
+      formData.append("discount_amount", checkFormValue(values.discount_amount || values.discount || 0, "number") || 0);
 
+      const currentCurrencyCode = values.priceIn?.to_currency || values.priceIn?.label || "USD";
+      const currentCurrencySymbol = values.priceIn?.symbol || getSymbol(currentCurrencyCode);
+
+      // use the hotelOption variable already defined in the component scope
+      if (!hotelOption || hotelOption.length === 0) { notifyError("Please add at least one hotel option."); return; }
+      
       const primaryOption = hotelOption[0];
       const truePrimaryAmount = primaryOption.trueBaseAmount !== undefined ? primaryOption.trueBaseAmount : (primaryOption.amount || 0);
       const grandTotal = calculateTrueTotal(truePrimaryAmount, primaryOption.markup || 0);
       const totalAmount = (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0) + truePrimaryAmount + (primaryOption.markup || 0);
       const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
       const convertedTotal = getRoundOfValue(grandTotal / rate);
-      formData.append("total_amount", totalAmount);
-      formData.append("grand_total", grandTotal);
-      formData.append("converted_total", convertedTotal);
+      
+      formData.append("total_amount", getRoundOfValue(totalAmount));
+      formData.append("grand_total", getRoundOfValue(grandTotal));
+      formData.append("converted_total", getRoundOfValue(convertedTotal));
       formData.append("exchange_rate", rate);
 
       // --- NEW: Calculate and append Quoted Options Breakdown ---
@@ -672,53 +683,60 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         const hasConversion = rate > 0;
         const convert = (val) => hasConversion ? getRoundOfValue(val / rate) : val;
         
-        const optGrandTotal = convert(calculateTrueTotal(
-          item.trueBaseAmount || item.amount || 0,
-          item.markup || 0
-        ));
+        const occupancyFactors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+        const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
 
-        // Map to convert room counts to person counts based on occupancy
-        // Only apply this multiplication in PER mode - in TOTAL mode, count is already correct
-        const occupancyFactors = {
-          single: 1,
-          double: 2,
-          triple: 3,
-          extra: 1,
-          childW: 1,
-          childN: 1
-        };
-        
-        const isPERMode = values.priceOption?.value === "PER";
+        const mappedRows = pRows.map(pt => {
+          const pCount = isPERMode ? (pt.count * (occupancyFactors[pt.key] || 1)) : pt.count;
+          const rowPriceInUI = convert(pt.total);
+          
+          let perPerson, itemizedTotal;
+          if (isPERMode) {
+              perPerson = rowPriceInUI;
+              itemizedTotal = perPerson * pCount; 
+          } else {
+              itemizedTotal = rowPriceInUI;
+              perPerson = pCount > 0 ? (itemizedTotal / pCount) : 0;
+          }
+
+          return {
+            key: pt.key,
+            label: pt.label,
+            count: pCount,
+            perPerson: getRoundOfValue(perPerson),
+            markup: convert(pt.markup),
+            vat: pt.vat,
+            total: getRoundOfValue(itemizedTotal)
+          };
+        });
+
+        const newGrandTotal = mappedRows.reduce((sum, r) => sum + r.total, 0);
 
         return {
           optionName: item.name,
-          grandTotal: optGrandTotal,
-          rows: pRows.map(pt => ({
-            key: pt.key,
-            label: pt.label,
-            count: isPERMode ? (pt.count * (occupancyFactors[pt.key] || 1)) : pt.count,
-            markup: convert(pt.markup),
-            vat: pt.vat,
-            total: convert(pt.total)
-          }))
+          grandTotal: getRoundOfValue(newGrandTotal),
+          currencyCode: currentCurrencyCode,
+          currencySymbol: currentCurrencySymbol,
+          rows: mappedRows
         };
       });
-      console.log('PaymentForm: Saving quoted_options to backend and formik state:', visibleOptionsData);
+      
       formData.append("quoted_options", JSON.stringify(visibleOptionsData));
-      // Store quoted_options in formik for ShareModal to access
       setFieldValue("quoted_options", visibleOptionsData);
-      // ------------------------------------------------------------
 
+      console.log('--- SUBMITTING BILLING ---');
+      for (var pair of formData.entries()) {
+        console.log(pair[0]+ ', ' + pair[1]); 
+      }
 
       let entryIndex = 0;
       values.planArr?.forEach(({ schedule }) => {
         schedule.forEach((data) => {
-          if (!data.entryId) throw new Error("Missing entry id. Please save itinerary items first.");
+          if (!data.entryId) return; // Skip items without entry ID
           formData.append(`entries[${entryIndex}][id]`, checkFormValue(data.entryId));
-          // Always save the canonical total amount so future loads are consistent
           const canonicalAmount = data.baseAmount !== undefined ? data.baseAmount : data.amount;
-          formData.append(`entries[${entryIndex}][amount]`, checkFormValue(canonicalAmount));
-          formData.append(`entries[${entryIndex}][markup]`, checkFormValue(data.markup));
+          formData.append(`entries[${entryIndex}][amount]`, checkFormValue(canonicalAmount) || 0);
+          formData.append(`entries[${entryIndex}][markup]`, checkFormValue(data.markup) || 0);
           entryIndex += 1;
         });
       });

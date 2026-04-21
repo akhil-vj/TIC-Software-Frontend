@@ -188,6 +188,20 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     return symbols[code] || code;
   };
 
+  const computePriceBreakdown = (info) => {
+    if (!packageData?.quoted_options) return [];
+    
+    // Parse quoted_options if string
+    const options = typeof packageData.quoted_options === "string" 
+      ? JSON.parse(packageData.quoted_options) 
+      : packageData.quoted_options;
+    
+    if (!Array.isArray(options) || options.length === 0) return [];
+    
+    const primaryOption = options[0];
+    return primaryOption.rows || [];
+  };
+
   const generateWhatsAppText = () => {
     const info = extractPackageInfo();
     if (!info) return "Sharing my travel plan...";
@@ -211,30 +225,50 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
     if (!values.hideTotalPrice) {
       const breakdown = computePriceBreakdown(info);
-      const displayCurrency = (!info.isBase && info.exchangeRate > 0 && packageData.priceIn?.to_currency)
+      const options = typeof packageData.quoted_options === "string" 
+        ? JSON.parse(packageData.quoted_options) 
+        : packageData.quoted_options;
+      const primaryOption = options?.[0] || {};
+      
+      const displayCurrency = primaryOption.currencyCode || ((!info.isBase && info.exchangeRate > 0 && packageData.priceIn?.to_currency)
         ? packageData.priceIn.to_currency
-        : info.currencyCode;
-      const displaySymbol = getCurrencySymbol(displayCurrency);
+        : info.currencyCode);
+      const displaySymbol = primaryOption.currencySymbol || getCurrencySymbol(displayCurrency);
 
       text += `*Price (${displayCurrency}):*\n`;
 
       if (values.priceBreakup && breakdown.length > 0) {
         const priceMode = packageData.price_mode || "TOTAL_PRICE";
+        const isPERMode = priceMode === "PER_PERSON" || priceMode === "PER_TRAVELLER";
+
         breakdown.forEach(row => {
           const isDoubleOrTriple = row.label.toLowerCase().includes("double") || row.label.toLowerCase().includes("triple");
-          const rowTotal = row.perPerson * row.count;
           
-          if (isDoubleOrTriple && (priceMode === "PER_PERSON" || priceMode === "PER_TRAVELLER")) {
-            text += `• *${row.label}*\t\t${displaySymbol} ${row.perPerson.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x ${row.count}\n`;
+          let perPerson, rowTotal;
+          if (isPERMode) {
+              // If row has perPerson from new data, use it. 
+              // Otherwise, if row.total exists and it's already divided, don't divide it again if it matches the total sum logic.
+              // Logic: In old PER data, row.total WAS the per-person rate.
+              perPerson = row.perPerson || row.total || 0;
+              rowTotal = perPerson * row.count;
           } else {
-            text += `• *${row.label}*\t\t- ${displaySymbol} ${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 1\n`;
+              rowTotal = row.total || (row.perPerson * row.count);
+              perPerson = row.count > 0 ? rowTotal / row.count : 0;
+          }
+          
+          if (isDoubleOrTriple && isPERMode) {
+            const countSuffix = row.count > 1 ? ` x ${row.count}` : '';
+            text += `• *${row.label}*\t\t${displaySymbol} ${perPerson.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${countSuffix}\n`;
+          } else {
+            const countSuffix = (row.count > 1) ? ` x ${row.count}` : '';
+            text += `• *${row.label}*\t\t- ${displaySymbol} ${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${countSuffix}\n`;
           }
         });
       }
 
-      const breakdownTotal = breakdown.reduce((sum, row) => sum + row.perPerson * row.count, 0);
-      const displayTotal = breakdownTotal > 0 ? Math.round(breakdownTotal) : info.grandTotal;
-      text += `*Total: ${displayTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-* _(exc. Vat)_\n\n`;
+      // Use the grandTotal from metadata if available for the final line
+      const displayTotal = primaryOption.grandTotal || breakdown.reduce((sum, row) => sum + (row.total || (row.perPerson * row.count)), 0);
+      text += `*Total: ${displaySymbol} ${displayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /-* _(exc. Vat)_\n\n`;
     }
 
     if (values.itinerary && packageData.planArr) {
