@@ -48,6 +48,7 @@ function SetupModal() {
     selectedSubDestinations:[],
     discount: 0,
     discount_amount: 0,
+    quoted_options: [], // Store pricing breakdown for WhatsApp sharing
   };
   const mapSubDestinations = (items = []) =>
     items
@@ -81,6 +82,18 @@ function SetupModal() {
       setFieldValue('converted_total',checkFormValue(data.converted_total))
       setFieldValue('total_amount',checkFormValue(data.total_amount))
       setFieldValue('exchange_rate',checkFormValue(data.exchange_rate))
+      // Restore quoted_options from API if available (for WhatsApp pricing display)
+      if (data.quoted_options) {
+        try {
+          let quotedOptions = data.quoted_options;
+          if (typeof quotedOptions === 'string') {
+            quotedOptions = JSON.parse(quotedOptions);
+          }
+          setFieldValue('quoted_options', quotedOptions);
+        } catch (e) {
+          console.warn('Failed to parse quoted_options:', e);
+        }
+      }
       const baseCurr = getDefaultCurrency(data.destination?.name);
       setFieldValue('baseCurrency', baseCurr);
       const priceInObj = {label:data.currency,value:data.currency};
@@ -145,6 +158,7 @@ function SetupModal() {
         return acc;
       }, []);
       setFieldValue('planArr',checkFormValue(sortedArray))
+      
       const uniqueSubDests = Array.from(
         new Map(
           data.entries

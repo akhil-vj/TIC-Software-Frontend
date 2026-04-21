@@ -97,12 +97,14 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       // Fallback to pre-calculated converted_total if available and we know it's not base
       grandTotal = parseFloat(packageData.converted_total);
     }
-
+    const travelDate = startDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    const destinationName = packageData.destination?.label || packageData.destinationName || "Destination";
     const pricePerPerson = adultCount > 0 ? (grandTotal / adultCount).toFixed(0) : 0;
 
     return {
       tripId, packageName, startDate, endDate, nightsCount, daysCount,
-      adultCount, childCount, refId, clientName, currencyCode, grandTotal, pricePerPerson
+      adultCount, childCount, refId, clientName, currencyCode, grandTotal, pricePerPerson,
+      travelDate, destinationName, isBase, exchangeRate
     };
   };
 
@@ -188,58 +190,51 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
   const generateWhatsAppText = () => {
     const info = extractPackageInfo();
-    if (!info) return "";
+    if (!info) return "Sharing my travel plan...";
 
-    const { tripId, packageName, startDate, nightsCount, daysCount, adultCount, childCount, refId, clientName, currencyCode, grandTotal, pricePerPerson } = info;
-    const currencySymbol = getCurrencySymbol(currencyCode);
+    // Helper for ordinals
+    const getOrdinalStr = (n) => {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
 
-    let text = `Hi ${clientName},\n\n`;
-    text += `Greetings from TIC Tours.\n\n`;
+    let text = `Hi ${info.clientName},\n\n`;
+    text += `Greetings from *TIC Tours.*\n\n`;
     text += `Thank you for your query with us. As per your requirements, following are the package details.\n\n`;
 
-    text += `*Trip ID ${tripId}*\n`;
+    text += `*Trip ID ${info.tripId}*\n`;
     text += `----------\n`;
-    text += `*${packageName}*\n`;
-    text += `• *${startDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}* _for_ *${nightsCount} Nights, ${daysCount} Days*\n`;
-    text += `• *${adultCount} Adults*${childCount > 0 ? ` and ${childCount} Child` : ""}\n`;
-    if (refId) text += `• *Ref ID: ${refId}*\n`;
-    text += `\n`;
+    text += `*${info.packageName}*\n`;
+    text += `• *${info.travelDate}* _for_ *${info.nightsCount} Nights, ${info.daysCount} Days*\n`;
+    text += `• *${info.adultCount} Adults*${info.childCount > 0 ? ` and ${info.childCount} Child` : ""}\n\n`;
 
     if (!values.hideTotalPrice) {
-      text += `*Price (${currencyCode}):*\n`;
-      if (values.priceBreakup) {
-        // Try to use quoted_options breakdown if available
-        let breakdownUsed = false;
-        if (packageData?.quoted_options) {
-          try {
-            let quotedOptions = packageData.quoted_options;
-            if (typeof quotedOptions === 'string') {
-              quotedOptions = JSON.parse(quotedOptions);
-            }
-            if (Array.isArray(quotedOptions) && quotedOptions.length > 0 && quotedOptions[0]?.rows) {
-              const primaryRows = quotedOptions[0].rows;
-              primaryRows.forEach((row) => {
-                const personLabel = row.label || "";
-                const personTotal = parseFloat(row.total || 0);
-                const personCount = row.count || 0;
-                if (personCount > 0 && personTotal > 0) {
-                  const countDisplay = personCount > 1 ? ` x ${personCount}` : "";
-                  text += `• *${personLabel}* - ${currencySymbol}  ${personTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}${countDisplay}\n`;
-                  breakdownUsed = true;
-                }
-              });
-            }
-          } catch (e) {
-            // If parsing fails, fall back to simple format
+      const breakdown = computePriceBreakdown(info);
+      const displayCurrency = (!info.isBase && info.exchangeRate > 0 && packageData.priceIn?.to_currency)
+        ? packageData.priceIn.to_currency
+        : info.currencyCode;
+      const displaySymbol = getCurrencySymbol(displayCurrency);
+
+      text += `*Price (${displayCurrency}):*\n`;
+
+      if (values.priceBreakup && breakdown.length > 0) {
+        const priceMode = packageData.price_mode || "TOTAL_PRICE";
+        breakdown.forEach(row => {
+          const isDoubleOrTriple = row.label.toLowerCase().includes("double") || row.label.toLowerCase().includes("triple");
+          const rowTotal = row.perPerson * row.count;
+          
+          if (isDoubleOrTriple && (priceMode === "PER_PERSON" || priceMode === "PER_TRAVELLER")) {
+            text += `• *${row.label}*\t\t${displaySymbol} ${row.perPerson.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x ${row.count}\n`;
+          } else {
+            text += `• *${row.label}*\t\t- ${displaySymbol} ${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 1\n`;
           }
-        }
-        
-        // Fallback to simple format if quoted_options not available
-        if (!breakdownUsed) {
-          text += `• *${parseFloat(pricePerPerson).toLocaleString()} / Person (Double Sharing)* x ${adultCount} Pax\n`;
-        }
+        });
       }
-      text += `*Total: ${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-* _(exc. Vat)_\n\n`;
+
+      const breakdownTotal = breakdown.reduce((sum, row) => sum + row.perPerson * row.count, 0);
+      const displayTotal = breakdownTotal > 0 ? Math.round(breakdownTotal) : info.grandTotal;
+      text += `*Total: ${displayTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-* _(exc. Vat)_\n\n`;
     }
 
     if (values.itinerary && packageData.planArr) {
@@ -248,35 +243,44 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
         text += `🏨  *_Hotels_*\n`;
         text += `-----------\n`;
         hotelsGrouped.forEach((h) => {
-          const nightsArray = h.nights.map((n) => getOrdinal(parseInt(n)));
-          const nightsStr = nightsArray.join(", ") + " Nights";
-          text += `*${nightsStr}* _at_ *${h.location}*\n`;
+          const nightOrdinals = h.nights.map(n => getOrdinalStr(n));
+          const nightStr = nightOrdinals.join(", ") + (h.nights.length > 1 ? " Nights" : " Night");
+          
+          text += `*${nightStr}* _at_ *${h.location}*\n`;
           text += `_Check-in: ${formatShortDate(h.checkInDate)}_ & _Check-out: ${formatShortDate(h.checkOutDate)}_\n`;
-          text += `*${h.name}* ${h.star ? `(${h.star})` : ""}\n`;
-          text += `${h.meal} • ${Math.ceil(adultCount / 2) || 1} ${h.room} (${adultCount} Pax)\n\n`;
+          text += `*${h.name}*\n`;
+          const roomCount = Math.ceil(info.adultCount / 2) || 1;
+          text += `Option 1 • ${roomCount} ${h.room} (${info.adultCount} Pax)\n\n`;
         });
       }
 
-      const activeDays = getActivitiesByDay();
-      if (activeDays.length > 0) {
-        text += `🚖  *Transportation and Activities*\n`;
-        text += `-----------\n`;
-        activeDays.forEach(({ dayIndex, dayDate, items }) => {
-          const dayStr = dayDate.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "2-digit" });
-          text += `*${getOrdinal(dayIndex + 1)} Day - ${dayStr}*\n`;
-          items.forEach((item) => {
-            const itemTypeLabel = item.insertType === "activity" ? "Tour" : "Meals/Transit";
-            text += `• ${item.name} - ${itemTypeLabel} _(${adultCount} Adults)_\n`;
-          });
-          text += `\n`;
+      text += `🚖  *Transportation and Activities*\n`;
+      text += `-----------\n`;
+      packageData.planArr.forEach((day, index) => {
+        const date = new Date(packageData.start_date);
+        date.setDate(date.getDate() + index);
+        const dayStr = date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "2-digit" });
+        
+        text += `*${getOrdinalStr(index + 1)} Day - ${dayStr}*\n`;
+        const activities = day.activities?.map(a => a.activity_name).filter(Boolean) || [];
+        activities.forEach(act => {
+          text += `• ${act} - Tour _(${info.adultCount} Adults)_\n`;
         });
-      }
+        const transfers = day.transfers?.map(t => t.description || "Transfer").filter(Boolean) || [];
+        transfers.forEach(trans => {
+          text += `• ${trans} - Meals/Transit _(${info.adultCount} Adults)_\n`;
+        });
+        text += `\n`;
+      });
     }
 
     if (values.terms) {
-      text += `*Terms and Conditions:*\nStandard cancellation and policies apply. Subject to availability.\n\n`;
+      text += `*Terms and Conditions:*\n`;
+      text += `Standard cancellation and policies apply. Subject to availability.\n\n`;
     }
 
+    text += `Looking forward to hearing from you!\n\n`;
+    text += `Warm Regards,\nTIC Tours Team\n`;
     return text.trim();
   };
 
@@ -349,15 +353,35 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
   // ----- Regenerate content when toggles/mode change -----
   useEffect(() => {
+    const itineraryId = packageData?.itineraryId || packageData?.id;
+    const queryParams = `?priceBreakup=${values.priceBreakup}&hideTotalPrice=${values.hideTotalPrice}&itinerary=${values.itinerary}&terms=${values.terms}`;
+
     if (values.mode === "whatsapp") {
-      setGeneratedText(generateWhatsAppText());
+      // Fetch WhatsApp text from backend - SAME AS EMAIL
+      if (itineraryId) {
+        setGeneratedText("Loading message...");
+        axiosGet(`${URLS.ITINERARY_URL}/${itineraryId}/preview-whatsapp${queryParams}`)
+          .then((res) => {
+            if (res?.success && res?.data?.text) {
+              setGeneratedText(res.data.text);
+            } else {
+              console.warn('Backend /preview-whatsapp not available, using quoted_options or fallback');
+              setGeneratedText(generateWhatsAppText());
+            }
+          })
+          .catch((err) => {
+            console.warn('Backend /preview-whatsapp endpoint error, using quoted_options or fallback:', err?.message);
+            setGeneratedText(generateWhatsAppText());
+          });
+      } else {
+        // Before saving, use client-side generation
+        setGeneratedText(generateWhatsAppText());
+      }
     } else {
       setGeneratedText(generateEmailPlainText());
       // Fetch HTML from backend instead of generating on client
-      const itineraryId = packageData?.itineraryId || packageData?.id;
       if (itineraryId) {
         setGeneratedHtml("<p class='text-muted p-3'>Loading original PDF template...</p>");
-        const queryParams = `?priceBreakup=${values.priceBreakup}&hideTotalPrice=${values.hideTotalPrice}&itinerary=${values.itinerary}&terms=${values.terms}`;
         axiosGet(`${URLS.ITINERARY_URL}/${itineraryId}/preview-html${queryParams}`)
           .then((res) => {
             if (res?.success && res?.data?.html) {
@@ -471,8 +495,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   ];
 
   const isWhatsApp = values.mode === "whatsapp";
-  const visibleOptions = isWhatsApp 
-    ? toggleOptions 
+  const visibleOptions = isWhatsApp
+    ? toggleOptions
     : toggleOptions.filter(opt => opt.id !== "priceBreakup" && opt.id !== "hideTotalPrice");
 
   return (
@@ -484,92 +508,92 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       centered
     >
       <div className="card-body p-4">
-          <>
-            {/* ── Mode Tabs ── */}
-            <div className="d-flex align-items-center mb-3">
-              <button
-                className={`btn btn-sm me-2 ${isWhatsApp ? 'btn-success' : 'btn-outline-secondary'}`}
-                type="button"
-                onClick={() => setFieldValue("mode", "whatsapp")}
-                style={{ borderRadius: "20px", padding: "6px 18px" }}
-              >
-                <i className="fa-brands fa-whatsapp me-2"></i>
-                WhatsApp
-              </button>
-              <button
-                className={`btn btn-sm ${!isWhatsApp ? 'btn-primary' : 'btn-outline-secondary'}`}
-                type="button"
-                onClick={() => setFieldValue("mode", "email")}
-                style={{ borderRadius: "20px", padding: "6px 18px" }}
-              >
-                <i className="fa-regular fa-envelope me-2"></i>
-                Email
-              </button>
-            </div>
-
-        {/* ── Info hint ── */}
-        <p className="text-muted small mb-3" style={{ fontSize: "12px" }}>
-          <i className="fa fa-info-circle me-1"></i>
-          {isWhatsApp
-            ? "Customize the WhatsApp message using the toggles below, then send or copy."
-            : 'Preview your email content below. Use "Copy Formatted" to paste into Gmail/Outlook with full table formatting.'
-          }
-        </p>
-
-        {/* ── Toggle Options ── */}
-        <div className="d-flex flex-wrap align-items-center gap-3 mb-3 pb-3" style={{ borderBottom: "1px solid #e9ecef" }}>
-          {visibleOptions.map((opt) => (
-            <div className="form-check form-switch" key={opt.id}>
-              <input
-                type="checkbox"
-                className="form-check-input"
-                id={`${opt.id}_${values.mode}`}
-                checked={values[opt.field]}
-                onChange={(e) => setFieldValue(opt.field, e.target.checked)}
-                role="switch"
-              />
-              <label className="form-check-label ms-1 small" htmlFor={`${opt.id}_${values.mode}`}>{opt.label}</label>
-            </div>
-          ))}
-        </div>
-
-            {/* ── Email "To" field removed from standard view as requested ── */}
-
-        {/* ── Preview Box ── */}
-        {isWhatsApp ? (
-          <div
-            className="p-3 mb-3 rounded"
-            style={{
-              backgroundColor: "#e7f5e7",
-              border: "1px solid #b7ddb7",
-              minHeight: "220px",
-              maxHeight: "400px",
-              overflowY: "auto",
-              whiteSpace: "pre-wrap",
-              fontSize: "13px",
-              color: "#333",
-              lineHeight: "1.6",
-            }}
-          >
-            {generatedText || <span className="text-muted">No content to preview.</span>}
+        <>
+          {/* ── Mode Tabs ── */}
+          <div className="d-flex align-items-center mb-3">
+            <button
+              className={`btn btn-sm me-2 ${isWhatsApp ? 'btn-success' : 'btn-outline-secondary'}`}
+              type="button"
+              onClick={() => setFieldValue("mode", "whatsapp")}
+              style={{ borderRadius: "20px", padding: "6px 18px" }}
+            >
+              <i className="fa-brands fa-whatsapp me-2"></i>
+              WhatsApp
+            </button>
+            <button
+              className={`btn btn-sm ${!isWhatsApp ? 'btn-primary' : 'btn-outline-secondary'}`}
+              type="button"
+              onClick={() => setFieldValue("mode", "email")}
+              style={{ borderRadius: "20px", padding: "6px 18px" }}
+            >
+              <i className="fa-regular fa-envelope me-2"></i>
+              Email
+            </button>
           </div>
-        ) : (
-          <div
-            ref={emailPreviewRef}
-            className="mb-3 rounded"
-            style={{
-              border: "1px solid #c5d3f0",
-              minHeight: "220px",
-              maxHeight: "500px",
-              overflowY: "auto",
-              backgroundColor: "#ffffff",
-            }}
-            dangerouslySetInnerHTML={{ __html: generatedHtml || '<p class="text-muted p-3">No content to preview.</p>' }}
-          />
-        )}
 
-        {/* ── Mail Setup Popup ── */}
-        {/* {showMailSetup && (
+          {/* ── Info hint ── */}
+          <p className="text-muted small mb-3" style={{ fontSize: "12px" }}>
+            <i className="fa fa-info-circle me-1"></i>
+            {isWhatsApp
+              ? "Customize the WhatsApp message using the toggles below, then send or copy."
+              : 'Preview your email content below. Use "Copy Formatted" to paste into Gmail/Outlook with full table formatting.'
+            }
+          </p>
+
+          {/* ── Toggle Options ── */}
+          <div className="d-flex flex-wrap align-items-center gap-3 mb-3 pb-3" style={{ borderBottom: "1px solid #e9ecef" }}>
+            {visibleOptions.map((opt) => (
+              <div className="form-check form-switch" key={opt.id}>
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id={`${opt.id}_${values.mode}`}
+                  checked={values[opt.field]}
+                  onChange={(e) => setFieldValue(opt.field, e.target.checked)}
+                  role="switch"
+                />
+                <label className="form-check-label ms-1 small" htmlFor={`${opt.id}_${values.mode}`}>{opt.label}</label>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Email "To" field removed from standard view as requested ── */}
+
+          {/* ── Preview Box ── */}
+          {isWhatsApp ? (
+            <div
+              className="p-3 mb-3 rounded"
+              style={{
+                backgroundColor: "#e7f5e7",
+                border: "1px solid #b7ddb7",
+                minHeight: "220px",
+                maxHeight: "400px",
+                overflowY: "auto",
+                whiteSpace: "pre-wrap",
+                fontSize: "13px",
+                color: "#333",
+                lineHeight: "1.6",
+              }}
+            >
+              {generatedText || <span className="text-muted">No content to preview.</span>}
+            </div>
+          ) : (
+            <div
+              ref={emailPreviewRef}
+              className="mb-3 rounded"
+              style={{
+                border: "1px solid #c5d3f0",
+                minHeight: "220px",
+                maxHeight: "500px",
+                overflowY: "auto",
+                backgroundColor: "#ffffff",
+              }}
+              dangerouslySetInnerHTML={{ __html: generatedHtml || '<p class="text-muted p-3">No content to preview.</p>' }}
+            />
+          )}
+
+          {/* ── Mail Setup Popup ── */}
+          {/* {showMailSetup && (
           <div
             style={{
               position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -635,43 +659,43 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           </div>
         )} */}
 
-        {/* ── Action Buttons ── */}
-        <div className="d-flex align-items-center flex-wrap gap-2">
-          {isWhatsApp ? (
-            <>
-              <button className="btn btn-success" onClick={handleWhatsAppSend}>
-                <i className="fa-brands fa-whatsapp me-2"></i> Send on WhatsApp
-              </button>
-              <button className="btn btn-outline-secondary" onClick={handleCopy}>
-                <i className="fa-regular fa-copy me-2"></i> Copy for WhatsApp
-              </button>
-              <span
-                className="ms-auto text-primary small"
-                style={{ cursor: "pointer" }}
-                onClick={() => setFieldValue("mode", "email")}
-              >
-                <i className="fa-regular fa-envelope me-1"></i> Switch to Email
-              </span>
-            </>
-          ) : (
-            <>
-              <button className="btn btn-primary" onClick={handleCopy}>
-                <i className="fa-regular fa-copy me-2"></i> Copy for Email
-              </button>
-              {/* <button className="btn btn-outline-primary" onClick={handleEmailSend}>
+          {/* ── Action Buttons ── */}
+          <div className="d-flex align-items-center flex-wrap gap-2">
+            {isWhatsApp ? (
+              <>
+                <button className="btn btn-success" onClick={handleWhatsAppSend}>
+                  <i className="fa-brands fa-whatsapp me-2"></i> Send on WhatsApp
+                </button>
+                <button className="btn btn-outline-secondary" onClick={handleCopy}>
+                  <i className="fa-regular fa-copy me-2"></i> Copy for WhatsApp
+                </button>
+                <span
+                  className="ms-auto text-primary small"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setFieldValue("mode", "email")}
+                >
+                  <i className="fa-regular fa-envelope me-1"></i> Switch to Email
+                </span>
+              </>
+            ) : (
+              <>
+                <button className="btn btn-primary" onClick={handleCopy}>
+                  <i className="fa-regular fa-copy me-2"></i> Copy for Email
+                </button>
+                {/* <button className="btn btn-outline-primary" onClick={handleEmailSend}>
                 <i className="fa-regular fa-paper-plane me-2"></i> Open in Mail Client
               </button> */}
-              <span
-                className="ms-auto text-success small"
-                style={{ cursor: "pointer" }}
-                onClick={() => setFieldValue("mode", "whatsapp")}
-              >
-                <i className="fa-brands fa-whatsapp me-1"></i> Switch to WhatsApp
-              </span>
-            </>
-          )}
-            </div>
-          </>
+                <span
+                  className="ms-auto text-success small"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setFieldValue("mode", "whatsapp")}
+                >
+                  <i className="fa-brands fa-whatsapp me-1"></i> Switch to WhatsApp
+                </span>
+              </>
+            )}
+          </div>
+        </>
       </div>
     </CustomModal>
   );

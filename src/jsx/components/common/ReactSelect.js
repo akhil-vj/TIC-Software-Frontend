@@ -16,13 +16,25 @@ function ReactSelect(props) {
   const isRequired = restProps.required
   const isDisabled = restProps.isDisabled
   const name = restProps.inputId
-  const value = restProps.value
+  let value = restProps.value
+  
+  // FIX: Ensure value matches the structure of data options
+  // If value exists but label/value don't match data structure, find and reconstruct it
+  if (value && data && data.length > 0) {
+    const valueToCompare = value[optionValue] !== undefined ? value[optionValue] : value.value;
+    const matchedOption = data.find(d => d.value === valueToCompare);
+    if (matchedOption && (!value.label || value.label !== matchedOption.label)) {
+      // Value object is incomplete or mismatched, use the matched option from data
+      value = matchedOption;
+    }
+  }
   
   return (
     <div className="form-group mb-3">
       {label && <label className="text-label">{label} {isRequired && !isDisabled && <span>*</span>}</label>}
       <Select
         {...restProps}
+        value={value}
         options={data}
         styles={{
           control: (baseStyles, state) => ({

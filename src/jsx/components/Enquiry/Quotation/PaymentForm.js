@@ -703,6 +703,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           }))
         };
       });
+      console.log('PaymentForm: Saving quoted_options to backend and formik state:', visibleOptionsData);
       formData.append("quoted_options", JSON.stringify(visibleOptionsData));
       // Store quoted_options in formik for ShareModal to access
       setFieldValue("quoted_options", visibleOptionsData);
