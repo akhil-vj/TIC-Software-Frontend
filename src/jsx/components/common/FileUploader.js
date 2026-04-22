@@ -58,16 +58,70 @@ export function FileUploader(props) {
     return `${baseUrl}${separator}${rawUrl}`;
   };
 
+  // Helper function to resize images using Canvas
+  const resizeImage = (file, targetWidth = 1280, targetHeight = 720) => {
+    return new Promise((resolve) => {
+      // If not an image, skip resizing
+      if (!file.type.startsWith('image/')) {
+        resolve(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+
+          // Fill with white background (useful for transparent PNGs if converted to JPEG)
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Calculate scale to "cover" the target dimensions (maintain aspect ratio)
+          const scale = Math.max(targetWidth / img.width, targetHeight / img.height);
+          const x = (targetWidth - img.width * scale) / 2;
+          const y = (targetHeight - img.height * scale) / 2;
+          const width = img.width * scale;
+          const height = img.height * scale;
+
+          ctx.drawImage(img, x, y, width, height);
+
+          canvas.toBlob((blob) => {
+            const resizedFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now(),
+            });
+            resolve(resizedFile);
+          }, file.type, 0.85); // 85% quality for good balance
+        };
+        img.onerror = () => resolve(file); // Fallback to original if image load fails
+      };
+      reader.onerror = () => resolve(file); // Fallback to original if file read fails
+    });
+  };
+
   // This function will be triggered when the file field change
-  const onFileChange = (e) => {
+  const onFileChange = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
+      
+      // Resize images if needed
+      const processedFiles = await Promise.all(
+        selectedFiles.map(file => resizeImage(file))
+      );
+
       if (isMulti) {
         // Append new files to existing fileData
-        setFieldValue(name, [...(fileData || []), ...selectedFiles]);
+        setFieldValue(name, [...(fileData || []), ...processedFiles]);
       } else {
         // Replace with single file
-        setFieldValue(name, selectedFiles[0]);
+        setFieldValue(name, processedFiles[0]);
       }
     }
   };
@@ -114,49 +168,55 @@ const handleRemove = async (img, index) => {
         />
       </div>
       {isPreview && (
-        <div className="row" style={styles.container}>
-          <div className="mb-2">
-            <h3>Preview</h3>
+        <div className="row mt-3">
+          <div className="col-12 mb-3">
+            <h4 className="text-primary font-w600">Image Preview</h4>
           </div>
-          <>
-            {isMulti ? (
-              fileData?.map((img, key) => (
-                <div className="col-md-6 col-lg-4" key={key}>
-                  <div style={styles.preview}>
+          {isMulti ? (
+            fileData?.map((img, key) => (
+              <div className="col-xl-4 col-lg-6 col-md-6 col-sm-12 mb-4" key={key}>
+                <div style={styles.previewCard}>
+                  <div style={styles.imageWrapper}>
                     <img
                       src={buildImageUrl(img)}
                       style={styles.image}
-                      alt="Thumb"
+                      alt={`hotel-${key}`}
                     />
-                    <button
-                      className="bg-danger"
-                    onClick={() => handleRemove(img, key)}
-                      style={styles.delete}
-                    >
-                      Delete
-                    </button>
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="col-md-6 col-lg-4" key={key}>
-                <div style={styles.preview}>
-                  <img
-                    src={buildImageUrl(fileData)}
-                    style={styles.image}
-                    alt="Thumb"
-                  />
                   <button
-                    className="bg-danger"
-                    onClick={() => handleRemove()}
-                    style={styles.delete}
+                    type="button"
+                    className="btn btn-danger btn-block shadow-none"
+                    style={styles.deleteBtn}
+                    onClick={() => handleRemove(img, key)}
                   >
+                    <i className="fa fa-trash me-2"></i>
                     Delete
                   </button>
                 </div>
               </div>
-            )}
-          </>
+            ))
+          ) : (
+            <div className="col-xl-4 col-lg-6 col-md-6 col-sm-12 mb-4">
+              <div style={styles.previewCard}>
+                <div style={styles.imageWrapper}>
+                  <img
+                    src={buildImageUrl(fileData)}
+                    style={styles.image}
+                    alt="hotel-preview"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-block shadow-none"
+                  style={styles.deleteBtn}
+                  onClick={() => handleRemove()}
+                >
+                  <i className="fa fa-trash me-2"></i>
+                  Delete
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -165,25 +225,34 @@ const handleRemove = async (img, index) => {
 
 // Just some styles
 const styles = {
-  container: {
-    // display: "flex",
-    // flexDirection: "column",
-    // justifyContent: "center",
-    // alignItems: "center",
-    padding: 50,
+  previewCard: {
+    position: "relative",
+    borderRadius: "12px",
+    overflow: "hidden",
+    boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
+    border: "1px solid #eee",
+    backgroundColor: "#fff",
+    transition: "transform 0.3s ease",
   },
-  preview: {
-    margin: "10px 0",
-    display: "flex",
-    flexDirection: "column",
+  imageWrapper: {
+    position: "relative",
+    width: "100%",
+    paddingTop: "56.25%", // 16:9 Aspect Ratio
+    overflow: "hidden",
   },
-  image: { maxWidth: "100%", maxHeight: 100 },
-  delete: {
-    cursor: "pointer",
-    padding: 10,
-    // background: "red",
-    color: "white",
-    border: "none",
-    maxWidth: "100%",
+  image: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  deleteBtn: {
+    width: "100%",
+    borderRadius: "0",
+    padding: "10px",
+    fontSize: "14px",
+    fontWeight: "500",
   },
 };
