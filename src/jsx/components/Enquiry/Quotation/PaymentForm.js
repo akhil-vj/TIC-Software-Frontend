@@ -522,10 +522,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         // Find how much of this item's total belongs to adults vs children
         let adultRatio = adultCount / totalTripPersons;
         if (schedItem.adultCost !== undefined && schedItem.childCost !== undefined) {
-           const explicitTotal = schedItem.adultCost + schedItem.childCost;
-           if (explicitTotal > 0) adultRatio = schedItem.adultCost / explicitTotal;
+          const explicitTotal = schedItem.adultCost + schedItem.childCost;
+          if (explicitTotal > 0) adultRatio = schedItem.adultCost / explicitTotal;
         }
-        
+
         adultActivityTransferTotal += itemTrueTotal * adultRatio;
         childActivityTransferTotal += itemTrueTotal * (1 - adultRatio);
       }
@@ -596,9 +596,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       const sharingFactor = personShareDivisors[pt.key] || 1;
       const isChildType = pt.key === 'childW' || pt.key === 'childN';
       const actTransferPerPersonType = isChildType ? actTransferPerChild : actTransferPerAdult;
-      
-      const actTransferToAdd = isPerMode 
-        ? actTransferPerPersonType 
+
+      const actTransferToAdd = isPerMode
+        ? actTransferPerPersonType
         : (actTransferPerPersonType * sharingFactor * displayCount);
 
       const rowPriceTotal = hotelPart + actTransferToAdd;
@@ -636,17 +636,17 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       formData.append("extra_markup_percentage", checkFormValue(values.baseMarkup, "number") || 0);
       formData.append("extra_markup_amount", checkFormValue(values.extraMarkup, "number") || 0);
       formData.append("description", values.paymentDescription || ".");
-      
+
       const currencyValue = values?.priceIn?.value ?? values?.priceIn?.id ?? values?.currency;
       formData.append("currency", checkFormValue(currencyValue) || 1); // fallback to ID 1 if not set
-      
+
       const pMode = values.priceOption?.value === "PER" || values.priceOption === "PER" ? "PER_PERSON" : "TOTAL_PRICE";
       formData.append("price_mode", pMode);
       formData.append("per_person_amounts", values.perPersonAmount ? "1" : "0");
-      
+
       const destinationId = values.destination?.value || values.destination?.id;
       if (destinationId) formData.append("destination_id", destinationId);
-      
+
       const selectedTaxPct = parseFloat(values.taxType?.percentage || 0);
       formData.append("tax_type_id", checkFormValue(values.taxType?.id) || 1);
       formData.append("tax_type_name", checkFormValue(values.taxType?.name) || "GST");
@@ -661,14 +661,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
       // use the hotelOption variable already defined in the component scope
       if (!hotelOption || hotelOption.length === 0) { notifyError("Please add at least one hotel option."); return; }
-      
+
       const primaryOption = hotelOption[0];
       const truePrimaryAmount = primaryOption.trueBaseAmount !== undefined ? primaryOption.trueBaseAmount : (primaryOption.amount || 0);
       const grandTotal = calculateTrueTotal(truePrimaryAmount, primaryOption.markup || 0);
       const totalAmount = (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0) + truePrimaryAmount + (primaryOption.markup || 0);
       const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
       const convertedTotal = getRoundOfValue(grandTotal / rate);
-      
+
       formData.append("total_amount", getRoundOfValue(totalAmount));
       formData.append("grand_total", getRoundOfValue(grandTotal));
       formData.append("converted_total", getRoundOfValue(convertedTotal));
@@ -682,21 +682,21 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         const pRows = getPersonTypeRows(item);
         const hasConversion = rate > 0;
         const convert = (val) => hasConversion ? getRoundOfValue(val / rate) : val;
-        
+
         const occupancyFactors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
         const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
 
         const mappedRows = pRows.map(pt => {
           const pCount = isPERMode ? (pt.count * (occupancyFactors[pt.key] || 1)) : pt.count;
           const rowPriceInUI = convert(pt.total);
-          
+
           let perPerson, itemizedTotal;
           if (isPERMode) {
-              perPerson = rowPriceInUI;
-              itemizedTotal = perPerson * pCount; 
+            perPerson = rowPriceInUI;
+            itemizedTotal = perPerson * pCount;
           } else {
-              itemizedTotal = rowPriceInUI;
-              perPerson = pCount > 0 ? (itemizedTotal / pCount) : 0;
+            itemizedTotal = rowPriceInUI;
+            perPerson = pCount > 0 ? (itemizedTotal / pCount) : 0;
           }
 
           return {
@@ -720,13 +720,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           rows: mappedRows
         };
       });
-      
+
       formData.append("quoted_options", JSON.stringify(visibleOptionsData));
       setFieldValue("quoted_options", visibleOptionsData);
 
       console.log('--- SUBMITTING BILLING ---');
       for (var pair of formData.entries()) {
-        console.log(pair[0]+ ', ' + pair[1]); 
+        console.log(pair[0] + ', ' + pair[1]);
       }
 
       let entryIndex = 0;
@@ -1198,18 +1198,63 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       ))}
                     </tbody>
                     <tfoot style={{ backgroundColor: "#f0f7ff", borderTop: "2px solid #e2e8f0" }}>
-                      <tr>
-                        <td colSpan={2} className="text-end pe-3 py-3" style={{ color: "#185FA5", fontSize: "14px", fontWeight: 600 }}>
-                          Grand Total :
-                        </td>
-                        <td className="pe-4 py-3 text-end" style={{ color: "#185FA5", fontSize: "15px", fontWeight: 600 }}>
-                          {(() => {
-                            const firstOpt = hotelOption.find(opt => opt.name === 'Option 1') || hotelOption[0] || { trueBaseAmount: 0, markup: 0, amount: 0 };
-                            const trueGrandTotal = calculateTrueTotal(firstOpt.trueBaseAmount || firstOpt.amount || 0, firstOpt.markup || 0);
-                            return <>{activeSymbol} {convert(trueGrandTotal)}</>;
-                          })()}
-                        </td>
-                      </tr>
+                      {(() => {
+                        const firstOpt = hotelOption.find(opt => opt.name === 'Option 1') || hotelOption[0] || { trueBaseAmount: 0, markup: 0, amount: 0 };
+                        const trueAmount = firstOpt.trueBaseAmount || firstOpt.amount || 0;
+                        const markup = firstOpt.markup || 0;
+                        
+                        const optionTotal = (totals.trueTotalAmount || 0) + totals.totalMarkup + trueAmount + markup;
+                        const discountPct = checkFormValue(values.discount, "number");
+                        const discountAmount = optionTotal * discountPct * 0.01;
+                        const gTotal = optionTotal - discountAmount;
+                        const selectedTaxPct = parseFloat(values.taxType?.percentage || 0);
+                        const taxAmount = gTotal * selectedTaxPct * 0.01;
+                        const additionalMarkup = calculateTrueInputMarkup(trueAmount, markup);
+                        const trueGrandTotal = getRoundOfValue(gTotal + additionalMarkup + taxAmount);
+                        
+                        return (
+                          <>
+                            {discountAmount > 0 && (
+                              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                <td colSpan={2} className="text-end pe-3 py-2" style={{ color: "#64748b", fontSize: "13px", fontWeight: 500 }}>
+                                  Discount ({discountPct}%):
+                                </td>
+                                <td className="pe-4 py-2 text-end" style={{ color: "#ef4444", fontSize: "13px", fontWeight: 500 }}>
+                                  - {activeSymbol} {convert(discountAmount)}
+                                </td>
+                              </tr>
+                            )}
+                            {additionalMarkup > 0 && (
+                              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                <td colSpan={2} className="text-end pe-3 py-2" style={{ color: "#64748b", fontSize: "13px", fontWeight: 500 }}>
+                                  Additional Markup:
+                                </td>
+                                <td className="pe-4 py-2 text-end" style={{ color: "#64748b", fontSize: "13px", fontWeight: 500 }}>
+                                  {activeSymbol} {convert(additionalMarkup)}
+                                </td>
+                              </tr>
+                            )}
+                            {taxAmount > 0 && (
+                              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                <td colSpan={2} className="text-end pe-3 py-2" style={{ color: "#64748b", fontSize: "13px", fontWeight: 500 }}>
+                                  Tax ({values.taxType?.name || "GST"} {selectedTaxPct}%):
+                                </td>
+                                <td className="pe-4 py-2 text-end" style={{ color: "#64748b", fontSize: "13px", fontWeight: 500 }}>
+                                  {activeSymbol} {convert(taxAmount)}
+                                </td>
+                              </tr>
+                            )}
+                            <tr>
+                              <td colSpan={2} className="text-end pe-3 py-3" style={{ color: "#185FA5", fontSize: "14px", fontWeight: 600 }}>
+                                Grand Total:
+                              </td>
+                              <td className="pe-4 py-3 text-end" style={{ color: "#185FA5", fontSize: "15px", fontWeight: 600 }}>
+                                {activeSymbol} {convert(trueGrandTotal)}
+                              </td>
+                            </tr>
+                          </>
+                        );
+                      })()}
                     </tfoot>
                   </table>
                 </div>
