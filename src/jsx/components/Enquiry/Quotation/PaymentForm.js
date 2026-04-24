@@ -1126,10 +1126,23 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
               {/* ── Executive Summary Table ── */}
               <div className="card border-0 mb-5 shadow-sm" style={{ borderRadius: "16px", overflow: "hidden", border: "1px solid #e2e8f0" }}>
-                <div className="card-header bg-white py-3 border-bottom">
+                <div className="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                   <h6 className="mb-0 text-dark fw-bold" style={{ fontSize: "15px" }}>
                     <i className="fa fa-list-ul me-2 text-primary"></i> Executive Summary
                   </h6>
+                  <div className="form-check" style={{ marginBottom: 0 }}>
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="includeChildTransferCheck"
+                      checked={includeChildTransfer}
+                      onChange={(e) => setIncludeChildTransfer(e.target.checked)}
+                      style={{ cursor: "pointer" }}
+                    />
+                    <label className="form-check-label" htmlFor="includeChildTransferCheck" style={{ cursor: "pointer", fontSize: "13px", marginBottom: 0 }}>
+                      Include Child Transfers
+                    </label>
+                  </div>
                 </div>
                 <div className="table-responsive">
                   <table className="table mb-0">
@@ -1180,22 +1193,27 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       ))}
 
                       {/* Transfers Section */}
-                      {[
-                        { label: 'Adult Transfers', value: categoryTotals.carAdult },
-                        { label: 'Child Transfers', value: categoryTotals.carChild },
-                      ].filter(row => row.value > 0).map((row, idx, arr) => (
-                        <tr key={`car-${idx}`}>
-                          {idx === 0 && (
-                            <td rowSpan={arr.length} className="ps-4 align-middle fw-bold" style={{ color: "#16A34A", backgroundColor: "#f6fff9" }}>
+                      {(categoryTotals.carAdult > 0 || categoryTotals.carChild > 0) && (
+                        <>
+                          <tr>
+                            <td rowSpan={includeChildTransfer && categoryTotals.carChild > 0 ? 2 : 1} className="ps-4 align-middle fw-bold" style={{ color: "#16A34A", backgroundColor: "#f6fff9" }}>
                               <i className="fa fa-car me-2"></i> Transfers
                             </td>
+                            <td className="text-dark fw-medium" style={{ fontSize: "13px" }}>Adult Transfers</td>
+                            <td className="pe-4 text-end text-dark fw-bold" style={{ fontSize: "14px" }}>
+                              {activeSymbol} {convert(includeChildTransfer ? categoryTotals.carAdult : (categoryTotals.carAdult + categoryTotals.carChild))}
+                            </td>
+                          </tr>
+                          {includeChildTransfer && categoryTotals.carChild > 0 && (
+                            <tr>
+                              <td className="text-dark fw-medium" style={{ fontSize: "13px" }}>Child Transfers</td>
+                              <td className="pe-4 text-end text-dark fw-bold" style={{ fontSize: "14px" }}>
+                                {activeSymbol} {convert(categoryTotals.carChild)}
+                              </td>
+                            </tr>
                           )}
-                          <td className="text-dark fw-medium" style={{ fontSize: "13px" }}>{row.label}</td>
-                          <td className="pe-4 text-end text-dark fw-bold" style={{ fontSize: "14px" }}>
-                            {activeSymbol} {convert(row.value)}
-                          </td>
-                        </tr>
-                      ))}
+                        </>
+                      )}
                     </tbody>
                     <tfoot style={{ backgroundColor: "#f0f7ff", borderTop: "2px solid #e2e8f0" }}>
                       {(() => {
