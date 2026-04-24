@@ -131,12 +131,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             if (scheduleItem.baseAmount !== undefined) return scheduleItem;
 
             const shouldDivide = scheduleItem.insertType !== 'hotel';
-            let person = (values.adult || 0) + (values.child || 0) || 1;
-            if (scheduleItem.insertType === 'activity') {
-              person = scheduleItem.person || 1;
-            } else if ((scheduleItem.insertType === 'transfer' || scheduleItem.insertType === 'car') && !includeChildTransfer) {
-              person = values.adult || 1;
-            }
+            const person = scheduleItem.insertType === 'activity'
+              ? (scheduleItem.person || 1)
+              : ((values.adult || 0) + (values.child || 0)) || 1;
 
             return {
               ...scheduleItem,
@@ -187,12 +184,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             if (ind === index) {
               const result = { ...scheduleItem, [type]: getRoundOfValue(inputValue) };
               if (type === "amount") {
-                let person = values.adult + values.child || 1;
-                if (scheduleItem.insertType === "activity") {
-                  person = scheduleItem.person || 1;
-                } else if ((scheduleItem.insertType === "transfer" || scheduleItem.insertType === "car") && !includeChildTransfer) {
-                  person = values.adult || 1;
-                }
+                const person =
+                  scheduleItem.insertType === "activity"
+                    ? scheduleItem.person
+                    : values.adult + values.child;
                 result.baseAmount =
                   values.priceOption.value === "TOTAL"
                     ? inputValue
@@ -270,12 +265,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       const newData = values.planArr?.map((item) => ({
         ...item,
         schedule: item.schedule.map((scheduleItem) => {
-          let person = values.adult + values.child || 1;
+          let person = values.adult + values.child;
 
           if (scheduleItem.insertType === "activity") {
-            person = scheduleItem.person || 1;
-          } else if ((scheduleItem.insertType === "transfer" || scheduleItem.insertType === "car") && !includeChildTransfer) {
-            person = values.adult || 1;
+            person = scheduleItem.person;
           }
 
           const currentBaseAmount =
@@ -304,34 +297,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       setFieldValue("planArr", newData);
     }
   };
-
-  // ─── Recalculate PER mode amounts when includeChildTransfer toggles ───
-  useEffect(() => {
-    if (values.priceOption?.value === 'PER') {
-      const newData = values.planArr?.map((item) => ({
-        ...item,
-        schedule: item.schedule.map((scheduleItem) => {
-          let person = values.adult + values.child || 1;
-          if (scheduleItem.insertType === "activity") {
-            person = scheduleItem.person || 1;
-          } else if ((scheduleItem.insertType === "transfer" || scheduleItem.insertType === "car") && !includeChildTransfer) {
-            person = values.adult || 1;
-          }
-
-          const currentBaseAmount = scheduleItem.baseAmount !== undefined ? scheduleItem.baseAmount : scheduleItem.amount;
-          const currentBaseMarkup = scheduleItem.baseMarkup !== undefined ? scheduleItem.baseMarkup : (scheduleItem.markup || 0);
-          const shouldDivide = scheduleItem.insertType !== "hotel";
-
-          return {
-            ...scheduleItem,
-            amount: shouldDivide ? getRoundOfValue(currentBaseAmount / person) : currentBaseAmount,
-            markup: shouldDivide ? getRoundOfValue(currentBaseMarkup / person) : currentBaseMarkup,
-          };
-        }),
-      }));
-      setFieldValue("planArr", newData);
-    }
-  }, [includeChildTransfer]);
 
   const handleMarkup = () => {
     setFieldValue("baseMarkup", checkFormValue(values.baseMarkupInput, "number"));
@@ -559,12 +524,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         if (schedItem.adultCost !== undefined && schedItem.childCost !== undefined) {
           const explicitTotal = schedItem.adultCost + schedItem.childCost;
           if (explicitTotal > 0) adultRatio = schedItem.adultCost / explicitTotal;
-        }
-
-        const rawType = (schedItem.insertType || '').toLowerCase();
-        const isTransfer = rawType === 'transfer' || rawType === 'car';
-        if (isTransfer && !includeChildTransfer && adultCount > 0) {
-          adultRatio = 1;
         }
 
         adultActivityTransferTotal += itemTrueTotal * adultRatio;
@@ -899,17 +858,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               const childCount = Number(values.child || 0);
               const totalPax = adultCount + childCount;
               if (totalPax > 0) {
-                const isCarWithoutChild = type === 'car' && !includeChildTransfer;
-                let adultPart, childPart;
-
-                if (isCarWithoutChild && adultCount > 0) {
-                    adultPart = itemGrossTotal;
-                    childPart = 0;
-                } else {
-                    adultPart = (itemGrossTotal * adultCount) / totalPax;
-                    childPart = (itemGrossTotal * childCount) / totalPax;
-                }
-
+                const adultPart = (itemGrossTotal * adultCount) / totalPax;
+                const childPart = (itemGrossTotal * childCount) / totalPax;
                 if (rawType === 'activity') {
                   acc.activityAdult = (acc.activityAdult || 0) + adultPart;
                   acc.activityChild = (acc.activityChild || 0) + childPart;
@@ -1252,7 +1202,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         const firstOpt = hotelOption.find(opt => opt.name === 'Option 1') || hotelOption[0] || { trueBaseAmount: 0, markup: 0, amount: 0 };
                         const trueAmount = firstOpt.trueBaseAmount || firstOpt.amount || 0;
                         const markup = firstOpt.markup || 0;
-                        
+
                         const optionTotal = (totals.trueTotalAmount || 0) + totals.totalMarkup + trueAmount + markup;
                         const discountPct = checkFormValue(values.discount, "number");
                         const discountAmount = optionTotal * discountPct * 0.01;
@@ -1261,7 +1211,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         const taxAmount = gTotal * selectedTaxPct * 0.01;
                         const additionalMarkup = calculateTrueInputMarkup(trueAmount, markup);
                         const trueGrandTotal = getRoundOfValue(gTotal + additionalMarkup + taxAmount);
-                        
+
                         return (
                           <>
                             {discountAmount > 0 && (
@@ -1353,24 +1303,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                     onBlur={handleBlur}
                     required
                   />
-                </div>
-              </div>
-
-              <div className="border-start ps-4">
-                <span className="text-dark d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Transfers</span>
-                <div className="form-check form-switch mt-2">
-                  <input 
-                    className="form-check-input" 
-                    type="checkbox" 
-                    id="includeChildTransferCheck" 
-                    checked={includeChildTransfer}
-                    onChange={(e) => setIncludeChildTransfer(e.target.checked)}
-                    disabled={readOnly}
-                    style={{ cursor: "pointer" }}
-                  />
-                  <label className="form-check-label text-dark" htmlFor="includeChildTransferCheck" style={{ fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>
-                    Include Child Count
-                  </label>
                 </div>
               </div>
             </div>
