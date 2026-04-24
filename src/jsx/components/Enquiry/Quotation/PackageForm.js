@@ -558,21 +558,14 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                         />
                       </div>
                     )}
-                    <h6 className="m-2">
+                    <h6 
+                      className="m-2"
+                      onClick={() => !readOnly && handleCardAdd(values.categoryOptions, list)}
+                      style={{ cursor: readOnly ? "default" : "pointer" }}
+                    >
                       {list.name || list.activity_name || list.vehicle_name}
                     </h6>
                   </div>
-                  {!readOnly && <div>
-                    <button
-                      type="button"
-                      className="btn btn-white p-3"
-                      onClick={() =>
-                        handleCardAdd(values.categoryOptions, list)
-                      }
-                    >
-                      <i className="fa-solid fa-plus text-primary"></i>
-                    </button>
-                  </div>}
                 </div>
               ))}
               <div>
