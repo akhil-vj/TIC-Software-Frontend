@@ -183,12 +183,18 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           schedule: item.schedule.map((scheduleItem, ind) => {
             if (ind === index) {
               const result = { ...scheduleItem, [type]: getRoundOfValue(inputValue) };
+              const person =
+                scheduleItem.insertType === "activity"
+                  ? scheduleItem.person
+                  : values.adult + values.child;
+                  
               if (type === "amount") {
-                const person =
-                  scheduleItem.insertType === "activity"
-                    ? scheduleItem.person
-                    : values.adult + values.child;
                 result.baseAmount =
+                  values.priceOption.value === "TOTAL"
+                    ? inputValue
+                    : inputValue * person;
+              } else if (type === "markup") {
+                result.baseMarkup =
                   values.priceOption.value === "TOTAL"
                     ? inputValue
                     : inputValue * person;
@@ -313,9 +319,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   const totals = scheduleArr.reduce(
     (acc, { item }) => {
       if (item.insertType !== "hotel") {
+        const person = item.insertType === "activity" ? (item.person || 1) : ((values.adult || 0) + (values.child || 0)) || 1;
+        
+        const trueBase = item.baseAmount !== undefined ? item.baseAmount : (values.priceOption.value === "PER" ? item.amount * person : item.amount);
+        const trueMarkup = item.baseMarkup !== undefined ? item.baseMarkup : (values.priceOption.value === "PER" ? item.markup * person : item.markup);
+        
         acc.totalAmount += item.amount;
-        acc.trueTotalAmount = (acc.trueTotalAmount || 0) + (item.baseAmount !== undefined ? item.baseAmount : item.amount);
-        acc.totalMarkup += item.markup;
+        acc.trueTotalAmount = (acc.trueTotalAmount || 0) + trueBase;
+        acc.totalMarkup = (acc.totalMarkup || 0) + trueMarkup;
       }
       return acc;
     },
@@ -509,31 +520,33 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     const totalTripPersons = adultCount + childCount;
 
     // Calculate separate activity/transfer costs for adults vs children
-    let adultActivityTransferTotal = 0;
-    let childActivityTransferTotal = 0;
+    let adultActivityTransferBase = 0;
+    let childActivityTransferBase = 0;
+    let adultActivityTransferMarkup = 0;
+    let childActivityTransferMarkup = 0;
 
     scheduleArr.forEach(({ item: schedItem }) => {
       if (schedItem.insertType !== "hotel") {
-        // Use true/base amounts to avoid double-division when in "PER" mode
         const trueBaseAmount = schedItem.trueBaseAmount !== undefined ? schedItem.trueBaseAmount : (schedItem.baseAmount !== undefined ? schedItem.baseAmount : (schedItem.amount || 0));
         const trueMarkup = schedItem.baseMarkup !== undefined ? schedItem.baseMarkup : (schedItem.markup || 0);
-        const itemTrueTotal = trueBaseAmount + trueMarkup;
 
-        // Find how much of this item's total belongs to adults vs children
         let adultRatio = adultCount / totalTripPersons;
         if (schedItem.adultCost !== undefined && schedItem.childCost !== undefined) {
           const explicitTotal = schedItem.adultCost + schedItem.childCost;
           if (explicitTotal > 0) adultRatio = schedItem.adultCost / explicitTotal;
         }
 
-        adultActivityTransferTotal += itemTrueTotal * adultRatio;
-        childActivityTransferTotal += itemTrueTotal * (1 - adultRatio);
+        adultActivityTransferBase += trueBaseAmount * adultRatio;
+        childActivityTransferBase += trueBaseAmount * (1 - adultRatio);
+        adultActivityTransferMarkup += trueMarkup * adultRatio;
+        childActivityTransferMarkup += trueMarkup * (1 - adultRatio);
       }
     });
 
-    // Per-person activity/transfer costs (separate for adults and children)
-    const actTransferPerAdult = adultCount > 0 ? adultActivityTransferTotal / adultCount : 0;
-    const actTransferPerChild = childCount > 0 ? childActivityTransferTotal / childCount : 0;
+    const actTransferBasePerAdult = adultCount > 0 ? adultActivityTransferBase / adultCount : 0;
+    const actTransferBasePerChild = childCount > 0 ? childActivityTransferBase / childCount : 0;
+    const actTransferMarkupPerAdult = adultCount > 0 ? adultActivityTransferMarkup / adultCount : 0;
+    const actTransferMarkupPerChild = childCount > 0 ? childActivityTransferMarkup / childCount : 0;
 
     // Determine markup mode
     const useBaseMarkup = Number(values.baseMarkup) > 0;
@@ -545,73 +558,71 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     if (useBaseMarkup) {
       const hotelAmount = item.trueBaseAmount || item.amount || 0;
       const hotelLineMarkup = item.markup || 0;
-      const optionSubtotal = hotelAmount + hotelLineMarkup;
-      totalBaseMarkup = optionSubtotal * Number(values.baseMarkup) * 0.01;
+      // Calculate the quotation-level markup on the total gross cost
+      totalBaseMarkup = calculateTrueInputMarkup(hotelAmount, hotelLineMarkup);
     }
 
     const hotelRows = activeTypes.map(({ pt, count, displayCount, hotelRowCostAll }) => {
-      // Calculate what fraction of the hotel base this type represents 
-      const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
-
-      // Line-item markup for this person type
-      const hotelMarkupAll = Number(item.markup || 0) * hotelFraction;
-
-      // Input markup for this row:
-      // - Base Markup %: distribute proportionally based on hotel cost share
-      // - Extra Markup (flat): show the EXACT entered value per row (not distributed)
-      let inputMarkupShare = 0;
-      if (useBaseMarkup) {
-        inputMarkupShare = totalHotelBase > 0
-          ? totalBaseMarkup * (hotelRowCostAll / totalHotelBase)
-          : (activeTypes.length > 0 ? totalBaseMarkup / activeTypes.length : 0);
-      } else if (useExtraMarkup) {
-        inputMarkupShare = extraMarkupValue;
-      }
-
-      // Total markup = line-item markup + input markup share
-      let rowMarkupTotal = hotelMarkupAll + inputMarkupShare;
-
-      // Start with hotel cost + markup (these get divided by sharing factor)
-      let hotelPart = hotelRowCostAll + rowMarkupTotal;
-
-      // Division rules (apply ONLY to hotel cost + markup):
-      // - TOTAL mode: no division for any type (show raw values)
-      // - PER mode: only Double ÷ 2 and Triple ÷ 3 (others stay same)
+      // Division rules:
+      // - TOTAL mode: no division
+      // - PER mode: Double ÷ 2 and Triple ÷ 3
       const isPerMode = values.priceOption?.value === "PER";
-
-      if (isPerMode) {
-        if (pt.key === 'double') {
-          hotelPart = hotelPart / 2;
-          rowMarkupTotal = rowMarkupTotal / 2;
-        } else if (pt.key === 'triple') {
-          hotelPart = hotelPart / 3;
-          rowMarkupTotal = rowMarkupTotal / 3;
-        }
-      }
-      // Activity + Transfer cost to add:
-      // - PER mode: add only 1 person's share
-      // - TOTAL mode: add share for ALL persons of this type (multiply by sharing factor)
-      // - Use CHILD rates for childW/childN, ADULT rates for others
       const personShareDivisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
       const sharingFactor = personShareDivisors[pt.key] || 1;
-      const isChildType = pt.key === 'childW' || pt.key === 'childN';
-      const actTransferPerPersonType = isChildType ? actTransferPerChild : actTransferPerAdult;
 
-      const actTransferToAdd = isPerMode
+      // Fraction of the hotel for this person type
+      const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
+      const hotelLineMarkup = Number(item.markup || 0);
+      
+      // 1. Hotel share for this row (Net + Line-item Markup)
+      let rowHotelGross = hotelRowCostAll + (hotelLineMarkup * hotelFraction);
+
+      if (isPerMode && (pt.key === 'double' || pt.key === 'triple')) {
+          rowHotelGross = rowHotelGross / sharingFactor;
+      }
+
+      // 2. Activity + Transfer share for this row
+      const isChildType = pt.key === 'childW' || pt.key === 'childN';
+      const actTransferPerPersonType = isChildType 
+        ? (actTransferBasePerChild + actTransferMarkupPerChild) 
+        : (actTransferBasePerAdult + actTransferMarkupPerAdult);
+
+      const actTotalToAdd = isPerMode
         ? actTransferPerPersonType
         : (actTransferPerPersonType * sharingFactor * displayCount);
 
-      const rowPriceTotal = hotelPart + actTransferToAdd;
+      // 3. Combine them for the row's base price before final markup
+      const rowGrossBeforeFinalMarkup = rowHotelGross + actTotalToAdd;
 
-      console.log(`[DEBUG_ROW] ${pt.key} | Mode:${isPerMode ? 'PER' : 'TOTAL'} | dispCount:${displayCount} | ActTransferPerPerson:${actTransferPerPersonType} | actTransferToAdd:${actTransferToAdd} | hotelPart:${hotelPart} | FinalTotal:${rowPriceTotal}`);
+      // 4. Calculate the quotation-level markup (the 10% or extra markup)
+      let inputMarkupShare = 0;
+      if (useBaseMarkup) {
+        // Apply the percentage markup directly to this row's gross cost
+        inputMarkupShare = rowGrossBeforeFinalMarkup * Number(values.baseMarkup) * 0.01;
+      } else if (useExtraMarkup) {
+        // Distribute the flat Extra Markup proportionally across rows
+        const totalPackageGross = (item.amount || 0) + (item.markup || 0) + (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0);
+        const rowTotalPackageShare = isPerMode 
+          ? (rowGrossBeforeFinalMarkup * sharingFactor * displayCount) 
+          : rowGrossBeforeFinalMarkup;
+
+        const totalOptionMarkupShare = totalPackageGross > 0 
+          ? (extraMarkupValue * rowTotalPackageShare / totalPackageGross)
+          : (extraMarkupValue / activeTypes.length);
+          
+        inputMarkupShare = isPerMode ? (totalOptionMarkupShare / sharingFactor) : totalOptionMarkupShare;
+      }
+
+      const finalRowMarkup = inputMarkupShare;
+      const finalRowTotal = rowGrossBeforeFinalMarkup + inputMarkupShare;
 
       return {
         key: pt.key,
         label: pt.label,
         count: displayCount,
-        markup: getRoundOfValue(rowMarkupTotal),
+        markup: getRoundOfValue(finalRowMarkup),
         vat: getVatDisplay(),
-        total: getRoundOfValue(rowPriceTotal)
+        total: getRoundOfValue(finalRowTotal)
       };
     });
 
