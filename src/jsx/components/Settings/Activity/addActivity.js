@@ -45,8 +45,6 @@ const AddActivity = () => {
     cost:0,
     adultCost: 0,
     childCost: 0,
-    adultCount: 0,
-    childCount: 0,
     editArr:-1,
     costArr: [],
     costId:''
@@ -74,8 +72,6 @@ const AddActivity = () => {
       formData.append('sub_destination_id',checkFormValue(values.subDestination?.value))
       formData.append('description',checkFormValue(values.description))
       formData.append('is_active',values.status.value)
-      formData.append('adult_count',values.adultCount || 0)
-      formData.append('child_count',values.childCount || 0)
       values.costArr.map((data,ind)=>{
         if(!!data.costId){
           formData.append(`estimations[${ind}][id]`,data.costId)
@@ -133,8 +129,6 @@ const AddActivity = () => {
       if(data.activity_type){
         formik.setFieldValue('activityType',{value:data.activity_type?.id,label:data.activity_type?.name})
       }
-      formik.setFieldValue('adultCount',data.adult_count || 0)
-      formik.setFieldValue('childCount',data.child_count || 0)
       formik.setFieldValue('description',data.description)
       formik.setFieldValue('status',{value:data.is_active,label:data.is_active===1?'Active':'Inactive'})
       const costArr = data.estimations?.map((item,ind)=>{
@@ -268,32 +262,6 @@ const AddActivity = () => {
                       }
                       required
                     />
-                  </div>
-                  <div className="col-lg-3 mb-2">
-                    <div className="form-group mb-3">
-                      <InputField
-                        type="number"
-                        label="Adult Count"
-                        name="adultCount"
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        values={formik.values}
-                        formik={formik}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-lg-3 mb-2">
-                    <div className="form-group mb-3">
-                      <InputField
-                        type="number"
-                        label="Child Count"
-                        name="childCount"
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        values={formik.values}
-                        formik={formik}
-                      />
-                    </div>
                   </div>
                   <div className="col-lg-6 mb-2">
                     <div className="form-group mb-3">
@@ -456,11 +424,6 @@ const AddActivity = () => {
                       <tbody>
                         {!!tableData?.length ? (
                           tableData.map((data, key) => {
-                            const adultCount = Number(formik.values.adultCount || 0);
-                            const childCount = Number(formik.values.childCount || 0);
-                            const adultTotal = Number(data.adultCost || 0) * adultCount;
-                            const childTotal = Number(data.childCost || 0) * childCount;
-                            const total = adultTotal + childTotal;
                             return (
                               <tr key={key}>
                                 <th>{key + 1}</th>
@@ -468,9 +431,9 @@ const AddActivity = () => {
                                 <td>{data.toDate}</td>
                                 <td>{parseTime(data.openingTime)}</td>
                                 <td>{parseTime(data.closingTime)}</td>
-                                <td>{adultTotal}</td>
-                                <td>{childTotal}</td>
-                                <td><strong>{total}</strong></td>
+                                <td>{data.adultCost}</td>
+                                <td>{data.childCost}</td>
+                                <td><strong>{Number(data.adultCost || 0) + Number(data.childCost || 0)}</strong></td>
                                 <td>
                                   <div className="d-flex">
                                     <button
