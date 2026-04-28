@@ -100,12 +100,12 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose }
     const childWCount = safeNum(values.childW);
     const childNCount = safeNum(values.childN);
     const totalAmount =
-      singleCount * Number(roomData?.single_bed_amount || 0) +
-      doubleCount * Number(roomData?.double_bed_amount || 0) +
-      tripleCount * Number(roomData?.triple_bed_amount || 0) +
-      extraCount * Number(roomData?.extra_bed_amount || 0) +
-      childWCount * Number(roomData?.child_w_bed_amount || 0) +
-      childNCount * Number(roomData?.child_n_bed_amount || 0);
+      singleCount * 1 * Number(roomData?.single_bed_amount || 0) +
+      doubleCount * 2 * Number(roomData?.double_bed_amount || 0) +
+      tripleCount * 3 * Number(roomData?.triple_bed_amount || 0) +
+      extraCount * 1 * Number(roomData?.extra_bed_amount || 0) +
+      childWCount * 1 * Number(roomData?.child_w_bed_amount || 0) +
+      childNCount * 1 * Number(roomData?.child_n_bed_amount || 0);
     onClick({ ...values, amount: totalAmount, markup: values.markup || 0 }, setShowModal);
   };
   useEffect(() => {

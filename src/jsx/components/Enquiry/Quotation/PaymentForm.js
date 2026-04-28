@@ -215,7 +215,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     const divisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
     const divisor = divisors[occupancyKey] || 1;
-    const newBaseRate = basePaxValue * divisor;
+    const newBaseRate = basePaxValue;
 
     const newData = values.planArr?.map((item, pIdx) =>
       pIdx === planIndex
@@ -249,7 +249,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 childN: safeCount(scheduleItem.childN),
               };
 
-              const newTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
+              const newTotalWeight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3) + (counts.extra * rates.extra * 1) + (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
 
               return {
                 ...scheduleItem,
@@ -392,7 +392,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           childN: safeCount(item.childN),
         };
 
-        const itemTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
+        const itemTotalWeight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3) + (counts.extra * rates.extra * 1) + (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
 
         let ratio = 1;
         if (itemTotalWeight > 0) {
@@ -420,12 +420,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         acc[idx].childWDisplay = Math.max(acc[idx].childWDisplay || 0, counts.childW);
         acc[idx].childNDisplay = Math.max(acc[idx].childNDisplay || 0, counts.childN);
 
-        acc[idx].singleTotalCost += (counts.single * rates.single) * ratio;
-        acc[idx].doubleTotalCost += (counts.double * rates.double) * ratio;
-        acc[idx].tripleTotalCost += (counts.triple * rates.triple) * ratio;
-        acc[idx].extraTotalCost += (counts.extra * rates.extra) * ratio;
-        acc[idx].childWTotalCost += (counts.childW * rates.childW) * ratio;
-        acc[idx].childNTotalCost += (counts.childN * rates.childN) * ratio;
+        acc[idx].singleTotalCost += (counts.single * rates.single * 1) * ratio;
+        acc[idx].doubleTotalCost += (counts.double * rates.double * 2) * ratio;
+        acc[idx].tripleTotalCost += (counts.triple * rates.triple * 3) * ratio;
+        acc[idx].extraTotalCost += (counts.extra * rates.extra * 1) * ratio;
+        acc[idx].childWTotalCost += (counts.childW * rates.childW * 1) * ratio;
+        acc[idx].childNTotalCost += (counts.childN * rates.childN * 1) * ratio;
       }
     }
     return acc;
@@ -673,19 +673,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       // use the hotelOption variable already defined in the component scope
       if (!hotelOption || hotelOption.length === 0) { notifyError("Please add at least one hotel option."); return; }
 
-      const primaryOption = hotelOption[0];
-      const truePrimaryAmount = primaryOption.trueBaseAmount !== undefined ? primaryOption.trueBaseAmount : (primaryOption.amount || 0);
-      const grandTotal = calculateTrueTotal(truePrimaryAmount, primaryOption.markup || 0);
-      const totalAmount = (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0) + truePrimaryAmount + (primaryOption.markup || 0);
+      // --- Calculate Quoted Options Breakdown (needed for grand_total below) ---
       const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
-      const convertedTotal = getRoundOfValue(grandTotal / rate);
-
-      formData.append("total_amount", getRoundOfValue(totalAmount));
-      formData.append("grand_total", getRoundOfValue(grandTotal));
-      formData.append("converted_total", getRoundOfValue(convertedTotal));
-      formData.append("exchange_rate", rate);
-
-      // --- NEW: Calculate and append Quoted Options Breakdown ---
       const visibleOptionsData = hotelOption.filter((item) => {
         const personRows = getPersonTypeRows(item);
         return personRows.length > 0;
@@ -731,6 +720,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           rows: mappedRows
         };
       });
+
+      // Use the primary option's occupancy-aware grand total for backend
+      const grandTotal = visibleOptionsData.length > 0 ? visibleOptionsData[0].grandTotal : 0;
+      const convertedTotal = grandTotal; // already converted in visibleOptionsData
+      const totalAmount = grandTotal; // backend expects total_amount
+
+      formData.append("total_amount", getRoundOfValue(totalAmount));
+      formData.append("grand_total", getRoundOfValue(grandTotal));
+      formData.append("converted_total", getRoundOfValue(convertedTotal));
+      formData.append("exchange_rate", rate);
 
       formData.append("quoted_options", JSON.stringify(visibleOptionsData));
       setFieldValue("quoted_options", visibleOptionsData);
@@ -917,14 +916,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 childW: safeCount(item.childW),
                 childN: safeCount(item.childN),
               };
-              const totalWeight = (counts.single * rates.single) + (counts.double * rates.double) +
-                (counts.triple * rates.triple) + (counts.extra * rates.extra) +
-                (counts.childW * rates.childW) + (counts.childN * rates.childN);
+              const totalWeight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) +
+                (counts.triple * rates.triple * 3) + (counts.extra * rates.extra * 1) +
+                (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
 
               const ratio = totalWeight > 0 ? itemGrossTotal / totalWeight : 0;
 
               // Room Rates — sum of sharing types
-              const roomCost = ((counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple)) * ratio;
+              const roomCost = ((counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3)) * ratio;
               // Adult Extra Bed
               const extraBedCost = (counts.extra * rates.extra) * ratio;
               // Child Extra Bed
@@ -993,7 +992,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                               childW: safeCount(item.childW),
                               childN: safeCount(item.childN),
                             };
-                            const weight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
+                            const weight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3) + (counts.extra * rates.extra * 1) + (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
                             const ratio = weight > 0 ? (Number(item.amount || 0) / weight) : 0;
                             const markupRatio = Number(item.amount || 0) > 0 ? (Number(item.markup || 0) / Number(item.amount || 0)) : 0;
 
@@ -1009,7 +1008,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                             breakdownData = types
                               .filter(t => counts[t.k] > 0)
                               .map(t => {
-                                const netPerPax = (rates[t.k] * ratio) / t.d;
+                                const netPerPax = (rates[t.k] * ratio);
                                 const grossPerPax = netPerPax * (1 + markupRatio);
                                 return {
                                   key: t.k,
@@ -1465,10 +1464,18 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
-                      const grandTotal = convert(calculateTrueTotal(
-                        item.trueBaseAmount || item.amount || 0,
-                        item.markup || 0
-                      ));
+                      // Grand total = sum of person row totals × occupancy factors
+                      // (single/extra/child ×1, double ×2, triple ×3)
+                      const occupancyFactors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+                      const isPERModeGT = values.priceOption?.value === "PER";
+                      const grandTotal = getRoundOfValue(personRows.reduce((sum, pt) => {
+                        const convertedTotal = convert(pt.total);
+                        if (isPERModeGT) {
+                          const factor = occupancyFactors[pt.key] || 1;
+                          return sum + (convertedTotal * pt.count * factor);
+                        }
+                        return sum + convertedTotal;
+                      }, 0));
                       return (
                         <React.Fragment key={optIdx}>
                           {personRows.map((pt, ptIdx) => (
@@ -1602,9 +1609,21 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         <div className="card-body p-0 bg-white">
                           {hotelOption.map((item, ind) => {
                             if (item.amount === 0) return null;
-                            const total = calculateTrueTotal(item.trueBaseAmount || item.amount || 0, item.markup || 0);
+                            const personRows = getPersonTypeRows(item);
+                            const occupancyFactors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+                            const isPERModeCO = values.priceOption?.value === "PER";
+                            
                             const rate = parseFloat(values.priceIn.exchange_rate) || 1;
-                            const convertedTotal = getRoundOfValue(total / rate);
+                            const convertLocal = (val) => getRoundOfValue(val / rate);
+
+                            const convertedTotal = getRoundOfValue(personRows.reduce((sum, pt) => {
+                              const rowTotalConverted = convertLocal(pt.total);
+                              if (isPERModeCO) {
+                                const factor = occupancyFactors[pt.key] || 1;
+                                return sum + (rowTotalConverted * pt.count * factor);
+                              }
+                              return sum + rowTotalConverted;
+                            }, 0));
                             const toCurrency =
                               values.priceIn.to_currency ||
                               values.priceIn.code ||
