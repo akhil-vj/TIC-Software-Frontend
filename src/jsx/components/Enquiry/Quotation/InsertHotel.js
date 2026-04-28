@@ -50,8 +50,8 @@ const addDays = (date, days = 1) => {
   return next;
 };
 
-const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) => {
-  const {itineraryId} = useParams()
+const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose }) => {
+  const { itineraryId } = useParams()
   const isItineraryId = !!itineraryId
   const hotelId = data?.id
   const hotelData = useAsync(`${URLS.HOTEL_URL}/${hotelId}`, !!hotelId)
@@ -60,7 +60,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
   const marketTypeData = marketTypefetchData?.data?.data
   const categoryfetchData = useAsync(URLS.PROPERTY_CATEGORY_URL)
   const categoryData = categoryfetchData?.data?.data
-  const [selectedRoom,setSelectedRoom]=useState(hotelDetailData?.rooms[0])
+  const [selectedRoom, setSelectedRoom] = useState(hotelDetailData?.rooms[0])
   const isEdit = !!editId || editId === 0
 
   const defaultStartDate = new Date(SETUP.TODAY_DATE);
@@ -70,8 +70,8 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
     startTime: '15:00',
     endDate: defaultEndDate,
     endTime: '11:00',
-    option:hotelOptions[0],
-    insertType:'hotel'
+    option: hotelOptions[0],
+    insertType: 'hotel'
   };
   const {
     values,
@@ -85,7 +85,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
     resetForm
   } = useFormik({ initialValues });
 
-  const handleSetup = () => {
+const handleSetup = () => {
     // Calculate hotel amount from room counts × room rates so the pricing page
     // can display correct values immediately (before saving to backend).
     const roomData = values.roomOption?.find((r) => r.id == values.roomType?.value);
@@ -105,55 +105,56 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
       childNCount * Number(roomData?.child_n_bed_amount || 0);
     onClick({ ...values, amount: totalAmount, markup: values.markup || 0 }, setShowModal);
   };
-  useEffect(()=>{
+  useEffect(() => {
     const showScheduleDate = data?.showScheduleDate
-    setFieldValue('startDate',showScheduleDate || defaultStartDate)
-    setFieldValue('endDate',showScheduleDate ? addDays(showScheduleDate) : defaultEndDate)
-    if(isEdit){
+    setFieldValue('startDate', showScheduleDate || defaultStartDate)
+    setFieldValue('endDate', showScheduleDate ? addDays(showScheduleDate) : defaultEndDate)
+    if (isEdit) {
       setValues(data)
-    }else{
-      if(hotelDetailData){
-      const destinationObj = {label:hotelDetailData?.destination_name,value:hotelDetailData?.destination_id}
-      const subDestinationObj = {label:hotelDetailData?.sub_destination_name,value:hotelDetailData?.sub_destination_id}
-      const roomTypeObj = {label:hotelDetailData?.rooms[0]?.room_type_name,value:hotelDetailData?.rooms[0]?.id}
-      const categoryObj = {label:hotelDetailData?.category_name,value:hotelDetailData?.category_id}
-      setFieldValue('destination',destinationObj)
-      setFieldValue('subDestination',subDestinationObj)
-      setFieldValue('name',hotelDetailData?.name)
-      setFieldValue('id',hotelDetailData?.id)
-      setFieldValue('roomOption',hotelDetailData?.rooms)
-      const initialMealPlan = selectedRoom?.meal_plans[0]
-      setFieldValue('mealPlan',[{label:initialMealPlan?.name,value:initialMealPlan?.id}])
-      setFieldValue('roomType',roomTypeObj)
-      setFieldValue('category',categoryObj)
-      setFieldValue('image',hotelDetailData?.document_2[0]?.file_url)
-    }}
-  },[editId,hotelId,hotelDetailData,selectedRoom])
-  
+    } else {
+      if (hotelDetailData) {
+        const destinationObj = { label: hotelDetailData?.destination_name, value: hotelDetailData?.destination_id }
+        const subDestinationObj = { label: hotelDetailData?.sub_destination_name, value: hotelDetailData?.sub_destination_id }
+        const roomTypeObj = { label: hotelDetailData?.rooms[0]?.room_type_name, value: hotelDetailData?.rooms[0]?.id }
+        const categoryObj = { label: hotelDetailData?.category_name, value: hotelDetailData?.category_id }
+        setFieldValue('destination', destinationObj)
+        setFieldValue('subDestination', subDestinationObj)
+        setFieldValue('name', hotelDetailData?.name)
+        setFieldValue('id', hotelDetailData?.id)
+        setFieldValue('roomOption', hotelDetailData?.rooms)
+        const initialMealPlan = selectedRoom?.meal_plans[0]
+        setFieldValue('mealPlan', [{ label: initialMealPlan?.name, value: initialMealPlan?.id }])
+        setFieldValue('roomType', roomTypeObj)
+        setFieldValue('category', categoryObj)
+        setFieldValue('image', hotelDetailData?.document_2[0]?.file_url)
+      }
+    }
+  }, [editId, hotelId, hotelDetailData, selectedRoom])
+
   const roomTypeId = values.roomType?.value
-  useEffect(()=>{
-    if(roomTypeId){
-      const data = values.roomOption.find((val)=> val.id == roomTypeId)
-      if(data){
+  useEffect(() => {
+    if (roomTypeId) {
+      const data = values.roomOption.find((val) => val.id == roomTypeId)
+      if (data) {
         setSelectedRoom(data)
-        const typeObj = {label:data?.market_type_name,value:data?.market_type_id}
-        setFieldValue('type',typeObj)
+        const typeObj = { label: data?.market_type_name, value: data?.market_type_id }
+        setFieldValue('type', typeObj)
         roomAllotement = [
-          { name: "single",label: "single", allowed: data.single_bed_amount },
-          { name: "double",label: "double", allowed: data.double_bed_amount },
-          { name: "triple",label: "triple", allowed: data.triple_bed_amount },
-          { name: "extra", label: "extra",allowed: data.extra_bed_amount },
-          { name: "childW",label: "child W", allowed: data.child_w_bed_amount },
-          { name: "childN",label: "child N", allowed: data.child_n_bed_amount },
+          { name: "single", label: "single", allowed: data.single_bed_amount },
+          { name: "double", label: "double", allowed: data.double_bed_amount },
+          { name: "triple", label: "triple", allowed: data.triple_bed_amount },
+          { name: "extra", label: "extra", allowed: data.extra_bed_amount },
+          { name: "childW", label: "child W", allowed: data.child_w_bed_amount },
+          { name: "childN", label: "child N", allowed: data.child_n_bed_amount },
         ];
       }
     }
-  },[roomTypeId])
+  }, [roomTypeId])
   return (
     <>
       <CustomModal
         showModal={showModal}
-        title={`${isEdit?'Edit':'Create'} Hotel`}
+        title={`${isEdit ? 'Edit' : 'Create'} Hotel`}
         handleModalClose={() => {
           onClose(setShowModal)
           resetForm()
@@ -220,8 +221,8 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
                     <ReactSelect
                       label="Room Type"
                       value={values.roomType}
-                      onChange={(selected) =>
-                        {console.log('sele',selected)
+                      onChange={(selected) => {
+                        console.log('sele', selected)
                         setFieldValue("roomType", selected)
                       }
                       }
@@ -262,7 +263,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
                     />
                   </div>
                   <FormSection bg={'#fffada'}>
-                  {/* <div className="col-sm-4">
+                    {/* <div className="col-sm-4">
                     <InputField
                       label="No of person"
                       name="person"
@@ -272,59 +273,59 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
                       values={values}
                     />
                   </div> */}
-                  {roomAllotement?.map((data) => (
-                    <div className="col-sm-3 col-4 col-md-2">
+                    {roomAllotement?.map((data) => (
+                      <div className="col-sm-3 col-4 col-md-2">
+                        <InputField
+                          mb="0"
+                          label={data.label}
+                          name={data.name}
+                          type="number"
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          values={values}
+                        />
+                        <p className="text-danger mb-3 mt-1" style={{ fontSize: '10px' }}>{`amount ${data.allowed}`}</p>
+                      </div>
+                    ))}
+                  </FormSection>
+                  <FormSection>
+                    <div className="col-sm-5">
+                      <label>Check In</label>
+                      <DatePicker
+                        className="form-control"
+                        selected={values.startDate}
+                        onChange={(date) => setFieldValue("startDate", date)}
+                      />
+                    </div>
+
+                    <div className="col-sm-5">
                       <InputField
-                        mb="0"
-                        label={data.label}
-                        name={data.name}
-                        type="number"
+                        label="Start Time"
+                        name="startTime"
+                        type="time"
                         onChange={handleChange}
                         onBlur={handleBlur}
                         values={values}
                       />
-                      <p className="text-danger mb-3 mt-1" style={{fontSize:'10px'}}>{`amount ${data.allowed}`}</p>
                     </div>
-                  ))}
-                  </FormSection>
-                  <FormSection>
-                  <div className="col-sm-5">
-                    <label>Check In</label>
-                    <DatePicker
-                      className="form-control"
-                      selected={values.startDate}
-                      onChange={(date) => setFieldValue("startDate", date)}
-                    />
-                  </div>
-
-                  <div className="col-sm-5">
-                    <InputField
-                      label="Start Time"
-                      name="startTime"
-                      type="time"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      values={values}
-                    />
-                  </div>
-                  <div className="col-sm-5">
-                    <label>Check Out</label>
-                    <DatePicker
-                      className="form-control"
-                      selected={values.endDate}
-                      onChange={(date) => setFieldValue("endDate", date)}
-                    />
-                  </div>
-                  <div className="col-sm-5">
-                    <InputField
-                      label="End Time"
-                      name="endTime"
-                      type="time"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      values={values}
-                    />
-                  </div>
+                    <div className="col-sm-5">
+                      <label>Check Out</label>
+                      <DatePicker
+                        className="form-control"
+                        selected={values.endDate}
+                        onChange={(date) => setFieldValue("endDate", date)}
+                      />
+                    </div>
+                    <div className="col-sm-5">
+                      <InputField
+                        label="End Time"
+                        name="endTime"
+                        type="time"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        values={values}
+                      />
+                    </div>
                   </FormSection>
                 </div>
               </div>
