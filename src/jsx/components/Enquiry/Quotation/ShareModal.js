@@ -116,22 +116,29 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
     packageData.planArr.forEach((day, index) => {
       const dayDate = new Date(day.date);
+      const dayLocation = day.dayDestination?.label || "";
       day.schedule?.forEach((item) => {
         if (item.insertType === "hotel" || item?.insertType?.toLowerCase() === "hotel") {
           const hName = item.name || item.hotel_name;
-          if (currentHotel && currentHotel.name === hName) {
+          const optLabel = item.option?.label || item.option?.value || (typeof item.option === 'string' ? item.option : "Option 1");
+          // Only merge consecutive entries with same hotel name AND same option
+          if (currentHotel && currentHotel.name === hName && currentHotel.optionLabel === optLabel) {
             currentHotel.nights.push(index + 1);
             currentHotel.checkOutDate = new Date(dayDate.getTime() + 86400000);
           } else {
             if (currentHotel) hotelsGrouped.push(currentHotel);
+            const mealStr = Array.isArray(item.mealPlan)
+              ? item.mealPlan.map(m => m.label || m.name).filter(Boolean).join(', ') || "Bed and Breakfast"
+              : (item.mealPlan?.label || item.mealPlan?.name || "Bed and Breakfast");
             currentHotel = {
               name: hName,
-              location: item.dayDestination?.label || item.subDestination?.name || item.destination?.label || "Destination",
+              optionLabel: optLabel,
+              location: dayLocation || item.subDestination?.label || item.subDestination?.name || item.destination?.label || "Destination",
               star: item.starRating || "",
               nights: [index + 1],
               checkInDate: dayDate,
               checkOutDate: new Date(dayDate.getTime() + 86400000),
-              meal: item.mealPlan?.label || item.mealPlan?.name || item.option?.label || "Bed and Breakfast",
+              meal: mealStr,
               room: item.roomType?.label || item.roomType?.name || "Deluxe Room",
             };
           }
@@ -198,8 +205,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     
     if (!Array.isArray(options) || options.length === 0) return [];
     
-    const primaryOption = options[0];
-    return primaryOption.rows || [];
+    // Return ALL options so WhatsApp can display each one
+    return options;
   };
 
   const generateWhatsAppText = () => {
@@ -223,89 +230,114 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     text += `• *${info.travelDate}* _for_ *${info.nightsCount} Nights, ${info.daysCount} Days*\n`;
     text += `• *${info.adultCount} Adults*${info.childCount > 0 ? ` and ${info.childCount} Child` : ""}\n\n`;
 
+    // ── Price section — show all options ──
     if (!values.hideTotalPrice) {
-      const breakdown = computePriceBreakdown(info);
-      const options = typeof packageData.quoted_options === "string" 
-        ? JSON.parse(packageData.quoted_options) 
-        : packageData.quoted_options;
-      const primaryOption = options?.[0] || {};
-      
-      const displayCurrency = primaryOption.currencyCode || ((!info.isBase && info.exchangeRate > 0 && packageData.priceIn?.to_currency)
-        ? packageData.priceIn.to_currency
-        : info.currencyCode);
-      const displaySymbol = primaryOption.currencySymbol || getCurrencySymbol(displayCurrency);
+      const allOptions = computePriceBreakdown(info);
 
-      text += `*Price (${displayCurrency}):*\n`;
+      if (allOptions.length > 0) {
+        const priceMode = packageData.priceOption?.value || "PER";
+        const isPERMode = priceMode === "PER" || priceMode === "PER_PERSON" || priceMode === "PER_TRAVELLER";
 
-      if (values.priceBreakup && breakdown.length > 0) {
-        const priceMode = packageData.price_mode || "TOTAL_PRICE";
-        const isPERMode = priceMode === "PER_PERSON" || priceMode === "PER_TRAVELLER";
+        allOptions.forEach((option, optIdx) => {
+          const displayCurrency = option.currencyCode || info.currencyCode;
+          const displaySymbol = option.currencySymbol || getCurrencySymbol(displayCurrency);
+          const rows = option.rows || [];
+          const optionName = option.optionName || `Option ${optIdx + 1}`;
 
-        breakdown.forEach(row => {
-          const isDoubleOrTriple = row.label.toLowerCase().includes("double") || row.label.toLowerCase().includes("triple");
-          
-          let perPerson, rowTotal;
-          if (isPERMode) {
-              // If row has perPerson from new data, use it. 
-              // Otherwise, if row.total exists and it's already divided, don't divide it again if it matches the total sum logic.
-              // Logic: In old PER data, row.total WAS the per-person rate.
-              perPerson = row.perPerson || row.total || 0;
-              rowTotal = perPerson * row.count;
+          // Show option name in header when multiple options exist
+          if (allOptions.length > 1) {
+            text += `*Price — ${optionName} (${displayCurrency}):*\n`;
           } else {
-              rowTotal = row.total || (row.perPerson * row.count);
-              perPerson = row.count > 0 ? rowTotal / row.count : 0;
+            text += `*Price (${displayCurrency}):*\n`;
           }
-          
-          if (isDoubleOrTriple && isPERMode) {
-            const countSuffix = row.count > 1 ? ` x ${row.count}` : '';
-            text += `• *${row.label}*\t\t${displaySymbol} ${perPerson.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${countSuffix}\n`;
-          } else {
-            const countSuffix = (row.count > 1) ? ` x ${row.count}` : '';
-            text += `• *${row.label}*\t\t- ${displaySymbol} ${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${countSuffix}\n`;
+
+          if (values.priceBreakup && rows.length > 0) {
+            rows.forEach(row => {
+              const isDoubleOrTriple = row.label.toLowerCase().includes("double") || row.label.toLowerCase().includes("triple");
+
+              let perPerson, rowTotal;
+              if (isPERMode) {
+                perPerson = row.perPerson || row.total || 0;
+                rowTotal = perPerson * row.count;
+              } else {
+                rowTotal = row.total || (row.perPerson * row.count);
+                perPerson = row.count > 0 ? rowTotal / row.count : 0;
+              }
+
+              if (isDoubleOrTriple && isPERMode) {
+                const countSuffix = row.count > 1 ? ` x ${row.count}` : '';
+                text += `• *${row.label}*\t\t${displaySymbol} ${perPerson.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${countSuffix}\n`;
+              } else {
+                const countSuffix = (row.count > 1) ? ` x ${row.count}` : '';
+                text += `• *${row.label}*\t\t${displaySymbol} ${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${countSuffix}\n`;
+              }
+            });
           }
+
+          const displayTotal = option.grandTotal || rows.reduce((sum, row) => sum + (row.total || (row.perPerson * row.count)), 0);
+          text += `*Total: ${displaySymbol} ${displayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /-* _(exc. Vat)_\n\n`;
         });
+      } else {
+        // Fallback when no quoted_options available
+        const displaySymbol = getCurrencySymbol(info.currencyCode);
+        text += `*Price (${info.currencyCode}):*\n`;
+        text += `*Total: ${displaySymbol} ${info.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /-* _(exc. Vat)_\n\n`;
       }
-
-      // Use the grandTotal from metadata if available for the final line
-      const displayTotal = primaryOption.grandTotal || breakdown.reduce((sum, row) => sum + (row.total || (row.perPerson * row.count)), 0);
-      text += `*Total: ${displaySymbol} ${displayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /-* _(exc. Vat)_\n\n`;
     }
 
+    // ── Hotels section — group by option when multiple options exist ──
     if (values.itinerary && packageData.planArr) {
       const hotelsGrouped = getGroupedHotels();
       if (hotelsGrouped.length > 0) {
-        text += `🏨  *_Hotels_*\n`;
-        text += `-----------\n`;
-        hotelsGrouped.forEach((h) => {
-          const nightOrdinals = h.nights.map(n => getOrdinalStr(n));
-          const nightStr = nightOrdinals.join(", ") + (h.nights.length > 1 ? " Nights" : " Night");
-          
-          text += `*${nightStr}* _at_ *${h.location}*\n`;
-          text += `_Check-in: ${formatShortDate(h.checkInDate)}_ & _Check-out: ${formatShortDate(h.checkOutDate)}_\n`;
-          text += `*${h.name}*\n`;
-          const roomCount = Math.ceil(info.adultCount / 2) || 1;
-          text += `Option 1 • ${roomCount} ${h.room} (${info.adultCount} Pax)\n\n`;
-        });
+        const distinctOptions = [...new Set(hotelsGrouped.map(h => h.optionLabel))];
+        const hasMultipleOptions = distinctOptions.length > 1;
+
+        if (hasMultipleOptions) {
+          distinctOptions.forEach(optLabel => {
+            const optionHotels = hotelsGrouped.filter(h => h.optionLabel === optLabel);
+            text += `🏨  *_Hotels — ${optLabel}_*\n`;
+            text += `-----------\n`;
+            optionHotels.forEach((h) => {
+              const nightOrdinals = h.nights.map(n => getOrdinalStr(n));
+              const nightStr = nightOrdinals.join(", ") + (h.nights.length > 1 ? " Nights" : " Night");
+              text += `*${nightStr}* _at_ *${h.location}*\n`;
+              text += `_Check-in: ${formatShortDate(h.checkInDate)}_ & _Check-out: ${formatShortDate(h.checkOutDate)}_\n`;
+              text += `*${h.name}*\n`;
+              text += `${h.room} • ${h.meal}\n\n`;
+            });
+          });
+        } else {
+          text += `🏨  *_Hotels_*\n`;
+          text += `-----------\n`;
+          hotelsGrouped.forEach((h) => {
+            const nightOrdinals = h.nights.map(n => getOrdinalStr(n));
+            const nightStr = nightOrdinals.join(", ") + (h.nights.length > 1 ? " Nights" : " Night");
+            text += `*${nightStr}* _at_ *${h.location}*\n`;
+            text += `_Check-in: ${formatShortDate(h.checkInDate)}_ & _Check-out: ${formatShortDate(h.checkOutDate)}_\n`;
+            text += `*${h.name}*\n`;
+            text += `${h.room} • ${h.meal}\n\n`;
+          });
+        }
       }
 
-      text += `🚖  *Transportation and Activities*\n`;
-      text += `-----------\n`;
-      packageData.planArr.forEach((day, index) => {
-        const date = new Date(packageData.start_date);
-        date.setDate(date.getDate() + index);
-        const dayStr = date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "2-digit" });
-        
-        text += `*${getOrdinalStr(index + 1)} Day - ${dayStr}*\n`;
-        const activities = day.activities?.map(a => a.activity_name).filter(Boolean) || [];
-        activities.forEach(act => {
-          text += `• ${act} - Tour _(${info.adultCount} Adults)_\n`;
+      // ── Activities & Transfers — use schedule data ──
+      const activeDays = getActivitiesByDay();
+      if (activeDays.length > 0) {
+        text += `🚖  *Transportation and Activities*\n`;
+        text += `-----------\n`;
+        activeDays.forEach(({ dayIndex, dayDate, items }) => {
+          const dayStr = dayDate.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "2-digit" });
+          text += `*${getOrdinalStr(dayIndex + 1)} Day - ${dayStr}*\n`;
+
+          items.forEach((item) => {
+            const itemName = item.name || item.activity_name || item.vehicle_name || "Service";
+            const itemType = item.insertType === "activity" ? "Tour" : "Transfer";
+            const paxStr = `${info.adultCount} Adults${info.childCount > 0 ? `, ${info.childCount} Child` : ""}`;
+            text += `• ${itemName} - ${itemType} _(${paxStr})_\n`;
+          });
+          text += `\n`;
         });
-        const transfers = day.transfers?.map(t => t.description || "Transfer").filter(Boolean) || [];
-        transfers.forEach(trans => {
-          text += `• ${trans} - Meals/Transit _(${info.adultCount} Adults)_\n`;
-        });
-        text += `\n`;
-      });
+      }
     }
 
     if (values.terms) {
@@ -391,26 +423,9 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     const queryParams = `?priceBreakup=${values.priceBreakup}&hideTotalPrice=${values.hideTotalPrice}&itinerary=${values.itinerary}&terms=${values.terms}`;
 
     if (values.mode === "whatsapp") {
-      // Fetch WhatsApp text from backend - SAME AS EMAIL
-      if (itineraryId) {
-        setGeneratedText("Loading message...");
-        axiosGet(`${URLS.ITINERARY_URL}/${itineraryId}/preview-whatsapp${queryParams}`)
-          .then((res) => {
-            if (res?.success && res?.data?.text) {
-              setGeneratedText(res.data.text);
-            } else {
-              console.warn('Backend /preview-whatsapp not available, using quoted_options or fallback');
-              setGeneratedText(generateWhatsAppText());
-            }
-          })
-          .catch((err) => {
-            console.warn('Backend /preview-whatsapp endpoint error, using quoted_options or fallback:', err?.message);
-            setGeneratedText(generateWhatsAppText());
-          });
-      } else {
-        // Before saving, use client-side generation
-        setGeneratedText(generateWhatsAppText());
-      }
+      // Always use frontend-generated WhatsApp text — handles multiple
+      // hotel options, correct pricing, and proper activity/transfer data.
+      setGeneratedText(generateWhatsAppText());
     } else {
       setGeneratedText(generateEmailPlainText());
       // Fetch HTML from backend instead of generating on client
