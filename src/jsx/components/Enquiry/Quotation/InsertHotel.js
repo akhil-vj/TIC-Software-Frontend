@@ -86,7 +86,24 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick,editId,onClose }) 
   } = useFormik({ initialValues });
 
   const handleSetup = () => {
-    onClick(values, setShowModal);
+    // Calculate hotel amount from room counts × room rates so the pricing page
+    // can display correct values immediately (before saving to backend).
+    const roomData = values.roomOption?.find((r) => r.id == values.roomType?.value);
+    const safeNum = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) && n > 0 ? n : 0; };
+    const singleCount = safeNum(values.single);
+    const doubleCount = safeNum(values.double);
+    const tripleCount = safeNum(values.triple);
+    const extraCount = safeNum(values.extra);
+    const childWCount = safeNum(values.childW);
+    const childNCount = safeNum(values.childN);
+    const totalAmount =
+      singleCount * Number(roomData?.single_bed_amount || 0) +
+      doubleCount * Number(roomData?.double_bed_amount || 0) +
+      tripleCount * Number(roomData?.triple_bed_amount || 0) +
+      extraCount * Number(roomData?.extra_bed_amount || 0) +
+      childWCount * Number(roomData?.child_w_bed_amount || 0) +
+      childNCount * Number(roomData?.child_n_bed_amount || 0);
+    onClick({ ...values, amount: totalAmount, markup: values.markup || 0 }, setShowModal);
   };
   useEffect(()=>{
     const showScheduleDate = data?.showScheduleDate
