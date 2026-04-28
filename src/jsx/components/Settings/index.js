@@ -13,6 +13,7 @@ const smallCard = [
   // { image: school, title: "Meal Plan", path: "/meal-plan" },
   { image: wallet, title: "Activity", path: "/activity" },
   { image: wallet, title: "Activity Type", path: "/activity-type" },
+  { image: transfer, title: "Vehicle Type", path: "/vehicle-type" },
   { image: transfer, title: "Transfer", path: "/transfer" },
   { image: school, title: "Lead Source", path: "/lead-source" },
   { image: school, title: "Priority", path: "/priority" },

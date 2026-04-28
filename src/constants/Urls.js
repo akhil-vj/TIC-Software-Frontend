@@ -31,6 +31,7 @@ export const URLS = {
   ACTIVITY_URL: "/api/activities",
   ACTIVITY_TYPE_URL: "/api/activity-types",
   ACTIVITY_UPDATE_URL: "/api/activity-status-update",
+  VEHICLE_TYPE_URL: "/api/vehicle-types",
   TRANSFER_URL: "/api/transfers",
   TRANSFER_UPDATE_URL: "/api/transfer-update",
   TRANSFER_PATCH_URL: "/api/transfer-status-update",

@@ -7,6 +7,7 @@ const smallCard = [
     { icon: "fa fa-hotel", title: "Hotels", path: "/hotels", desc: "Hotels & property settings" },
     { icon: "fa fa-hiking", title: "Activity", path: "/activity", desc: "Tour activities & excursions" },
     { icon: "fa fa-tags", title: "Activity Type", path: "/activity-type", desc: "Categorize activity types" },
+    { icon: "fa fa-car", title: "Vehicle Type", path: "/vehicle-type", desc: "Categorize vehicle types" },
     { icon: "fa fa-shuttle-van", title: "Transfer", path: "/transfer", desc: "Transport & transfer options" },
     { icon: "fa fa-bullseye", title: "Lead Source", path: "/lead-source", desc: "Where your leads come from" },
     { icon: "fa fa-flag", title: "Priority", path: "/priority", desc: "Lead priority levels" },

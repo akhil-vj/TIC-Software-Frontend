@@ -135,6 +135,7 @@ function SetupModal() {
           person:entry.no_of_person,
           description:entry.description,
           type:transferType,
+          vehicleType: entry.vehicle_type ? {label: entry.vehicle_type, value: entry.vehicle_type} : undefined,
           cost:entry.cost,
           amount:entry.amount,
           markup:entry.markup,
@@ -259,6 +260,9 @@ function SetupModal() {
         }
         if(data.insertType === 'transfer'){
           formData.append(`entries[${index}][transfer_type]`,checkFormValue(data.type?.value))
+          if (data.type?.value === 'PRIVATE') {
+             formData.append(`entries[${index}][vehicle_type]`,checkFormValue(data.vehicleType?.value))
+          }
           formData.append(`entries[${index}][cost]`,checkFormValue(data.cost,'number'))
           formData.append(`entries[${index}][adult_cost]`,checkFormValue(data.adultCost,'number'))
           formData.append(`entries[${index}][child_cost]`,checkFormValue(data.childCost,'number'))

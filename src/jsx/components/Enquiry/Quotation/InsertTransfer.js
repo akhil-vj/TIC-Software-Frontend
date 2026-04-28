@@ -45,6 +45,11 @@ const InsertTransfer = ({
 }) => {
   const destination = useAsync(URLS.DESTINATION_URL);
   const destinationOptions = destination?.data?.data;
+  const vehicleTypeData = useAsync(URLS.VEHICLE_TYPE_URL);
+  const vehicleTypeOptions = vehicleTypeData?.data?.data?.map(item => ({
+    label: item.name,
+    value: item.name
+  })) || [];
   const isEdit = !!editId || editId === 0;
   const initialValues = {
     startDate: SETUP.TODAY_DATE,
@@ -71,8 +76,8 @@ const InsertTransfer = ({
     resetForm();
   };
   useEffect(() => {
-    setFieldValue('startDate',data?.showScheduleDate)
-    setFieldValue('endDate',data?.showScheduleDate)
+    setFieldValue('startDate', data?.showScheduleDate)
+    setFieldValue('endDate', data?.showScheduleDate)
     if (isEdit) {
       setValues(data);
     } else {
@@ -84,7 +89,7 @@ const InsertTransfer = ({
       setFieldValue("name", data?.vehicle_name);
       setFieldValue("id", data?.id);
       setFieldValue("image", data?.image);
-      
+
       // Get pricing from estimations array (from admin settings)
       if (data?.estimations && data.estimations.length > 0) {
         const estimation = data.estimations[0];
@@ -196,14 +201,28 @@ const InsertTransfer = ({
                     />
                   </div>
                   {values.type?.label === "PRIVATE" ? (
-                    <div className="col-sm-4">
-                      <div className="form-group mb-3">
-                        <label>Cost</label>
-                        <div className="form-control bg-light">
-                          {values.cost || 'N/A'}
+                    <>
+                      <div className="col-sm-4">
+                        <ReactSelect
+                          label="Vehicle Type"
+                          value={values.vehicleType}
+                          onChange={(selected) => setFieldValue("vehicleType", selected)}
+                          onBlur={handleBlur}
+                          options={vehicleTypeOptions}
+                          optionValue="value"
+                          optionLabel="label"
+                          isSearchable={false}
+                        />
+                      </div>
+                      <div className="col-sm-4">
+                        <div className="form-group mb-3">
+                          <label>Cost</label>
+                          <div className="form-control bg-light">
+                            {values.cost || 'N/A'}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </>
                   ) : (
                     <>
                       <div className="col-sm-4">

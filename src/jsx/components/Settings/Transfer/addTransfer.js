@@ -25,11 +25,6 @@ const statusOptions = [
   { label: "Active", value: 1 },
   { label: "Inactive", value: 0 },
 ];
-const vehicleTypeOptions = [
-  { label: "Car", value: "Car" },
-  { label: "Suv", value: "Suv" },
-  { label: "Van", value: "Van" },
-];
 
 const AddTransfer = () => {
   const navigate = useNavigate();
@@ -117,6 +112,12 @@ const AddTransfer = () => {
   const subDestinationData = useAsync(subDestinationUrl, destinationId);
   const categoryData = useAsync(URLS.PROPERTY_CATEGORY_URL);
   const propertyTypeData = useAsync(URLS.PROPERTY_TYPE_URL);
+  const vehicleTypeData = useAsync(URLS.VEHICLE_TYPE_URL);
+
+  const vehicleTypeOptions = vehicleTypeData?.data?.data?.map(item => ({
+    label: item.name,
+    value: item.name
+  })) || [];
 
   const errors = formik.errors;
   const isEdit = !!id;
