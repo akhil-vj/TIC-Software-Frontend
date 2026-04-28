@@ -85,11 +85,14 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose }
     resetForm
   } = useFormik({ initialValues });
 
-const handleSetup = () => {
+  const handleSetup = () => {
     // Calculate hotel amount from room counts × room rates so the pricing page
     // can display correct values immediately (before saving to backend).
     const roomData = values.roomOption?.find((r) => r.id == values.roomType?.value);
-    const safeNum = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) && n > 0 ? n : 0; };
+    const safeNum = (v) => {
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    };
     const singleCount = safeNum(values.single);
     const doubleCount = safeNum(values.double);
     const tripleCount = safeNum(values.triple);
