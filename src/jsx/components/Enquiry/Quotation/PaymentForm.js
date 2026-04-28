@@ -836,10 +836,21 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             const rawType = (item.insertType || 'other').toLowerCase();
             const type = (rawType === 'transfer' || rawType === 'car') ? 'car' : rawType;
 
-            // For Hotels, only sum Option 1 totals (which match the default Grand Total)
+            // For Hotels, group by option instead of filtering them out
+            let hotelOptionKey = null;
             if (rawType === 'hotel') {
-              const optLabel = item.option?.label || (typeof item.option === 'string' ? item.option : '');
-              if (optLabel !== "" && optLabel !== "Option 1") return acc;
+              const optLabel = item.option?.label || (typeof item.option === 'string' ? item.option : 'Option 1');
+              hotelOptionKey = optLabel === "" ? "Option 1" : optLabel;
+              // Initialize hotel options structure if needed
+              if (!acc.hotelsByOption) acc.hotelsByOption = {};
+              if (!acc.hotelsByOption[hotelOptionKey]) {
+                acc.hotelsByOption[hotelOptionKey] = {
+                  hotelRoom: 0,
+                  hotelExtra: 0,
+                  hotelChildW: 0,
+                  hotelChildN: 0
+                };
+              }
             }
 
             // In ALL summary cards, we show the TOTAL aggregate gross cost (Net + Markup) for all travelers
@@ -861,7 +872,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             }
 
             const itemGrossTotal = itemNetTotal + itemMarkupTotal;
-            acc[type] = (acc[type] || 0) + itemGrossTotal;
+            if (!hotelOptionKey) {
+              acc[type] = (acc[type] || 0) + itemGrossTotal;
+            }
 
             // ── Adult / Child Split for Activities & Transfers ──
             if (rawType === 'activity' || type === 'car') {
@@ -919,10 +932,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               // Child Without Bed
               const childNCost = (counts.childN * rates.childN) * ratio;
 
-              acc.hotelRoom = (acc.hotelRoom || 0) + roomCost;
-              acc.hotelExtra = (acc.hotelExtra || 0) + extraBedCost;
-              acc.hotelChildW = (acc.hotelChildW || 0) + childWCost;
-              acc.hotelChildN = (acc.hotelChildN || 0) + childNCost;
+              acc.hotelsByOption[hotelOptionKey].hotelRoom = (acc.hotelsByOption[hotelOptionKey].hotelRoom || 0) + roomCost;
+              acc.hotelsByOption[hotelOptionKey].hotelExtra = (acc.hotelsByOption[hotelOptionKey].hotelExtra || 0) + extraBedCost;
+              acc.hotelsByOption[hotelOptionKey].hotelChildW = (acc.hotelsByOption[hotelOptionKey].hotelChildW || 0) + childWCost;
+              acc.hotelsByOption[hotelOptionKey].hotelChildN = (acc.hotelsByOption[hotelOptionKey].hotelChildN || 0) + childNCost;
             }
 
             return acc;
@@ -1165,25 +1178,42 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {/* Hotels Section */}
-                      {[
-                        { label: 'Main Room Rate', value: categoryTotals.hotelRoom, type: 'Hotels' },
-                        { label: 'Adult Extra Bed', value: categoryTotals.hotelExtra, type: 'Hotels' },
-                        { label: 'Child With Bed', value: categoryTotals.hotelChildW, type: 'Hotels' },
-                        { label: 'Child Without Bed', value: categoryTotals.hotelChildN, type: 'Hotels' },
-                      ].filter(row => row.value > 0).map((row, idx, arr) => (
-                        <tr key={`hotel-${idx}`} style={{ borderBottom: idx === arr.length - 1 ? "2px solid #f1f5f9" : "1px solid #f1f5f9" }}>
-                          {idx === 0 && (
-                            <td rowSpan={arr.length} className="ps-4 align-middle fw-bold text-primary" style={{ backgroundColor: "#fcfdff" }}>
-                              <i className="fa fa-hotel me-2"></i> Hotels
-                            </td>
-                          )}
-                          <td className="text-dark fw-medium" style={{ fontSize: "13px" }}>{row.label}</td>
-                          <td className="pe-4 text-end text-dark fw-bold" style={{ fontSize: "14px" }}>
-                            {activeSymbol} {convert(row.value)}
-                          </td>
-                        </tr>
-                      ))}
+                      {/* Hotels Section - grouped by option */}
+                      {categoryTotals.hotelsByOption && (() => {
+                        const hotelOptions = Object.entries(categoryTotals.hotelsByOption);
+                        const hasMultipleOptions = hotelOptions.length > 1;
+                        
+                        return hotelOptions.map(([optionName, optionTotals]) => {
+                          const hotelRows = [
+                            { label: 'Main Room Rate', value: optionTotals.hotelRoom },
+                            { label: 'Adult Extra Bed', value: optionTotals.hotelExtra },
+                            { label: 'Child With Bed', value: optionTotals.hotelChildW },
+                            { label: 'Child Without Bed', value: optionTotals.hotelChildN },
+                          ].filter(row => row.value > 0);
+                          
+                          if (hotelRows.length === 0) return null;
+                          
+                          const categoryLabel = hasMultipleOptions ? `Hotels - ${optionName}` : `Hotels`;
+                          
+                          return (
+                            <React.Fragment key={`hotel-${optionName}`}>
+                              {hotelRows.map((row, idx) => (
+                                <tr key={`hotel-${optionName}-${idx}`} style={{ borderBottom: idx === hotelRows.length - 1 ? "2px solid #f1f5f9" : "1px solid #f1f5f9" }}>
+                                  {idx === 0 && (
+                                    <td rowSpan={hotelRows.length} className="ps-4 align-middle fw-bold text-primary" style={{ backgroundColor: "#fcfdff" }}>
+                                      <i className="fa fa-hotel me-2"></i> {categoryLabel}
+                                    </td>
+                                  )}
+                                  <td className="text-dark fw-medium" style={{ fontSize: "13px" }}>{row.label}</td>
+                                  <td className="pe-4 text-end text-dark fw-bold" style={{ fontSize: "14px" }}>
+                                    {activeSymbol} {convert(row.value)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          );
+                        });
+                      })()}
 
                       {/* Activities Section */}
                       {[
@@ -1253,16 +1283,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 </td>
                               </tr>
                             )}
-                            {additionalMarkup > 0 && (
-                              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                                <td colSpan={2} className="text-end pe-3 py-2" style={{ color: "#64748b", fontSize: "13px", fontWeight: 500 }}>
-                                  Additional Markup:
-                                </td>
-                                <td className="pe-4 py-2 text-end" style={{ color: "#64748b", fontSize: "13px", fontWeight: 500 }}>
-                                  {activeSymbol} {convert(additionalMarkup)}
-                                </td>
-                              </tr>
-                            )}
                             {taxAmount > 0 && (
                               <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
                                 <td colSpan={2} className="text-end pe-3 py-2" style={{ color: "#64748b", fontSize: "13px", fontWeight: 500 }}>
@@ -1273,14 +1293,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 </td>
                               </tr>
                             )}
-                            <tr>
-                              <td colSpan={2} className="text-end pe-3 py-3" style={{ color: "#185FA5", fontSize: "14px", fontWeight: 600 }}>
-                                Grand Total:
-                              </td>
-                              <td className="pe-4 py-3 text-end" style={{ color: "#185FA5", fontSize: "15px", fontWeight: 600 }}>
-                                {activeSymbol} {convert(trueGrandTotal)}
-                              </td>
-                            </tr>
                           </>
                         );
                       })()}
