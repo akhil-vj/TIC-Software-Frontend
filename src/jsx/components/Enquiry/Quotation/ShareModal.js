@@ -51,7 +51,9 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     const tripId = String(rawTripId).includes("-") && String(rawTripId).length > 20
       ? rawTripId.split("-")[0]
       : rawTripId;
-    const packageName = packageData.packageName || "Trip Package";
+    const packageName = (packageData.packageName && packageData.packageName !== 'null' && packageData.packageName !== 'undefined')
+      ? packageData.packageName
+      : (packageData.package_name || "Trip Package");
 
     const startDate = packageData.formStartDate ? new Date(packageData.formStartDate) : new Date();
     const endDate = packageData.formEndDate ? new Date(packageData.formEndDate) : new Date();
@@ -196,6 +198,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   };
 
   const computePriceBreakdown = (info) => {
+    // quoted_options is null before API resolves, or [] if empty — both return no options
     if (!packageData?.quoted_options) return [];
     
     // Parse quoted_options if string
@@ -453,6 +456,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     values.terms,
     values.name,
     packageData,
+    packageData?.quoted_options, // explicit: re-generate when pricing data arrives from API
     values.mode
   ]);
 
