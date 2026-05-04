@@ -992,7 +992,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                               childW: safeCount(item.childW),
                               childN: safeCount(item.childN),
                             };
-                            const weight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3) + (counts.extra * rates.extra * 1) + (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
+                            // Weight without occupancy multipliers - just count * rate
+                            const weight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
                             const ratio = weight > 0 ? (Number(item.amount || 0) / weight) : 0;
                             const markupRatio = Number(item.amount || 0) > 0 ? (Number(item.markup || 0) / Number(item.amount || 0)) : 0;
 
@@ -1008,7 +1009,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                             breakdownData = types
                               .filter(t => counts[t.k] > 0)
                               .map(t => {
-                                const netPerPax = (rates[t.k] * ratio);
+                                // Calculate per-person rate: (room_rate * ratio) / occupancy_divisor
+                                const netPerPax = (rates[t.k] * ratio) / t.d;
                                 const grossPerPax = netPerPax * (1 + markupRatio);
                                 return {
                                   key: t.k,
