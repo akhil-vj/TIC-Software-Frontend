@@ -916,14 +916,15 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 childW: safeCount(item.childW),
                 childN: safeCount(item.childN),
               };
-              const totalWeight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) +
-                (counts.triple * rates.triple * 3) + (counts.extra * rates.extra * 1) +
-                (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
+              // Weight without occupancy multipliers - just count * rate
+              const totalWeight = (counts.single * rates.single) + (counts.double * rates.double) +
+                (counts.triple * rates.triple) + (counts.extra * rates.extra) +
+                (counts.childW * rates.childW) + (counts.childN * rates.childN);
 
               const ratio = totalWeight > 0 ? itemGrossTotal / totalWeight : 0;
 
-              // Room Rates — sum of sharing types
-              const roomCost = ((counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3)) * ratio;
+              // Room Rates — sum of sharing types (without occupancy multipliers)
+              const roomCost = ((counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple)) * ratio;
               // Adult Extra Bed
               const extraBedCost = (counts.extra * rates.extra) * ratio;
               // Child Extra Bed
