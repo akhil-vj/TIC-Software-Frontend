@@ -130,8 +130,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           } else {
             if (currentHotel) hotelsGrouped.push(currentHotel);
             const mealStr = Array.isArray(item.mealPlan)
-              ? item.mealPlan.map(m => m.label || m.name).filter(Boolean).join(', ') || "Bed and Breakfast"
-              : (item.mealPlan?.label || item.mealPlan?.name || "Bed and Breakfast");
+              ? item.mealPlan.map(m => m.label || m.name).filter(Boolean).join(', ') || ""
+              : (item.mealPlan?.label || item.mealPlan?.name || (typeof item.mealPlan === 'string' ? item.mealPlan : ""));
             currentHotel = {
               name: hName,
               optionLabel: optLabel,
@@ -247,11 +247,19 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           const rows = option.rows || [];
           const optionName = option.optionName || `Option ${optIdx + 1}`;
 
+          // Get unique hotel names for this option
+          const hotelsGrouped = getGroupedHotels();
+          const optionHotels = hotelsGrouped
+            .filter(h => h.optionLabel === optionName)
+            .map(h => h.name);
+          const uniqueHotels = [...new Set(optionHotels)];
+          const hotelsStr = uniqueHotels.length > 0 ? ` (${uniqueHotels.join(" / ")})` : "";
+
           // Show option name in header when multiple options exist
           if (allOptions.length > 1) {
-            text += `*Price — ${optionName} (${displayCurrency}):*\n`;
+            text += `*Price — ${optionName}${hotelsStr} (${displayCurrency}):*\n`;
           } else {
-            text += `*Price (${displayCurrency}):*\n`;
+            text += `*Price${hotelsStr} (${displayCurrency}):*\n`;
           }
 
           if (values.priceBreakup && rows.length > 0) {
@@ -269,22 +277,26 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
               if (isDoubleOrTriple && isPERMode) {
                 const countSuffix = row.count > 1 ? ` x ${row.count}` : '';
-                text += `• *${row.label}*\t\t${displaySymbol} ${perPerson.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${countSuffix}\n`;
+                text += `• *${row.label}*\t\t${displaySymbol} ${perPerson.toLocaleString(undefined, { maximumFractionDigits: 0 })}${countSuffix}\n`;
               } else {
                 const countSuffix = (row.count > 1) ? ` x ${row.count}` : '';
-                text += `• *${row.label}*\t\t${displaySymbol} ${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${countSuffix}\n`;
+                text += `• *${row.label}*\t\t${displaySymbol} ${rowTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}${countSuffix}\n`;
               }
             });
           }
 
           const displayTotal = option.grandTotal || rows.reduce((sum, row) => sum + (row.total || (row.perPerson * row.count)), 0);
-          text += `*Total: ${displaySymbol} ${displayTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /-* _(exc. Vat)_\n\n`;
+          text += `*Total: ${displaySymbol} ${displayTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-* _(exc. Vat)_\n\n`;
         });
       } else {
         // Fallback when no quoted_options available
+        const hotelsGrouped = getGroupedHotels();
+        const uniqueHotels = [...new Set(hotelsGrouped.map(h => h.name))];
+        const hotelsStr = uniqueHotels.length > 0 ? ` (${uniqueHotels.join(" / ")})` : "";
+        
         const displaySymbol = getCurrencySymbol(info.currencyCode);
-        text += `*Price (${info.currencyCode}):*\n`;
-        text += `*Total: ${displaySymbol} ${info.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /-* _(exc. Vat)_\n\n`;
+        text += `*Price${hotelsStr} (${info.currencyCode}):*\n`;
+        text += `*Total: ${displaySymbol} ${info.grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-* _(exc. Vat)_\n\n`;
       }
     }
 
@@ -322,6 +334,59 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           });
         }
       }
+
+      // ── Tour Cost Includes ──
+      text += `✅  *_Tour Cost Includes_*\n`;
+      text += `-----------\n`;
+
+      // 1. Hotels summary (merged) - Matches PDF logic (only first option)
+      const hotelsGroupedForInclusions = getGroupedHotels();
+      const firstOptionLabel = hotelsGroupedForInclusions.length > 0 ? hotelsGroupedForInclusions[0].optionLabel : null;
+      const firstOptionHotels = hotelsGroupedForInclusions.filter(h => h.optionLabel === firstOptionLabel);
+
+      const mergedInclusions = [];
+      firstOptionHotels.forEach(h => {
+        const key = `${h.name}-${h.room}`;
+        const existing = mergedInclusions.find(i => i.key === key);
+        if (existing) {
+          existing.nights += h.nights.length;
+        } else {
+          mergedInclusions.push({
+            key,
+            nights: h.nights.length,
+            room: h.room,
+            meal: h.meal
+          });
+        }
+      });
+      mergedInclusions.forEach(mi => {
+        const mealSuffix = mi.meal ? ` with ${mi.meal}` : '';
+        text += `• ${mi.nights} Night accommodation in BASIC/${mi.room} category room${mealSuffix}\n`;
+      });
+
+      // 2. Transfers summary - Matches PDF format
+      packageData.planArr.forEach(day => {
+        day.schedule?.forEach(item => {
+          if (item.insertType === 'transfer' || item.insertType?.toLowerCase() === 'transfer') {
+            const name = item.name || item.vehicle_name || "Transfer";
+            const type = item.transferType?.label || item.transferType || "PVT";
+            text += `• Transfer from ${name} by ${type}\n`;
+          }
+        });
+      });
+
+      // 3. Activities summary
+      packageData.planArr.forEach(day => {
+        day.schedule?.forEach(item => {
+          if (item.insertType === 'activity' || item.insertType?.toLowerCase() === 'activity') {
+            const name = item.name || item.activity_name || "Activity";
+            const desc = item.description ? ` - ${item.description}` : '';
+            text += `• ${name}${desc}\n`;
+          }
+        });
+      });
+
+      text += `• English speaking customer service assistance\n\n`;
 
       // ── Activities & Transfers — use schedule data ──
       const activeDays = getActivitiesByDay();
