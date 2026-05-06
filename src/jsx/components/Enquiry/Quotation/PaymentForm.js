@@ -392,7 +392,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           childN: safeCount(item.childN),
         };
 
-        const itemTotalWeight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3) + (counts.extra * rates.extra * 1) + (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
+        const itemTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
 
         let ratio = 1;
         if (itemTotalWeight > 0) {
@@ -420,12 +420,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         acc[idx].childWDisplay = Math.max(acc[idx].childWDisplay || 0, counts.childW);
         acc[idx].childNDisplay = Math.max(acc[idx].childNDisplay || 0, counts.childN);
 
-        acc[idx].singleTotalCost += (counts.single * rates.single * 1) * ratio;
-        acc[idx].doubleTotalCost += (counts.double * rates.double * 2) * ratio;
-        acc[idx].tripleTotalCost += (counts.triple * rates.triple * 3) * ratio;
-        acc[idx].extraTotalCost += (counts.extra * rates.extra * 1) * ratio;
-        acc[idx].childWTotalCost += (counts.childW * rates.childW * 1) * ratio;
-        acc[idx].childNTotalCost += (counts.childN * rates.childN * 1) * ratio;
+        acc[idx].singleTotalCost += (counts.single * rates.single) * ratio;
+        acc[idx].doubleTotalCost += (counts.double * rates.double) * ratio;
+        acc[idx].tripleTotalCost += (counts.triple * rates.triple) * ratio;
+        acc[idx].extraTotalCost += (counts.extra * rates.extra) * ratio;
+        acc[idx].childWTotalCost += (counts.childW * rates.childW) * ratio;
+        acc[idx].childNTotalCost += (counts.childN * rates.childN) * ratio;
       }
     }
     return acc;
