@@ -48,7 +48,8 @@ function SetupModal() {
     selectedSubDestinations:[],
     discount: 0,
     discount_amount: 0,
-    quoted_options: [], // Store pricing breakdown for WhatsApp sharing
+    packageName: '',           // Never undefined — prevents "null" display in ShareModal
+    quoted_options: null,      // null (not []) so ShareModal falls back to grand_total before API resolves
   };
   const mapSubDestinations = (items = []) =>
     items
