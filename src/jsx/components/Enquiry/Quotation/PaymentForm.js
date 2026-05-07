@@ -502,8 +502,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
    * Adult types (0,1) share adultCost; child types (2,3) share childCost.
    * Adjust the distribution keys here once real per-type data is available.
    */
-  const getPersonTypeRows = (item) => {
-    // Pre-compute which person types are active and their costs to calculate fractions
+  const getPersonTypeRows = (item, shouldIncludeChildTransfer = false) => {
     const activeTypes = PERSON_TYPES.map((pt) => {
       const count = safeCount(item[pt.key]);
       const displayCount = safeCount(item[`${pt.key}Display`]);
@@ -512,14 +511,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       return { pt, count, displayCount, hotelRowCostAll };
     }).filter(Boolean);
 
-    // Calculate total hotel base for this option (sum of all active person-type costs)
-    const totalHotelBase = activeTypes.reduce((sum, t) => sum + t.hotelRowCostAll, 0);
-
     const adultCount = values.adult || 1;
     const childCount = values.child || 0;
     const totalTripPersons = adultCount + childCount;
 
-    // Calculate separate activity/transfer costs for adults vs children
+    // ── Always split proportionally (same as old code) ──────────────────────
     let adultActivityTransferBase = 0;
     let childActivityTransferBase = 0;
     let adultActivityTransferMarkup = 0;
@@ -527,19 +523,30 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     scheduleArr.forEach(({ item: schedItem }) => {
       if (schedItem.insertType !== "hotel") {
-        const trueBaseAmount = schedItem.trueBaseAmount !== undefined ? schedItem.trueBaseAmount : (schedItem.baseAmount !== undefined ? schedItem.baseAmount : (schedItem.amount || 0));
-        const trueMarkup = schedItem.baseMarkup !== undefined ? schedItem.baseMarkup : (schedItem.markup || 0);
+        const trueBaseAmount = schedItem.baseAmount !== undefined
+          ? schedItem.baseAmount
+          : (schedItem.amount || 0);
+        const trueMarkup = schedItem.baseMarkup !== undefined
+          ? schedItem.baseMarkup
+          : (schedItem.markup || 0);
 
-        let adultRatio = adultCount / totalTripPersons;
+        let adultRatio = totalTripPersons > 0 ? adultCount / totalTripPersons : 1;
         if (schedItem.adultCost !== undefined && schedItem.childCost !== undefined) {
           const explicitTotal = schedItem.adultCost + schedItem.childCost;
           if (explicitTotal > 0) adultRatio = schedItem.adultCost / explicitTotal;
         }
 
-        adultActivityTransferBase += trueBaseAmount * adultRatio;
-        childActivityTransferBase += trueBaseAmount * (1 - adultRatio);
-        adultActivityTransferMarkup += trueMarkup * adultRatio;
-        childActivityTransferMarkup += trueMarkup * (1 - adultRatio);
+        // When child transfers are excluded, fold child share into adult share
+        // for the quoted options breakdown — but only if it's a transfer/car type
+        const isTransfer = schedItem.insertType === "transfer" || schedItem.insertType === "car";
+        const effectiveAdultRatio = (!shouldIncludeChildTransfer && isTransfer)
+          ? 1  // all cost to adults
+          : adultRatio;
+
+        adultActivityTransferBase += trueBaseAmount * effectiveAdultRatio;
+        childActivityTransferBase += trueBaseAmount * (1 - effectiveAdultRatio);
+        adultActivityTransferMarkup += trueMarkup * effectiveAdultRatio;
+        childActivityTransferMarkup += trueMarkup * (1 - effectiveAdultRatio);
       }
     });
 
@@ -548,79 +555,55 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     const actTransferMarkupPerAdult = adultCount > 0 ? adultActivityTransferMarkup / adultCount : 0;
     const actTransferMarkupPerChild = childCount > 0 ? childActivityTransferMarkup / childCount : 0;
 
-    // Determine markup mode
     const useBaseMarkup = Number(values.baseMarkup) > 0;
     const useExtraMarkup = !useBaseMarkup && Number(values.extraMarkup) > 0;
     const extraMarkupValue = useExtraMarkup ? Number(values.extraMarkup) : 0;
 
-    // For Base Markup %, calculate total percentage-based markup to distribute proportionally
-    let totalBaseMarkup = 0;
-    if (useBaseMarkup) {
-      const hotelAmount = item.trueBaseAmount || item.amount || 0;
-      const hotelLineMarkup = item.markup || 0;
-      // Calculate the quotation-level markup on the total gross cost
-      totalBaseMarkup = calculateTrueInputMarkup(hotelAmount, hotelLineMarkup);
-    }
-
     const hotelRows = activeTypes.map(({ pt, count, displayCount, hotelRowCostAll }) => {
-      // Division rules:
-      // - TOTAL mode: no division
-      // - PER mode: Double ÷ 2 and Triple ÷ 3
       const isPerMode = values.priceOption?.value === "PER";
       const personShareDivisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
       const sharingFactor = personShareDivisors[pt.key] || 1;
 
-      // Fraction of the hotel for this person type
       const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
       const hotelLineMarkup = Number(item.markup || 0);
-      
-      // 1. Hotel share for this row (Net + Line-item Markup)
-      let rowHotelGross = hotelRowCostAll + (hotelLineMarkup * hotelFraction);
 
+      let rowHotelGross = hotelRowCostAll + (hotelLineMarkup * hotelFraction);
       if (isPerMode && (pt.key === 'double' || pt.key === 'triple')) {
-          rowHotelGross = rowHotelGross / sharingFactor;
+        rowHotelGross = rowHotelGross / sharingFactor;
       }
 
-      // 2. Activity + Transfer share for this row
       const isChildType = pt.key === 'childW' || pt.key === 'childN';
-      const actTransferPerPersonType = isChildType 
-        ? (actTransferBasePerChild + actTransferMarkupPerChild) 
+      const actTransferPerPersonType = isChildType
+        ? (actTransferBasePerChild + actTransferMarkupPerChild)
         : (actTransferBasePerAdult + actTransferMarkupPerAdult);
 
       const actTotalToAdd = isPerMode
         ? actTransferPerPersonType
         : (actTransferPerPersonType * sharingFactor * displayCount);
 
-      // 3. Combine them for the row's base price before final markup
       const rowGrossBeforeFinalMarkup = rowHotelGross + actTotalToAdd;
 
-      // 4. Calculate the quotation-level markup (the 10% or extra markup)
       let inputMarkupShare = 0;
       if (useBaseMarkup) {
-        // Apply the percentage markup directly to this row's gross cost
         inputMarkupShare = rowGrossBeforeFinalMarkup * Number(values.baseMarkup) * 0.01;
       } else if (useExtraMarkup) {
-        // Distribute the flat Extra Markup proportionally across rows
         const totalPackageGross = (item.amount || 0) + (item.markup || 0) + (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0);
-        const rowTotalPackageShare = isPerMode 
-          ? (rowGrossBeforeFinalMarkup * sharingFactor * displayCount) 
+        const rowTotalPackageShare = isPerMode
+          ? (rowGrossBeforeFinalMarkup * sharingFactor * displayCount)
           : rowGrossBeforeFinalMarkup;
-
-        const totalOptionMarkupShare = totalPackageGross > 0 
+        const totalOptionMarkupShare = totalPackageGross > 0
           ? (extraMarkupValue * rowTotalPackageShare / totalPackageGross)
           : (extraMarkupValue / activeTypes.length);
-          
         inputMarkupShare = isPerMode ? (totalOptionMarkupShare / sharingFactor) : totalOptionMarkupShare;
       }
 
-      const finalRowMarkup = inputMarkupShare;
       const finalRowTotal = rowGrossBeforeFinalMarkup + inputMarkupShare;
 
       return {
         key: pt.key,
         label: pt.label,
         count: displayCount,
-        markup: getRoundOfValue(finalRowMarkup),
+        markup: getRoundOfValue(inputMarkupShare),
         vat: getVatDisplay(),
         total: getRoundOfValue(finalRowTotal)
       };
@@ -628,6 +611,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     return hotelRows;
   };
+ 
 
   // ─── Handle billing submission ────────────────────────────────────────────────
   const handleBilling = async () => {
@@ -676,10 +660,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       // --- Calculate Quoted Options Breakdown (needed for grand_total below) ---
       const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
       const visibleOptionsData = hotelOption.filter((item) => {
-        const personRows = getPersonTypeRows(item);
+        const personRows = getPersonTypeRows(item, includeChildTransfer);
         return personRows.length > 0;
       }).map(item => {
-        const pRows = getPersonTypeRows(item);
+        const pRows = getPersonTypeRows(item, includeChildTransfer);
         const hasConversion = rate > 0;
         const convert = (val) => hasConversion ? getRoundOfValue(val / rate) : val;
 
@@ -800,7 +784,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   };
 
   const visibleOptions = hotelOption.filter((item) => {
-    const personRows = getPersonTypeRows(item);
+    const personRows = getPersonTypeRows(item, includeChildTransfer);
     return personRows.length > 0;
   });
 
@@ -1020,12 +1004,51 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                   gross: displayAmount(grossPerPax)
                                 };
                               });
+                          } else if ((item.insertType === "transfer" || item.insertType === "car") && isPer) {
+  const adultCount = Number(values.adult) || 1;
+  const childCount = Number(values.child) || 0;
+
+  // Use baseAmount (original total) — item.amount is already divided by total pax in PER mode
+  const totalAmount = item.baseAmount !== undefined
+    ? Number(item.baseAmount)
+    : Number(item.amount) * ((values.adult || 0) + (values.child || 0)) || 0;
+  const totalMarkup = item.baseMarkup !== undefined
+    ? Number(item.baseMarkup)
+    : Number(item.markup) * ((values.adult || 0) + (values.child || 0)) || 0;
+
+  const effectiveTravelerCount = includeChildTransfer ? (adultCount + childCount) : adultCount;
+
+  const perPersonNet = effectiveTravelerCount > 0 ? totalAmount / effectiveTravelerCount : 0;
+  const perPersonGross = effectiveTravelerCount > 0 ? (totalAmount + totalMarkup) / effectiveTravelerCount : 0;
+
+                            // Create breakdown rows showing the same per-person rate for each type
+                            
+                            if (adultCount > 0) {
+                              breakdownData.push({
+                                key: 'adult',
+                                label: 'Adult rate',
+                                net: perPersonNet,
+                                gross: perPersonGross
+                              });
+                            }
+
+                            // Add child rate only if checkbox is enabled and there are children
+                            if (includeChildTransfer && childCount > 0) {
+                              breakdownData.push({
+                                key: 'child',
+                                label: 'Child rate',
+                                net: perPersonNet,
+                                gross: perPersonGross
+                              });
+                            }
                           }
 
                           const firstBreakdown = breakdownData[0];
                           const otherBreakdowns = breakdownData.slice(1);
-                          const showMainBorder = !(isHotel && isPer) || otherBreakdowns.length === 0;
-                          const isBreakdown = isHotel && isPer && breakdownData.length > 0;
+                          const isHotelPer = isHotel && isPer;
+                          const isTransferPer = (item.insertType === "transfer" || item.insertType === "car") && isPer;
+                          const showMainBorder = !(isHotelPer || isTransferPer) || otherBreakdowns.length === 0;
+                          const isBreakdown = (isHotelPer || isTransferPer) && breakdownData.length > 0;
 
                           const themes = {
                             hotel: { bg: "#ffffff", hover: "#f8f9fa", accent: "transparent" },
@@ -1055,7 +1078,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                         <span className="text-muted" style={{ fontSize: "12px" }}>
                                           {`${item.roomType?.label || item.type?.label || "Service"} • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
                                         </span>
-                                        {isHotel && isPer && firstBreakdown && (
+                                        {(isHotelPer || isTransferPer) && firstBreakdown && (
                                           <span style={{ fontSize: "11px", fontWeight: 500, marginTop: "8px", color: "#64748b", display: "block" }}>
                                             <i className="fa-solid fa-turn-up fa-rotate-90 me-2 opacity-50"></i> {firstBreakdown.label}
                                           </span>
@@ -1070,7 +1093,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                   </span>
                                 </td>
                                 <td className={`px-4 text-end ${isBreakdown ? "pt-1 pb-1 align-bottom" : "py-3 align-middle"}`} style={{ border: "none" }}>
-                                  {!(isHotel && isPer) ? (
+                                  {!(isHotelPer || isTransferPer) ? (
                                     <input
                                       className="form-control text-end fw-bold text-dark"
                                       type="number"
@@ -1086,9 +1109,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                       <input
                                         className="form-control form-control-sm text-end fw-bold text-dark"
                                         type="number"
-                                        value={firstBreakdown.net}
+                                        value={displayAmount(firstBreakdown.net)}
                                         disabled={readOnly}
-                                        onChange={(e) => handleHotelPaxPriceChange(planArrInd, scheduleInd, firstBreakdown.key, e.target.value)}
+                                        onChange={(e) => isHotelPer ? handleHotelPaxPriceChange(planArrInd, scheduleInd, firstBreakdown.key, e.target.value) : handleInputChange(planArrInd, scheduleInd, e.target.value)}
                                         style={{ border: "1px solid transparent", backgroundColor: "transparent", borderRadius: "4px", width: "100%", fontSize: "12px" }}
                                         onFocus={(e) => { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; }}
                                         onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "transparent"; handleBlur(e); }}
@@ -1097,12 +1120,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                   )}
                                 </td>
                                 <td className={`px-4 text-end fw-bold text-dark fs-15 ${isBreakdown ? "pt-1 pb-1 align-bottom" : "py-3 align-middle"}`} style={{ border: "none" }}>
-                                  {!(isHotel && isPer) ? (
+                                  {!(isHotelPer || isTransferPer) ? (
                                     getRoundOfValue(item.amount + item.markup)
                                   ) : (
                                     firstBreakdown && (
                                       <span className="text-dark fw-bold" style={{ fontSize: "12px" }}>
-                                        {firstBreakdown.gross}
+                                        {displayAmount(firstBreakdown.gross)}
                                       </span>
                                     )
                                   )}
@@ -1110,7 +1133,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                               </tr>
 
                               {/* Additional Breakdown Sub-Rows */}
-                              {isHotel && isPer && otherBreakdowns.map((row, i) => {
+                              {(isHotelPer || isTransferPer) && otherBreakdowns.map((row, i) => {
                                 const isLastBreakdown = i === otherBreakdowns.length - 1;
                                 return (
                                   <tr key={`${ind}_${i}`} className={`${isLastBreakdown ? "" : ""}`} style={{ backgroundColor: theme.bg, borderBottom: isLastBreakdown ? "1px solid #f1f5f9" : "none", transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.hover} onMouseOut={(e) => e.currentTarget.style.backgroundColor = theme.bg}>
@@ -1125,17 +1148,17 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                       <input
                                         className="form-control form-control-sm text-end fw-bold text-dark"
                                         type="number"
-                                        value={row.net}
-                                        disabled={readOnly}
-                                        onChange={(e) => handleHotelPaxPriceChange(planArrInd, scheduleInd, row.key, e.target.value)}
+                                        value={displayAmount(row.net)}
+                                        disabled={readOnly || isTransferPer}
+                                        onChange={(e) => isHotelPer ? handleHotelPaxPriceChange(planArrInd, scheduleInd, row.key, e.target.value) : null}
                                         style={{ border: "1px solid transparent", backgroundColor: "transparent", borderRadius: "4px", width: "100%", fontSize: "12px" }}
-                                        onFocus={(e) => { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; }}
+                                        onFocus={(e) => { if (isHotelPer && !readOnly) { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; } }}
                                         onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "transparent"; handleBlur(e); }}
                                       />
                                     </td>
                                     <td className="px-4 py-2 border-0 align-middle text-end" style={{ border: "none" }}>
                                       <span className="text-dark fw-bold" style={{ fontSize: "12px" }}>
-                                        {row.gross}
+                                        {displayAmount(row.gross)}
                                       </span>
                                     </td>
                                   </tr>
@@ -1461,7 +1484,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                     </tr>
                   ) : (
                     visibleOptions.map((item, optIdx) => {
-                      const personRows = getPersonTypeRows(item);
+                      const personRows = getPersonTypeRows(item, includeChildTransfer);
                       const exchangeRate = parseFloat(values.priceIn?.exchange_rate) || 0;
                       const hasConversion = exchangeRate > 0;
                       const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
