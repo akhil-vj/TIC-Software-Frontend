@@ -1078,7 +1078,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                         <span className="text-muted" style={{ fontSize: "12px" }}>
                                           {`${item.roomType?.label || item.type?.label || "Service"} • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
                                         </span>
-                                        {(isHotelPer || isTransferPer) && firstBreakdown && (
+                                        {(isHotelPer || (isTransferPer && otherBreakdowns.length > 0)) && firstBreakdown && (
                                           <span style={{ fontSize: "11px", fontWeight: 500, marginTop: "8px", color: "#64748b", display: "block" }}>
                                             <i className="fa-solid fa-turn-up fa-rotate-90 me-2 opacity-50"></i> {firstBreakdown.label}
                                           </span>
