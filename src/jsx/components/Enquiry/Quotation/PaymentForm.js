@@ -1050,24 +1050,48 @@ console.log('TRANSFER:', item.name, {
     ? Number(item.baseMarkup)
     : Number(item.markup || 0) * (person || 1);
 
-  // Transfers: divide by adults only (child unticked) OR all pax (child ticked)
-  // Activities: always divide by adults + children
-  const effectiveDivisor = isTransferType
-    ? (includeChildTransfer ? (adultCount + childCount) : adultCount)
-    : (adultCount + childCount);
+  const hasExplicitCosts = item.insertType === "activity" && item.adultCost && item.childCost && (Number(item.adultCost) + Number(item.childCost)) > 0 && (adultCount + childCount) > 0;
 
-  const safeDivisor = effectiveDivisor > 0 ? effectiveDivisor : 1;
-  const perPersonNet = getRoundOfValue(totalAmount / safeDivisor);
-  const perPersonGross = getRoundOfValue((totalAmount + totalMarkup) / safeDivisor);
+  if (hasExplicitCosts) {
+    const adultTotalCost = Number(item.adultCost) || 0;
+    const childTotalCost = Number(item.childCost) || 0;
+    const totalExplicitCost = adultTotalCost + childTotalCost;
+    const adultMarkup = totalExplicitCost > 0 ? (totalMarkup * adultTotalCost / totalExplicitCost) : 0;
+    const childMarkup = totalExplicitCost > 0 ? (totalMarkup * childTotalCost / totalExplicitCost) : 0;
 
-  if (adultCount > 0) {
-    breakdownData.push({ key: 'adult', label: 'Adult rate', net: perPersonNet, gross: perPersonGross });
-  }
+    if (adultCount > 0) {
+      breakdownData.push({
+        key: 'adult',
+        label: 'Adult rate',
+        net: getRoundOfValue(adultTotalCost / adultCount),
+        gross: getRoundOfValue((adultTotalCost + adultMarkup) / adultCount)
+      });
+    }
+    if (childCount > 0) {
+      breakdownData.push({
+        key: 'child',
+        label: 'Child rate',
+        net: getRoundOfValue(childTotalCost / childCount),
+        gross: getRoundOfValue((childTotalCost + childMarkup) / childCount)
+      });
+    }
+  } else {
+    // Transfers and general fallback
+    const effectiveDivisor = isTransferType
+      ? (includeChildTransfer ? (adultCount + childCount) : adultCount)
+      : (adultCount + childCount);
 
-  // Transfers: show child row only if checkbox ticked
-  // Activities: always show child row when children exist
-  if (childCount > 0 && (!isTransferType || includeChildTransfer)) {
-    breakdownData.push({ key: 'child', label: 'Child rate', net: perPersonNet, gross: perPersonGross });
+    const safeDivisor = effectiveDivisor > 0 ? effectiveDivisor : 1;
+    const perPersonNet = getRoundOfValue(totalAmount / safeDivisor);
+    const perPersonGross = getRoundOfValue((totalAmount + totalMarkup) / safeDivisor);
+
+    if (adultCount > 0) {
+      breakdownData.push({ key: 'adult', label: 'Adult rate', net: perPersonNet, gross: perPersonGross });
+    }
+
+    if (childCount > 0 && (!isTransferType || includeChildTransfer)) {
+      breakdownData.push({ key: 'child', label: 'Child rate', net: perPersonNet, gross: perPersonGross });
+    }
   }
                           }
 
