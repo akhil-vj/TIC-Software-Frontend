@@ -134,6 +134,8 @@ function SetupModal() {
           childN:entry.child_n_count,
           date:entry.date,
           person:entry.no_of_person,
+          adult:entry.adult_count,
+          child:entry.child_count,
           description:entry.description,
           type:transferType,
           vehicleType: entry.vehicle_type ? {label: entry.vehicle_type, value: entry.vehicle_type} : undefined,
@@ -216,35 +218,36 @@ function SetupModal() {
       formData.append('currency', checkFormValue(currencyValue))
       // Backend update endpoint uses URL param; no itinerary_id field required
       const totalEntries = values.planArr?.reduce((acc,{schedule})=>acc + (schedule?.length || 0),0) || 0
-      if(totalEntries === 0){
-        notifyError('Add at least one itinerary item before saving')
-        return
-      }
-      let index = 0
-      values.planArr?.flatMap(({ date, schedule, dayDestination },arrInd) =>
-      schedule.map((data,ind) => {
-          console.log('date',data,index)
-        // if(data.isExist){
-        //   formData.append(`requirements[id]`,data?.value)
-        // }
+    let entryIndex = 0;
+    values.planArr?.forEach(({ date, schedule, dayDestination }, arrInd) => {
+      schedule.forEach((data, ind) => {
+        const index = entryIndex++;
         const entryDate = getDateStr(date)
         const startDateVal = getDateStr(data.startDate || date)
         const endDateVal = getDateStr(data.endDate || date)
         const startTimeVal = getTimeStr(data.startTime) || '00:00:00'
         const endTimeVal = getTimeStr(data.endTime) || '00:00:00'
+        
         if(!entryDate || !startDateVal || !endDateVal){
           throw new Error('Invalid or missing dates in itinerary entries')
         }
         if(data.entryId){
           formData.append(`entries[${index}][id]`,checkFormValue(data.entryId))
         }
-        const personCount = data.person ?? values.adult + values.child;
+        const entryAdult = Number(data.adult || 0);
+        const entryChild = Number(data.child || 0);
+        const personCount = (data.insertType === 'activity' || (entryAdult + entryChild > 0)) 
+          ? (entryAdult + entryChild) 
+          : (data.person ?? (Number(values.adult || 0) + Number(values.child || 0)));
         formData.append(`entries[${index}][subject_id]`,checkFormValue(data.id))
         formData.append(`entries[${index}][entry_type]`,checkFormValue(data.insertType?.toUpperCase()))
         formData.append(`entries[${index}][date]`,checkFormValue(entryDate))
         const subDestValue = dayDestination?.value || data.subDestination?.value;
         formData.append(`entries[${index}][sub_destination_id]`,checkFormValue(subDestValue))
         formData.append(`entries[${index}][no_of_person]`,checkFormValue(personCount,'number'))
+        formData.append(`entries[${index}][adult_count]`,checkFormValue(data.adult,'number'))
+        formData.append(`entries[${index}][child_count]`,checkFormValue(data.child,'number'))
+        
         if(data.insertType === 'hotel'){
           formData.append(`entries[${index}][option]`,checkFormValue(data.option?.value))
           formData.append(`entries[${index}][room_id]`,checkFormValue(data.roomType?.value))
@@ -273,8 +276,8 @@ function SetupModal() {
         formData.append(`entries[${index}][start_time]`,checkFormValue(startTimeVal))
         formData.append(`entries[${index}][end_date]`,checkFormValue(endDateVal))
         formData.append(`entries[${index}][end_time]`,checkFormValue(endTimeVal))
-        index = index + 1
-      }))
+      });
+    });
       // formData.append('assigned_to',checkFormValue(values.assigned?.value))
       let response
       const url = URLS.ITINERARY_URL

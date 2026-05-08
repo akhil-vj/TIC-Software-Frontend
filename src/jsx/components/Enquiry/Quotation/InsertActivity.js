@@ -49,6 +49,10 @@ const InsertActivity = ({
     startTime: SETUP.START_TIME,
     endTime: SETUP.END_TIME,
     insertType: "activity",
+    adultCost: 0,
+    childCost: 0,
+    adult: 0,
+    child: 0,
   };
   const {
     values,
@@ -73,7 +77,8 @@ const InsertActivity = ({
       setFieldValue('startDate',showScheduleDateValue)
       setFieldValue('endDate',showScheduleDateValue)
     }
-    setFieldValue('person',data?.personCount)
+    setFieldValue('adult', data?.adult ?? data?.adultCount ?? 0)
+    setFieldValue('child', data?.child ?? data?.childCount ?? 0)
     if (isEdit) {
       setValues(data);
     } else {
@@ -138,8 +143,18 @@ const InsertActivity = ({
                   </div>
                   <div className="col-sm-6">
                     <InputField
-                      label="No of person"
-                      name="person"
+                      label="Adult count"
+                      name="adult"
+                      type="number"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      values={values}
+                    />
+                  </div>
+                  <div className="col-sm-6">
+                    <InputField
+                      label="Child count"
+                      name="child"
                       type="number"
                       onChange={handleChange}
                       onBlur={handleBlur}

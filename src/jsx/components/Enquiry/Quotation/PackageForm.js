@@ -196,8 +196,14 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
   const handleCardAdd = (value = values.categoryOptions, data) => {
     const checkValue = value?.toLowerCase();
     if (data) {
-      const personCount = values.adult + values.child
-      const value = { ...data, showScheduleDate: new Date(showScheduleValue?.date), personCount }
+      const adultCount = values.adult || 0;
+      const childCount = values.child || 0;
+      const value = { 
+        ...data, 
+        showScheduleDate: new Date(showScheduleValue?.date), 
+        adultCount,
+        childCount 
+      }
       setEditData(value);
     }
     if (checkValue === "hotel") {
