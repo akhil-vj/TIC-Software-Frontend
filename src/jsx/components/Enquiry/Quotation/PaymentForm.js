@@ -131,9 +131,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             if (scheduleItem.baseAmount !== undefined) return scheduleItem;
 
             const shouldDivide = scheduleItem.insertType !== 'hotel';
-            const person = scheduleItem.insertType === 'activity'
-              ? ((Number(scheduleItem.adult || 0) + Number(scheduleItem.child || 0)) || 1)
-              : ((values.adult || 0) + (values.child || 0)) || 1;
+            const isTransferItem = scheduleItem.insertType === 'transfer' || scheduleItem.insertType === 'car';
+const person = scheduleItem.insertType === 'activity'
+  ? ((Number(scheduleItem.adult || 0) + Number(scheduleItem.child || 0)) || 1)
+  : isTransferItem
+    ? ((values.adult || 0) || 1)
+    : ((values.adult || 0) + (values.child || 0)) || 1;
 
             return {
               ...scheduleItem,
@@ -339,8 +342,24 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     if (item.adultCost && item.childCost)
       return { adultCost: item.adultCost, childCost: item.childCost };
     
-    const adultCount = (item.insertType === "activity" ? Number(item.adult || 0) : Number(values.adult || 0)) || 0;
-    const childCount = (item.insertType === "activity" ? Number(item.child || 0) : Number(values.child || 0)) || 0;
+   const adultCount = (item.insertType === "activity" ? Number(item.adult) : Number(values.adult)) || 0;
+const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
+const isTransferType = item.insertType === "transfer" || item.insertType === "car";
+
+console.log('TRANSFER:', item.name, {
+  insertType: item.insertType,
+  isTransferType,
+  amount: item.amount,
+  baseAmount: item.baseAmount,
+  valuesAdult: values.adult,
+  valuesChild: values.child,
+  adultCount,
+  childCount,
+  includeChildTransfer,
+  effectiveDivisorWouldBe: isTransferType
+    ? (includeChildTransfer ? (adultCount + childCount) : adultCount)
+    : (adultCount + childCount),
+});
     const totalPersons = adultCount + childCount;
 
     if (totalPersons > 0 && item.amount) {
@@ -1019,7 +1038,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
   const isTransferType = item.insertType === "transfer" || item.insertType === "car";
 
-  // Get true total amounts (baseAmount is the canonical total before per-person division)
+  // Recover the true total cost
   const activityPersonCount = (Number(item.adult || 0) + Number(item.child || 0));
   const globalPersonCount = ((values.adult || 0) + (values.child || 0));
   const person = (item.insertType === "activity" && activityPersonCount > 0) ? activityPersonCount : globalPersonCount;
@@ -1031,89 +1050,32 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     ? Number(item.baseMarkup)
     : Number(item.markup || 0) * (person || 1);
 
-  // Check for explicit adult/child cost split
-  const hasExplicitAdultCost = item.adultCost !== undefined && item.adultCost !== null && item.adultCost !== "";
-  const hasExplicitChildCost = item.childCost !== undefined && item.childCost !== null && item.childCost !== "";
-  // Ensure we have both counts and costs for a proper split
-  const hasExplicitCosts = hasExplicitAdultCost && hasExplicitChildCost && (Number(item.adultCost) + Number(item.childCost)) > 0 && (adultCount + childCount) > 0;
+  // Transfers: divide by adults only (child unticked) OR all pax (child ticked)
+  // Activities: always divide by adults + children
+  const effectiveDivisor = isTransferType
+    ? (includeChildTransfer ? (adultCount + childCount) : adultCount)
+    : (adultCount + childCount);
 
-  if (hasExplicitCosts) {
-    // Use explicit adult and child costs directly (these are TOTAL costs, not per-person)
-    const adultTotalCost = Number(item.adultCost) || 0;
-    const childTotalCost = Number(item.childCost) || 0;
-    const totalExplicitCost = adultTotalCost + childTotalCost;
+  const safeDivisor = effectiveDivisor > 0 ? effectiveDivisor : 1;
+  const perPersonNet = getRoundOfValue(totalAmount / safeDivisor);
+  const perPersonGross = getRoundOfValue((totalAmount + totalMarkup) / safeDivisor);
 
-    // Distribute markup proportionally
-    const adultMarkup = totalExplicitCost > 0 ? (totalMarkup * adultTotalCost / totalExplicitCost) : 0;
-    const childMarkup = totalExplicitCost > 0 ? (totalMarkup * childTotalCost / totalExplicitCost) : 0;
-
-    if (adultCount > 0) {
-      breakdownData.push({
-        key: 'adult',
-        label: 'Adult rate',
-        net: getRoundOfValue(adultTotalCost / adultCount),
-        gross: getRoundOfValue((adultTotalCost + adultMarkup) / adultCount)
-      });
-    }
-
-    if (childCount > 0) {
-      breakdownData.push({
-        key: 'child',
-        label: 'Child rate',
-        net: getRoundOfValue(childTotalCost / childCount),
-        gross: getRoundOfValue((childTotalCost + childMarkup) / childCount)
-      });
-    }
-  } else {
-    // Fallback: split total evenly among effective travelers
-    const effectiveTravelerCount = isTransferType && !includeChildTransfer
-      ? adultCount
-      : (adultCount + childCount);
-
-    const perPersonNet = effectiveTravelerCount > 0 ? totalAmount / effectiveTravelerCount : 0;
-    const perPersonGross = effectiveTravelerCount > 0 ? (totalAmount + totalMarkup) / effectiveTravelerCount : 0;
-
-    if (adultCount > 0) {
-      breakdownData.push({
-        key: 'adult',
-        label: 'Adult rate',
-        net: getRoundOfValue(perPersonNet),
-        gross: getRoundOfValue(perPersonGross)
-      });
-    }
-
-    // Activities always show child rate; transfers only if checkbox enabled
-    if (childCount > 0 && (!isTransferType || includeChildTransfer)) {
-      breakdownData.push({
-        key: 'child',
-        label: 'Child rate',
-        net: getRoundOfValue(perPersonNet),
-        gross: getRoundOfValue(perPersonGross)
-      });
-    }
+  if (adultCount > 0) {
+    breakdownData.push({ key: 'adult', label: 'Adult rate', net: perPersonNet, gross: perPersonGross });
   }
-}
-// Add this temporarily inside the scheduleArr.map, right before the breakdownData logic
-console.log('ITEM DEBUG:', {
-  name: item.name,
-  insertType: item.insertType,
-  amount: item.amount,
-  baseAmount: item.baseAmount,
-  markup: item.markup,
-  baseMarkup: item.baseMarkup,
-  adultCost: item.adultCost,
-  childCost: item.childCost,
-  person: item.person,
-  allKeys: Object.keys(item),
-});
-if (item.insertType === 'activity' && item.name.includes('Coral')) {
-  console.log('CORAL FULL ITEM:', JSON.stringify(item, null, 2));
-}
+
+  // Transfers: show child row only if checkbox ticked
+  // Activities: always show child row when children exist
+  if (childCount > 0 && (!isTransferType || includeChildTransfer)) {
+    breakdownData.push({ key: 'child', label: 'Child rate', net: perPersonNet, gross: perPersonGross });
+  }
+                          }
+
 
                           const firstBreakdown = breakdownData[0];
                           const otherBreakdowns = breakdownData.slice(1);
                           const isHotelPer = isHotel && isPer;
-                          const isTransferPer = (item.insertType === "transfer" || item.insertType === "car" || item.insertType === "activity") && isPer;
+                          const isTransferPer = (item.insertType === "transfer" || item.insertType === "car" || item.insertType === "activity") && isPer && breakdownData.length > 1;
                           const showMainBorder = !(isHotelPer || isTransferPer) || otherBreakdowns.length === 0;
                           const isBreakdown = (isHotelPer || isTransferPer) && breakdownData.length > 0;
 
