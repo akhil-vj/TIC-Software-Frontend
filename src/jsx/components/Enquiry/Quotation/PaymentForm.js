@@ -845,6 +845,8 @@ console.log('TRANSFER:', item.name, {
           // Itemized Breakdown and Executive Summary always show base currency
           const activeRate = 1;
           const activeSymbol = getSymbol(baseCode);
+          const globalAdultCount = Number(values.adult || 0);
+          const globalTotalCount = (Number(values.adult || 0) + Number(values.child || 0));
 
           const categoryTotals = scheduleArr.reduce((acc, { item }) => {
             const rawType = (item.insertType || 'other').toLowerCase();
@@ -873,12 +875,19 @@ console.log('TRANSFER:', item.name, {
             let itemMarkupTotal = 0;
 
             const isPer = values.priceOption?.value === "PER";
-            const person = (rawType === 'activity') ? ((Number(item.adult || 0) + Number(item.child || 0)) || 1) : ((values.adult || 0) + (values.child || 0)) || 1;
+            let person = 1;
+            if (rawType === 'activity') {
+              person = (Number(item.adult || 0) + Number(item.child || 0)) || (globalTotalCount || 1);
+            } else if (rawType === 'transfer' || rawType === 'car') {
+              person = includeChildTransfer ? (globalTotalCount || 1) : (globalAdultCount || 1);
+            } else {
+              person = globalTotalCount || 1;
+            }
 
             if (isPer && rawType !== 'hotel') {
-              // Convert per-person back to total for the summary
-              itemNetTotal = (Number(item.amount || 0)) * person;
-              itemMarkupTotal = (Number(item.markup || 0)) * person;
+              // Prioritize baseAmount/baseMarkup (unrounded totals) for the summary
+              itemNetTotal = item.baseAmount !== undefined ? Number(item.baseAmount) : (Number(item.amount || 0)) * person;
+              itemMarkupTotal = item.baseMarkup !== undefined ? Number(item.baseMarkup) : (Number(item.markup || 0)) * person;
             } else {
               // Already total
               itemNetTotal = Number(item.amount || 0);
@@ -891,12 +900,12 @@ console.log('TRANSFER:', item.name, {
             }
 
             // ── Adult / Child Split for Activities & Transfers ──
+            // ── Adult / Child Split for Activities & Transfers ──
             if (rawType === 'activity' || type === 'car') {
               const adultCount = (rawType === 'activity' ? Number(item.adult) : Number(values.adult)) || 0;
               const childCount = (rawType === 'activity' ? Number(item.child) : Number(values.child)) || 0;
               
               if (rawType === 'activity') {
-                // For activities, use explicit cost split if available
                 if (item.adultCost && item.childCost && (Number(item.adultCost) + Number(item.childCost)) > 0) {
                   const adultTotalCost = Number(item.adultCost) || 0;
                   const childTotalCost = Number(item.childCost) || 0;
@@ -904,20 +913,21 @@ console.log('TRANSFER:', item.name, {
                   const adultMarkup = totalExplicitCost > 0 ? (itemMarkupTotal * adultTotalCost / totalExplicitCost) : 0;
                   const childMarkup = totalExplicitCost > 0 ? (itemMarkupTotal * childTotalCost / totalExplicitCost) : 0;
                   
-                  acc.activityAdult = (acc.activityAdult || 0) + adultTotalCost + adultMarkup;
-                  acc.activityChild = (acc.activityChild || 0) + childTotalCost + childMarkup;
+                  // Round the per-person rates to match the breakdown rows
+                  const adultRate = getRoundOfValue((adultTotalCost + adultMarkup) / (adultCount || 1));
+                  const childRate = getRoundOfValue((childTotalCost + childMarkup) / (childCount || 1));
+                  
+                  acc.activityAdult = (acc.activityAdult || 0) + (adultRate * adultCount);
+                  acc.activityChild = (acc.activityChild || 0) + (childRate * childCount);
                 } else {
-                  // Fallback to proportional split
                   const totalPax = adultCount + childCount;
-                  if (totalPax > 0) {
-                    acc.activityAdult = (acc.activityAdult || 0) + (itemGrossTotal * adultCount) / totalPax;
-                    acc.activityChild = (acc.activityChild || 0) + (itemGrossTotal * childCount) / totalPax;
-                  } else {
-                    acc.activityAdult = (acc.activityAdult || 0) + itemGrossTotal;
-                  }
+                  const rate = getRoundOfValue(itemGrossTotal / (totalPax || 1));
+                  acc.activityAdult = (acc.activityAdult || 0) + (rate * adultCount);
+                  acc.activityChild = (acc.activityChild || 0) + (rate * childCount);
                 }
               } else if (type === 'car') {
-                // For transfers, respect the includeChildTransfer toggle
+                const divisor = includeChildTransfer ? (adultCount + childCount) : adultCount;
+                
                 if (includeChildTransfer) {
                   const totalPax = adultCount + childCount;
                   if (totalPax > 0) {
@@ -929,7 +939,6 @@ console.log('TRANSFER:', item.name, {
                 } else {
                   // If children excluded, 100% of transfer cost is assigned to adults
                   acc.carAdult = (acc.carAdult || 0) + itemGrossTotal;
-                  acc.carChild = (acc.carChild || 0); // remains unchanged
                 }
               }
             }
@@ -1355,7 +1364,7 @@ console.log('TRANSFER:', item.name, {
                             </td>
                             <td className="text-dark fw-medium" style={{ fontSize: "13px" }}>Adult Transfers</td>
                             <td className="pe-4 text-end text-dark fw-bold" style={{ fontSize: "14px" }}>
-                              {activeSymbol} {convert(includeChildTransfer ? categoryTotals.carAdult : (categoryTotals.carAdult + categoryTotals.carChild))}
+                              {activeSymbol} {convert(includeChildTransfer ? (categoryTotals.carAdult || 0) : ((categoryTotals.carAdult || 0) + (categoryTotals.carChild || 0)))}
                             </td>
                           </tr>
                           {includeChildTransfer && categoryTotals.carChild > 0 && (
