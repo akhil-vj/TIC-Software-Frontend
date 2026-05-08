@@ -324,7 +324,9 @@ const person = scheduleItem.insertType === 'activity'
       if (item.insertType !== "hotel") {
         const person = (item.insertType === "activity") 
           ? ((Number(item.adult || 0) + Number(item.child || 0)) || 1) 
-          : (((values.adult || 0) + (values.child || 0)) || 1);
+          : (item.insertType === "transfer" || item.insertType === "car")
+            ? (includeChildTransfer ? ((values.adult || 0) + (values.child || 0)) : (values.adult || 0)) || 1
+            : (((values.adult || 0) + (values.child || 0)) || 1);
         
         const trueBase = item.baseAmount !== undefined ? item.baseAmount : (values.priceOption.value === "PER" ? item.amount * person : item.amount);
         const trueMarkup = item.baseMarkup !== undefined ? item.baseMarkup : (values.priceOption.value === "PER" ? item.markup * person : item.markup);
@@ -1038,10 +1040,20 @@ console.log('TRANSFER:', item.name, {
   const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
   const isTransferType = item.insertType === "transfer" || item.insertType === "car";
 
-  // Recover the true total cost
+  // Recover the true total cost using the same person count logic as during conversion
   const activityPersonCount = (Number(item.adult || 0) + Number(item.child || 0));
-  const globalPersonCount = ((values.adult || 0) + (values.child || 0));
-  const person = (item.insertType === "activity" && activityPersonCount > 0) ? activityPersonCount : globalPersonCount;
+  const globalAdultCount = Number(values.adult || 0);
+  const globalTotalCount = (Number(values.adult || 0) + Number(values.child || 0));
+
+  let person = 1;
+  if (item.insertType === "activity") {
+    person = activityPersonCount > 0 ? activityPersonCount : (globalTotalCount || 1);
+  } else if (item.insertType === "transfer" || item.insertType === "car") {
+    // Synchronize with the divisor logic: if children aren't ticked, the per-person rate was divided by adults only
+    person = includeChildTransfer ? (globalTotalCount || 1) : (globalAdultCount || 1);
+  } else {
+    person = globalTotalCount || 1;
+  }
 
   const totalAmount = item.baseAmount !== undefined
     ? Number(item.baseAmount)
