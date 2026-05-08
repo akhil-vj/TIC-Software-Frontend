@@ -550,34 +550,72 @@ console.log('TRANSFER:', item.name, {
 
     scheduleArr.forEach(({ item: schedItem }) => {
       if (schedItem.insertType !== "hotel") {
-        const trueBaseAmount = schedItem.baseAmount !== undefined
-          ? schedItem.baseAmount
-          : (schedItem.amount || 0);
-        const trueMarkup = schedItem.baseMarkup !== undefined
-          ? schedItem.baseMarkup
-          : (schedItem.markup || 0);
-
-        const itemAdult = (schedItem.insertType === "activity" ? Number(schedItem.adult) : adultCount) || 0;
-        const itemChild = (schedItem.insertType === "activity" ? Number(schedItem.child) : childCount) || 0;
-        const itemTotal = itemAdult + itemChild;
+        const rawType = (schedItem.insertType || 'other').toLowerCase();
         
-        let adultRatio = itemTotal > 0 ? itemAdult / itemTotal : (totalTripPersons > 0 ? adultCount / totalTripPersons : 1);
-        if (schedItem.adultCost !== undefined && schedItem.childCost !== undefined) {
-          const explicitTotal = Number(schedItem.adultCost) + Number(schedItem.childCost);
-          if (explicitTotal > 0) adultRatio = Number(schedItem.adultCost) / explicitTotal;
+        // 1. Recover the true total amount for this item
+        let personDivisor = 1;
+        const itemAdultCount = (rawType === 'activity' ? Number(schedItem.adult) : adultCount) || 0;
+        const itemChildCount = (rawType === 'activity' ? Number(schedItem.child) : childCount) || 0;
+        const itemTotalCount = itemAdultCount + itemChildCount;
+
+        if (rawType === 'activity') {
+          personDivisor = itemTotalCount || (totalTripPersons || 1);
+        } else if (rawType === 'transfer' || rawType === 'car') {
+          personDivisor = shouldIncludeChildTransfer ? (totalTripPersons || 1) : (adultCount || 1);
+        } else {
+          personDivisor = totalTripPersons || 1;
         }
 
-        // When child transfers are excluded, fold child share into adult share
-        // for the quoted options breakdown — but only if it's a transfer/car type
-        const isTransfer = schedItem.insertType === "transfer" || schedItem.insertType === "car";
-        const effectiveAdultRatio = (!shouldIncludeChildTransfer && isTransfer)
-          ? 1  // all cost to adults
-          : adultRatio;
+        const isPerMode = values.priceOption?.value === "PER";
+        const trueBaseAmount = schedItem.baseAmount !== undefined 
+          ? Number(schedItem.baseAmount) 
+          : (isPerMode ? (Number(schedItem.amount || 0) * personDivisor) : Number(schedItem.amount || 0));
+        
+        const trueMarkup = schedItem.baseMarkup !== undefined
+          ? Number(schedItem.baseMarkup)
+          : (isPerMode ? (Number(schedItem.markup || 0) * personDivisor) : Number(schedItem.markup || 0));
 
-        adultActivityTransferBase += trueBaseAmount * effectiveAdultRatio;
-        childActivityTransferBase += trueBaseAmount * (1 - effectiveAdultRatio);
-        adultActivityTransferMarkup += trueMarkup * effectiveAdultRatio;
-        childActivityTransferMarkup += trueMarkup * (1 - effectiveAdultRatio);
+        // 2. Split between adult and child buckets
+        if (rawType === 'activity') {
+          if (schedItem.adultCost && schedItem.childCost && (Number(schedItem.adultCost) + Number(schedItem.childCost)) > 0) {
+            const explicitAdultBase = Number(schedItem.adultCost);
+            const explicitChildBase = Number(schedItem.childCost);
+            const explicitTotal = explicitAdultBase + explicitChildBase;
+            
+            const adultMarkup = explicitTotal > 0 ? (trueMarkup * explicitAdultBase / explicitTotal) : 0;
+            const childMarkup = explicitTotal > 0 ? (trueMarkup * explicitChildBase / explicitTotal) : 0;
+            
+            adultActivityTransferBase += explicitAdultBase;
+            childActivityTransferBase += explicitChildBase;
+            adultActivityTransferMarkup += adultMarkup;
+            childActivityTransferMarkup += childMarkup;
+          } else {
+            const ratio = itemTotalCount > 0 ? itemAdultCount / itemTotalCount : 1;
+            adultActivityTransferBase += trueBaseAmount * ratio;
+            childActivityTransferBase += trueBaseAmount * (1 - ratio);
+            adultActivityTransferMarkup += trueMarkup * ratio;
+            childActivityTransferMarkup += trueMarkup * (1 - ratio);
+          }
+        } else if (rawType === 'transfer' || rawType === 'car') {
+          if (shouldIncludeChildTransfer) {
+            const ratio = totalTripPersons > 0 ? adultCount / totalTripPersons : 1;
+            adultActivityTransferBase += trueBaseAmount * ratio;
+            childActivityTransferBase += trueBaseAmount * (1 - ratio);
+            adultActivityTransferMarkup += trueMarkup * ratio;
+            childActivityTransferMarkup += trueMarkup * (1 - ratio);
+          } else {
+            // All to adults
+            adultActivityTransferBase += trueBaseAmount;
+            adultActivityTransferMarkup += trueMarkup;
+          }
+        } else {
+          // General fallback
+          const ratio = totalTripPersons > 0 ? adultCount / totalTripPersons : 1;
+          adultActivityTransferBase += trueBaseAmount * ratio;
+          childActivityTransferBase += trueBaseAmount * (1 - ratio);
+          adultActivityTransferMarkup += trueMarkup * ratio;
+          childActivityTransferMarkup += trueMarkup * (1 - ratio);
+        }
       }
     });
 
