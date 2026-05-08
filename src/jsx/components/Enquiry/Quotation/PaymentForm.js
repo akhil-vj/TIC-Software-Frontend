@@ -894,20 +894,43 @@ console.log('TRANSFER:', item.name, {
             if (rawType === 'activity' || type === 'car') {
               const adultCount = (rawType === 'activity' ? Number(item.adult) : Number(values.adult)) || 0;
               const childCount = (rawType === 'activity' ? Number(item.child) : Number(values.child)) || 0;
-              const totalPax = adultCount + childCount;
-              if (totalPax > 0) {
-                const adultPart = (itemGrossTotal * adultCount) / totalPax;
-                const childPart = (itemGrossTotal * childCount) / totalPax;
-                if (rawType === 'activity') {
-                  acc.activityAdult = (acc.activityAdult || 0) + adultPart;
-                  acc.activityChild = (acc.activityChild || 0) + childPart;
+              
+              if (rawType === 'activity') {
+                // For activities, use explicit cost split if available
+                if (item.adultCost && item.childCost && (Number(item.adultCost) + Number(item.childCost)) > 0) {
+                  const adultTotalCost = Number(item.adultCost) || 0;
+                  const childTotalCost = Number(item.childCost) || 0;
+                  const totalExplicitCost = adultTotalCost + childTotalCost;
+                  const adultMarkup = totalExplicitCost > 0 ? (itemMarkupTotal * adultTotalCost / totalExplicitCost) : 0;
+                  const childMarkup = totalExplicitCost > 0 ? (itemMarkupTotal * childTotalCost / totalExplicitCost) : 0;
+                  
+                  acc.activityAdult = (acc.activityAdult || 0) + adultTotalCost + adultMarkup;
+                  acc.activityChild = (acc.activityChild || 0) + childTotalCost + childMarkup;
                 } else {
-                  acc.carAdult = (acc.carAdult || 0) + adultPart;
-                  acc.carChild = (acc.carChild || 0) + childPart;
+                  // Fallback to proportional split
+                  const totalPax = adultCount + childCount;
+                  if (totalPax > 0) {
+                    acc.activityAdult = (acc.activityAdult || 0) + (itemGrossTotal * adultCount) / totalPax;
+                    acc.activityChild = (acc.activityChild || 0) + (itemGrossTotal * childCount) / totalPax;
+                  } else {
+                    acc.activityAdult = (acc.activityAdult || 0) + itemGrossTotal;
+                  }
                 }
-              } else {
-                if (rawType === 'activity') acc.activityAdult = (acc.activityAdult || 0) + itemGrossTotal;
-                else acc.carAdult = (acc.carAdult || 0) + itemGrossTotal;
+              } else if (type === 'car') {
+                // For transfers, respect the includeChildTransfer toggle
+                if (includeChildTransfer) {
+                  const totalPax = adultCount + childCount;
+                  if (totalPax > 0) {
+                    acc.carAdult = (acc.carAdult || 0) + (itemGrossTotal * adultCount) / totalPax;
+                    acc.carChild = (acc.carChild || 0) + (itemGrossTotal * childCount) / totalPax;
+                  } else {
+                    acc.carAdult = (acc.carAdult || 0) + itemGrossTotal;
+                  }
+                } else {
+                  // If children excluded, 100% of transfer cost is assigned to adults
+                  acc.carAdult = (acc.carAdult || 0) + itemGrossTotal;
+                  acc.carChild = (acc.carChild || 0); // remains unchanged
+                }
               }
             }
 
