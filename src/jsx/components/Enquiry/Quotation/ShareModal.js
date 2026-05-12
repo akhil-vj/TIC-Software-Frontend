@@ -216,208 +216,222 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     const info = extractPackageInfo();
     if (!info) return "Sharing my travel plan...";
 
-    // Helper for ordinals
-    const getOrdinalStr = (n) => {
-      const s = ["th", "st", "nd", "rd"];
-      const v = n % 100;
-      return n + (s[(v - 20) % 10] || s[v] || s[0]);
-    };
+    const DIVIDER = "━━━━━━━━━━━━━━━━━━";
+    const { adultCount, childCount, currencyCode, grandTotal, destinationName,
+            travelDate, nightsCount, daysCount, tripId, packageName } = info;
 
-    let text = `Hi ${info.clientName},\n\n`;
-    text += `Greetings from *TIC Tours.*\n\n`;
-    text += `Thank you for your query with us. As per your requirements, following are the package details.\n\n`;
+    const priceMode = packageData.priceOption?.value || "PER";
+    const isPERMode = priceMode === "PER" || priceMode === "PER_PERSON" || priceMode === "PER_TRAVELLER";
 
-    text += `*Trip ID ${info.tripId}*\n`;
-    text += `----------\n`;
-    text += `*${info.packageName}*\n`;
-    text += `• *${info.travelDate}* _for_ *${info.nightsCount} Nights, ${info.daysCount} Days*\n`;
-    text += `• *${info.adultCount} Adults*${info.childCount > 0 ? ` and ${info.childCount} Child` : ""}\n\n`;
+    // ─────────────────────────────────────────
+    // HEADER
+    // ─────────────────────────────────────────
+    const packageTitle = (packageName || "Holiday Package").toUpperCase();
+    let text = `🌴✈️ *${packageTitle}* ✈️🌴\n`;
+    text += `*Presented by TIC TOURS*\n\n`;
+    text += `${DIVIDER}\n\n`;
 
-    // ── Price section — show all options ──
+    // ─────────────────────────────────────────
+    // TRIP DETAILS
+    // ─────────────────────────────────────────
+    const guestStr = `${adultCount} Adult${adultCount !== 1 ? "s" : ""}` +
+      (childCount > 0 ? ` & ${childCount} Child${childCount !== 1 ? "ren" : ""}` : "");
+    // Build destination string — prefer unique sub-destinations from planArr
+    const subDestNames = packageData.planArr
+      ? [...new Set(packageData.planArr.map(d => d.dayDestination?.label).filter(Boolean))]
+      : [];
+    const displayDestination = subDestNames.length > 0 ? subDestNames.join(" & ") : destinationName;
+    text += `📍 *Destination:* ${displayDestination}\n`;
+    text += `📅 *Travel Date:* ${travelDate}\n`;
+    text += `🌙 *Duration:* ${nightsCount} Nights / ${daysCount} Days\n`;
+    text += `👨‍👩‍👧 *Guests:* ${guestStr}\n`;
+    text += `🆔 *Trip ID:* #${tripId}\n\n`;
+    text += `${DIVIDER}\n\n`;
+
+    // ─────────────────────────────────────────
+    // HOTEL OPTIONS  (mirrors blade template Option loop)
+    // ─────────────────────────────────────────
     if (!values.hideTotalPrice) {
-      const allOptions = computePriceBreakdown(info);
+      const allOptions = computePriceBreakdown(info);   // quoted_options array
+      const hotelsGrouped = getGroupedHotels();         // from planArr
 
-      if (allOptions.length > 0) {
-        const priceMode = packageData.priceOption?.value || "PER";
-        const isPERMode = priceMode === "PER" || priceMode === "PER_PERSON" || priceMode === "PER_TRAVELLER";
+      // Distinct option labels in order
+      const distinctOptions = [...new Map(hotelsGrouped.map(h => [h.optionLabel, h])).keys()];
+      const optCount = Math.max(distinctOptions.length, allOptions.length);
 
-        allOptions.forEach((option, optIdx) => {
-          const displayCurrency = option.currencyCode || info.currencyCode;
-          const displaySymbol = option.currencySymbol || getCurrencySymbol(displayCurrency);
-          const rows = option.rows || [];
-          const optionName = option.optionName || `Option ${optIdx + 1}`;
+      if (optCount > 0) {
+        text += `🏨 *HOTEL OPTIONS*\n\n`;
 
-          // Get unique hotel names for this option
-          const hotelsGrouped = getGroupedHotels();
-          const optionHotels = hotelsGrouped
-            .filter(h => h.optionLabel === optionName)
-            .map(h => h.name);
-          const uniqueHotels = [...new Set(optionHotels)];
-          const hotelsStr = uniqueHotels.length > 0 ? ` (${uniqueHotels.join(" / ")})` : "";
+        for (let optIdx = 0; optIdx < optCount; optIdx++) {
+          const optionLabel = distinctOptions[optIdx] || `Option ${optIdx + 1}`;
+          const optionHotels = hotelsGrouped.filter(h => h.optionLabel === optionLabel);
+          const quotedOpt   = allOptions[optIdx] || null;
 
-          // Show option name in header when multiple options exist
-          if (allOptions.length > 1) {
-            text += `*Price — ${optionName}${hotelsStr} (${displayCurrency}):*\n`;
-          } else {
-            text += `*Price${hotelsStr} (${displayCurrency}):*\n`;
-          }
+          const displayCurrency = quotedOpt?.currencyCode || currencyCode;
+          const rows = quotedOpt?.rows || [];
+
+          text += `🔹 *${optionLabel}*\n`;
+
+          // List unique location → hotel pairs (mirrors blade mergedHotels by subDest+hotel+room)
+          const seenHotels = new Set();
+          optionHotels.forEach(h => {
+            const key = `${h.location}-${h.name}`;
+            if (!seenHotels.has(key)) {
+              seenHotels.add(key);
+              text += h.location ? `📍 ${h.location} – ${h.name}\n` : `📍 ${h.name}\n`;
+            }
+          });
+
+          // Pricing (mirrors blade rate-section logic)
+          text += `\n💵 *Package Price:*\n`;
 
           if (values.priceBreakup && rows.length > 0) {
+            // Use quoted_options rows — mirrors blade $matchedQOpt['rows']
             rows.forEach(row => {
-              const isDoubleOrTriple = row.label.toLowerCase().includes("double") || row.label.toLowerCase().includes("triple");
-
+              const count = parseInt(row.count) || 1;
               let perPerson, rowTotal;
               if (isPERMode) {
-                perPerson = row.perPerson || row.total || 0;
-                rowTotal = perPerson * row.count;
+                perPerson = parseFloat(row.perPerson ?? row.total ?? 0);
+                rowTotal  = perPerson * count;
               } else {
-                rowTotal = row.total || (row.perPerson * row.count);
-                perPerson = row.count > 0 ? rowTotal / row.count : 0;
+                rowTotal  = parseFloat(row.total ?? 0) || (parseFloat(row.perPerson ?? 0) * count);
+                perPerson = count > 0 ? rowTotal / count : 0;
               }
-
-              if (isDoubleOrTriple && isPERMode) {
-                const countSuffix = row.count > 1 ? ` x ${row.count}` : '';
-                text += `• *${row.label}*\t\t${displaySymbol} ${perPerson.toLocaleString(undefined, { maximumFractionDigits: 0 })}${countSuffix}\n`;
-              } else {
-                const countSuffix = (row.count > 1) ? ` x ${row.count}` : '';
-                text += `• *${row.label}*\t\t${displaySymbol} ${rowTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}${countSuffix}\n`;
+              if (isPERMode) {
+                text += `${displayCurrency} ${Math.round(perPerson).toLocaleString()} Per Person\n`;
               }
+              text += `👥 Total for ${adultCount} Adults: *${displayCurrency} ${Math.round(rowTotal).toLocaleString()}*\n`;
             });
+          } else {
+            // No breakup rows — compute from grandTotal
+            const displayTotal = quotedOpt?.grandTotal || grandTotal;
+            if (isPERMode && adultCount > 0) {
+              text += `${displayCurrency} ${Math.round(displayTotal / adultCount).toLocaleString()} Per Person\n`;
+            }
+            text += `👥 Total for ${adultCount} Adults: *${displayCurrency} ${Math.round(displayTotal).toLocaleString()}*\n`;
           }
 
-          const displayTotal = option.grandTotal || rows.reduce((sum, row) => sum + (row.total || (row.perPerson * row.count)), 0);
-          text += `*Total: ${displaySymbol} ${displayTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-* _(exc. Vat)_\n\n`;
-        });
-      } else {
-        // Fallback when no quoted_options available
-        const hotelsGrouped = getGroupedHotels();
-        const uniqueHotels = [...new Set(hotelsGrouped.map(h => h.name))];
-        const hotelsStr = uniqueHotels.length > 0 ? ` (${uniqueHotels.join(" / ")})` : "";
-        
-        const displaySymbol = getCurrencySymbol(info.currencyCode);
-        text += `*Price${hotelsStr} (${info.currencyCode}):*\n`;
-        text += `*Total: ${displaySymbol} ${info.grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /-* _(exc. Vat)_\n\n`;
+          text += `\n${DIVIDER}\n\n`;
+        }
       }
     }
 
-    // ── Hotels section — group by option when multiple options exist ──
+    // ─────────────────────────────────────────
+    // PACKAGE INCLUSIONS  (mirrors blade Tour Cost Includes)
+    // ─────────────────────────────────────────
     if (values.itinerary && packageData.planArr) {
       const hotelsGrouped = getGroupedHotels();
-      if (hotelsGrouped.length > 0) {
-        const distinctOptions = [...new Set(hotelsGrouped.map(h => h.optionLabel))];
-        const hasMultipleOptions = distinctOptions.length > 1;
+      const firstOptLabel = hotelsGrouped.length > 0 ? hotelsGrouped[0].optionLabel : null;
+      const firstOptHotels = hotelsGrouped.filter(h => h.optionLabel === firstOptLabel);
 
-        if (hasMultipleOptions) {
-          distinctOptions.forEach(optLabel => {
-            const optionHotels = hotelsGrouped.filter(h => h.optionLabel === optLabel);
-            text += `🏨  *_Hotels — ${optLabel}_*\n`;
-            text += `-----------\n`;
-            optionHotels.forEach((h) => {
-              const nightOrdinals = h.nights.map(n => getOrdinalStr(n));
-              const nightStr = nightOrdinals.join(", ") + (h.nights.length > 1 ? " Nights" : " Night");
-              text += `*${nightStr}* _at_ *${h.location}*\n`;
-              text += `_Check-in: ${formatShortDate(h.checkInDate)}_ & _Check-out: ${formatShortDate(h.checkOutDate)}_\n`;
-              text += `*${h.name}*\n`;
-              text += `${h.room} • ${h.meal}\n\n`;
-            });
-          });
+      // Merge hotel nights by room-type only (so Pattaya 2N + Bangkok 2N → 4N Superior)
+      const mergedMap = {};
+      firstOptHotels.forEach(h => {
+        const key = h.room || "Room";          // merge across hotels with same room type
+        if (mergedMap[key]) {
+          mergedMap[key].nights += h.nights.length;
         } else {
-          text += `🏨  *_Hotels_*\n`;
-          text += `-----------\n`;
-          hotelsGrouped.forEach((h) => {
-            const nightOrdinals = h.nights.map(n => getOrdinalStr(n));
-            const nightStr = nightOrdinals.join(", ") + (h.nights.length > 1 ? " Nights" : " Night");
-            text += `*${nightStr}* _at_ *${h.location}*\n`;
-            text += `_Check-in: ${formatShortDate(h.checkInDate)}_ & _Check-out: ${formatShortDate(h.checkOutDate)}_\n`;
-            text += `*${h.name}*\n`;
-            text += `${h.room} • ${h.meal}\n\n`;
-          });
-        }
-      }
-
-      // ── Tour Cost Includes ──
-      text += `✅  *_Tour Cost Includes_*\n`;
-      text += `-----------\n`;
-
-      // 1. Hotels summary (merged) - Matches PDF logic (only first option)
-      const hotelsGroupedForInclusions = getGroupedHotels();
-      const firstOptionLabel = hotelsGroupedForInclusions.length > 0 ? hotelsGroupedForInclusions[0].optionLabel : null;
-      const firstOptionHotels = hotelsGroupedForInclusions.filter(h => h.optionLabel === firstOptionLabel);
-
-      const mergedInclusions = [];
-      firstOptionHotels.forEach(h => {
-        const key = `${h.name}-${h.room}`;
-        const existing = mergedInclusions.find(i => i.key === key);
-        if (existing) {
-          existing.nights += h.nights.length;
-        } else {
-          mergedInclusions.push({
-            key,
-            nights: h.nights.length,
-            room: h.room,
-            meal: h.meal
-          });
+          mergedMap[key] = { nights: h.nights.length, room: h.room, meal: h.meal };
         }
       });
-      mergedInclusions.forEach(mi => {
-        const mealSuffix = mi.meal ? ` with ${mi.meal}` : '';
-        text += `• ${mi.nights} Night accommodation in BASIC/${mi.room} category room${mealSuffix}\n`;
+
+      const inclusionLines = Object.values(mergedMap).map(mi => {
+        const mealSuffix = mi.meal ? ` with ${mi.meal}` : "";
+        return `${mi.nights} Night${mi.nights !== 1 ? "s" : ""} Accommodation (${mi.room})${mealSuffix}`;
       });
 
-      // 2. Transfers summary - Matches PDF format
+      // Transfers: use item.name directly (it already contains the full description from DB)
+      const transferLines = [];
       packageData.planArr.forEach(day => {
         day.schedule?.forEach(item => {
-          if (item.insertType === 'transfer' || item.insertType?.toLowerCase() === 'transfer') {
-            const name = item.name || item.vehicle_name || "Transfer";
-            const type = item.transferType?.label || item.transferType || "PVT";
-            text += `• Transfer from ${name} by ${type}\n`;
+          if (item.insertType === "transfer" || item.insertType?.toLowerCase() === "transfer") {
+            const name = item.name || item.vehicle_name || item.description || "Transfer";
+            transferLines.push(name);
           }
         });
       });
 
-      // 3. Activities summary
+      // Activities: mirrors blade activity->activity_name + entry->description
+      const activityLines = [];
       packageData.planArr.forEach(day => {
         day.schedule?.forEach(item => {
-          if (item.insertType === 'activity' || item.insertType?.toLowerCase() === 'activity') {
+          if (item.insertType === "activity" || item.insertType?.toLowerCase() === "activity") {
             const name = item.name || item.activity_name || "Activity";
-            const desc = item.description ? ` - ${item.description}` : '';
-            text += `• ${name}${desc}\n`;
+            const desc = item.description ? ` - ${item.description}` : "";
+            activityLines.push(`${name}${desc}`);
           }
         });
       });
 
-      text += `• English speaking customer service assistance\n\n`;
+      const allInclusions = [
+        ...inclusionLines,
+        ...transferLines,
+        ...activityLines,
+        "English Speaking Assistance",
+      ];
 
-      // ── Activities & Transfers — use schedule data ──
-      const activeDays = getActivitiesByDay();
-      if (activeDays.length > 0) {
-        text += `🚖  *Transportation and Activities*\n`;
-        text += `-----------\n`;
-        activeDays.forEach(({ dayIndex, dayDate, items }) => {
-          const dayStr = dayDate.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "2-digit" });
-          text += `*${getOrdinalStr(dayIndex + 1)} Day - ${dayStr}*\n`;
+      if (allInclusions.length > 0) {
+        text += `🎁 *PACKAGE INCLUSIONS*\n\n`;
+        allInclusions.forEach(line => { text += `✅ ${line}\n`; });
+        text += `\n${DIVIDER}\n\n`;
+      }
 
-          items.forEach((item) => {
-            const itemName = item.name || item.activity_name || item.vehicle_name || "Service";
-            const itemType = item.insertType === "activity" ? "Tour" : "Transfer";
-            const paxStr = `${info.adultCount} Adults${info.childCount > 0 ? `, ${info.childCount} Child` : ""}`;
-            text += `• ${itemName} - ${itemType} _(${paxStr})_\n`;
+      // ─────────────────────────────────────────
+      // TRAVEL PLAN  (mirrors blade Proposed Itinerary)
+      // ─────────────────────────────────────────
+      const allDays = getDayWiseItinerary();
+      if (allDays.length > 0) {
+        text += `🗓 *TRAVEL PLAN*\n\n`;
+
+        allDays.forEach(({ dayIndex, schedule }) => {
+          const dayNum = dayIndex + 1;
+          const dayItems = [];
+
+          schedule.forEach(item => {
+            const type = item.insertType?.toLowerCase();
+
+            // Hotels are skipped in travel plan (check-in/breakfast not needed in WhatsApp summary)
+
+            if (type === "transfer") {
+              // Use item.name directly — it already contains the full transfer description
+              const name = item.name || item.vehicle_name || item.description || "Transfer";
+              dayItems.push(name);
+
+            } else if (type === "activity") {
+              const name = item.name || item.activity_name || "Activity";
+              const desc = item.description ? ` - ${item.description}` : "";
+              dayItems.push(`${name}${desc}`);
+            }
           });
-          text += `\n`;
+
+          if (dayItems.length > 0) {
+            // Join items with → arrow (like the sample format)
+            text += `📌 *Day ${dayNum}:* ${dayItems.join(" → ")}\n\n`;
+          }
         });
+
+        text += `${DIVIDER}\n\n`;
       }
     }
 
+    // ─────────────────────────────────────────
+    // EXCLUSIONS  (shown when Terms toggle ON)
+    // ─────────────────────────────────────────
     if (values.terms) {
-      text += `*Terms and Conditions:*\n`;
-      text += `Standard cancellation and policies apply. Subject to availability.\n\n`;
+      text += `❌ *Exclusions*\n`;
+      text += `• Air Ticket & Visa\n`;
+      text += `• Insurance\n`;
+      text += `• Personal Expenses\n`;
+      text += `• Meals Not Mentioned\n\n`;
+      text += `${DIVIDER}\n\n`;
     }
 
-    text += `Looking forward to hearing from you!\n\n`;
-    text += `Warm Regards,\nTIC Tours Team\n`;
+    // ── Footer ──
+    text += `📞 For Booking & Confirmation\n`;
+    text += `*TIC TOURS* 🌍`;
+
     return text.trim();
   };
-
 
 
   // Plain text fallback for mailto
