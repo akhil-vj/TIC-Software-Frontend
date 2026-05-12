@@ -207,6 +207,15 @@ const ENQUIRY_STYLES = `
   max-width: 0;
 }
 
+/* Ref No column - ensure single line */
+.td-ref-no {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
 /* Assigned To — highlight color */
 .td-assigned {
   color: #01A3FF !important;
@@ -256,7 +265,7 @@ const ENQUIRY_STYLES = `
 @media (max-width: 900px) {
   .enquiry-content { padding: 7px 0px 30px; }
   .enquiry-table-outer { overflow-x: auto; }
-  .enquiry-table { min-width: 700px !important; }
+  .enquiry-table { min-width: 900px !important; }
 }
 `;
 
@@ -360,6 +369,25 @@ const Enquiry = () => {
     const url = URLS.ENQUIRY_URL;
     const enquiryData = useAsync(url);
     const tableData = enquiryData?.data?.data || [];
+
+    // Fetch all itineraries to map package names to enquiries
+    const itineraryUrl = URLS.ITINERARY_URL;
+    const itineraryData = useAsync(itineraryUrl);
+    const allItineraries = itineraryData?.data?.data || [];
+
+    // Create a map of enquiry_id -> package_name (using first/latest itinerary for each enquiry)
+    const packageNameMap = useMemo(() => {
+        const map = {};
+        allItineraries.forEach((itinerary) => {
+            if (itinerary?.enquiry_id && itinerary?.package_name) {
+                // Store only if we haven't already (first itinerary)
+                if (!map[itinerary.enquiry_id]) {
+                    map[itinerary.enquiry_id] = itinerary.package_name;
+                }
+            }
+        });
+        return map;
+    }, [allItineraries]);
 
     const summaryData = useMemo(() => {
         const getStatus = (item) =>
@@ -466,7 +494,7 @@ const Enquiry = () => {
         navigate(`/enquiry-detail/${id}`);
     };
     const onEdit = (id) => {
-        navigate(`${id}/profile`);
+        navigate(`${id}/quotation`);
     };
 
     // ── Selection & Bulk Delete ──
@@ -633,7 +661,7 @@ const Enquiry = () => {
                                     onClick={handleClearFilters}
                                     style={{ display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "6px", border: "1.5px solid #FBBF24", background: "#FFFBEB", color: "#D97706", fontWeight: "600", fontSize: "13px", cursor: "pointer" }}
                                 >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.51"></path></svg>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 0 1 0 .49-3.51"></path></svg>
                                     Reset
                                 </button>
                             )}
@@ -646,20 +674,21 @@ const Enquiry = () => {
                             <div className="enquiry-table-scroll">
                                 <table className="enquiry-table">
                                     <colgroup>
-                                        {isSelectionMode && <col style={{ width: "24px" }} />}
-                                        <col style={{ width: "30px" }} />
+                                        {isSelectionMode && <col style={{ width: "40px" }} />}
+                                        <col style={{ width: "60px" }} />
+                                        <col style={{ width: "150px" }} />
                                         <col style={{ width: "10%" }} />
-                                        <col style={{ width: "23%" }} />
+                                        <col style={{ width: "110px" }} />
+                                        <col style={{ width: "80px" }} />
+                                        <col style={{ width: "130px" }} />
+                                        <col style={{ width: "150px" }} />
                                         <col style={{ width: "12%" }} />
-                                        <col style={{ width: "12%" }} />
-                                        <col style={{ width: "12%" }} />
-                                        <col style={{ width: "8%" }} />
-                                        <col style={{ width: "40px" }} />
+                                        <col style={{ width: "60px" }} />
                                     </colgroup>
                                     <thead>
                                         <tr>
                                             {isSelectionMode && (
-                                                <th style={{ padding: "0 0 0 4px", width: "24px", verticalAlign: "middle", textAlign: "center" }}>
+                                                <th style={{ padding: "12px 10px", textAlign: "center" }}>
                                                     <input
                                                         type="checkbox"
                                                         onChange={handleSelectAll}
@@ -669,13 +698,14 @@ const Enquiry = () => {
                                                     />
                                                 </th>
                                             )}
-                                            <th style={{ textAlign: "center", paddingLeft: isSelectionMode ? "0" : "10px" }}>Sl No</th>
+                                            <th style={{ textAlign: "center" }}>SI No</th>
+                                            <th>Ref No</th>
+                                            <th>Package Name</th>
+                                            <th style={{ textAlign: "center" }}>No of Pax</th>
                                             <th style={{ textAlign: "center" }}>Type</th>
-                                            <th>Name</th>
-                                            <th style={{ textAlign: "center" }}>Lead Source</th>
-                                            <th>Requirement</th>
-                                            <th style={{ textAlign: "center" }}>Assigned To</th>
-                                            <th>Date</th>
+                                            <th style={{ textAlign: "center" }}>Starting Date</th>
+                                            <th style={{ textAlign: "center" }}>Assigned to</th>
+                                            <th>Agent Name</th>
                                             <th style={{ textAlign: "center" }}>Action</th>
                                         </tr>
                                     </thead>
@@ -685,16 +715,23 @@ const Enquiry = () => {
                                                 const globalIdx = page * pageSize + ind;
                                                 const isHovered = hoveredRow === globalIdx;
                                                 const isRowSelected = selectedRows.includes(item?.id);
-                                                const customerName = item?.customer?.name || item?.agent?.name || "-";
-                                                const contactInfo = item?.customer?.email || item?.agent?.email || item?.customer?.phone || "";
-                                                const leadSourceName = item?.lead_source?.name || "-";
+                                                const refNo = item?.ref_no || item?.reference_no || "-";
+                                                const packageName = packageNameMap[item?.id] || "-";
+                                                const adultCount = Number(item?.adult_count || 0);
+                                                const childCount = Number(item?.child_count || 0);
+                                                const infantCount = Number(item?.infant_count || 0);
+                                                const paxDisplay = (() => {
+                                                    const parts = [];
+                                                    if (adultCount > 0) parts.push(`${adultCount}A`);
+                                                    if (childCount > 0) parts.push(`${childCount}C`);
+                                                    if (infantCount > 0) parts.push(`${infantCount}I`);
+                                                    return parts.length > 0 ? parts.join(", ") : "-";
+                                                })();
+                                                const agentName = item?.agent?.name || "-";
                                                 const assignedName = item?.assigned_to_user?.first_name || "-";
                                                 const dateStr = item?.start_date
                                                     ? new Date(item.start_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
                                                     : "-";
-                                                const requirementText = Array.isArray(item?.requirements)
-                                                    ? item.requirements.map(r => r?.name || r).join(", ")
-                                                    : (item?.requirements || "-");
 
                                                 return (
                                                     <tr
@@ -702,10 +739,12 @@ const Enquiry = () => {
                                                         className={isRowSelected ? "row-hovered" : isHovered ? "row-hovered" : ""}
                                                         onMouseEnter={() => setHoveredRow(globalIdx)}
                                                         onMouseLeave={() => setHoveredRow(null)}
+                                                        onClick={() => onEdit(item?.id)}
+                                                        style={{ cursor: "pointer" }}
                                                     >
                                                         {/* Checkbox */}
                                                         {isSelectionMode && (
-                                                            <td style={{ padding: "0 0 0 4px", verticalAlign: "middle", textAlign: "center" }}>
+                                                            <td style={{ padding: "10px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                                                                 <input
                                                                     type="checkbox"
                                                                     onChange={() => handleSelectRow(item?.id)}
@@ -716,8 +755,8 @@ const Enquiry = () => {
                                                             </td>
                                                         )}
 
-                                                        {/* Sl No */}
-                                                        <td style={{ textAlign: "center", paddingLeft: isSelectionMode ? "0" : "10px" }}>
+                                                        {/* SI No */}
+                                                        <td style={{ textAlign: "center" }}>
                                                             <span style={{
                                                                 display: "inline-block", fontWeight: 700, fontSize: "12px",
                                                                 color: "#6B7280", background: "#F3F4F6", border: "1px solid #E5E7EB",
@@ -727,48 +766,39 @@ const Enquiry = () => {
                                                             </span>
                                                         </td>
 
+                                                        {/* Ref No - Fixed with proper class */}
+                                                        <td className="td-ref-no" title={refNo} style={{ color: "#4B5563", fontWeight: 500 }}>
+                                                            {refNo}
+                                                        </td>
+
+                                                        {/* Package Name */}
+                                                        <td className="td-truncate" title={packageName} style={{ color: "#374151", fontWeight: 500 }}>
+                                                            {packageName}
+                                                        </td>
+
+                                                        {/* No of Pax */}
+                                                        <td style={{ textAlign: "center", color: "#4B5563", fontWeight: 500, fontSize: "13px" }}>
+                                                            {paxDisplay}
+                                                        </td>
+
                                                         {/* Type */}
                                                         <td style={{ textAlign: "center" }}>
                                                             <span style={{
                                                                 display: "inline-block", padding: "3px 9px", borderRadius: "12px",
-                                                                fontSize: "12px", fontWeight: 500, background: "#F1F5F9",
-                                                                color: "#475569", border: "1px solid #E2E8F0", whiteSpace: "nowrap",
+                                                                fontSize: "12px", fontWeight: 500, background: item?.type === "B2B" ? "#F1F5F9" : "#FEF3C7",
+                                                                color: item?.type === "B2B" ? "#475569" : "#92400E", border: "1px solid #E2E8F0", whiteSpace: "nowrap",
                                                             }}>
                                                                 {item?.type || "-"}
                                                             </span>
                                                         </td>
 
-                                                        {/* Name */}
-                                                        <td style={{ whiteSpace: "normal", lineHeight: 1.3 }}>
-                                                            <span style={{ fontWeight: 700, fontSize: "13px", color: "#111827", display: "block" }}>
-                                                                {customerName}
-                                                            </span>
-                                                            {contactInfo && (
-                                                                <span style={{ fontSize: "11.5px", color: "#9CA3AF", display: "block", marginTop: "1px" }}>
-                                                                    {contactInfo}
-                                                                </span>
-                                                            )}
+                                                        {/* Starting Date */}
+                                                        <td style={{ textAlign: "center", whiteSpace: "nowrap", color: "#6B7280", fontSize: "12.5px" }}>
+                                                            {dateStr}
                                                         </td>
 
-                                                        {/* Lead Source */}
+                                                        {/* Assigned to */}
                                                         <td style={{ textAlign: "center" }}>
-                                                            <span style={{
-                                                                display: "inline-block", padding: "3px 9px", borderRadius: "12px",
-                                                                fontSize: "12px", fontWeight: 500, background: "#F1F5F9",
-                                                                color: "#475569", border: "1px solid #E2E8F0", whiteSpace: "nowrap",
-                                                                maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis",
-                                                            }} title={leadSourceName}>
-                                                                {leadSourceName}
-                                                            </span>
-                                                        </td>
-
-                                                        {/* Requirement */}
-                                                        <td className="td-truncate" title={requirementText} style={{ color: "#4B5563" }}>
-                                                            {requirementText}
-                                                        </td>
-
-                                                        {/* Assigned To */}
-                                                        <td className="td-assigned" title={assignedName}>
                                                             <div style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
                                                                 <div style={{
                                                                     width: "24px", height: "24px", borderRadius: "50%",
@@ -778,17 +808,17 @@ const Enquiry = () => {
                                                                 }}>
                                                                     {assignedName !== "-" ? assignedName.charAt(0).toUpperCase() : "?"}
                                                                 </div>
-                                                                <span style={{ color: "#01A3FF", fontWeight: 600 }}>{assignedName}</span>
+                                                                <span style={{ color: "#01A3FF", fontWeight: 600, fontSize: "12px" }}>{assignedName}</span>
                                                             </div>
                                                         </td>
 
-                                                        {/* Date */}
-                                                        <td style={{ whiteSpace: "nowrap", color: "#6B7280", fontSize: "12.5px" }}>
-                                                            {dateStr}
+                                                        {/* Agent Name */}
+                                                        <td className="td-truncate" title={agentName} style={{ color: "#374151", fontWeight: 500 }}>
+                                                            {agentName}
                                                         </td>
 
                                                         {/* Actions */}
-                                                        <td style={{ textAlign: "center", padding: "0 8px" }}>
+                                                        <td style={{ textAlign: "center", padding: "0 8px" }} onClick={(e) => e.stopPropagation()}>
                                                             <Dropdown>
                                                                 <Dropdown.Toggle
                                                                     as="div"
@@ -816,7 +846,7 @@ const Enquiry = () => {
                                                                         <Dropdown.Item onClick={() => onEdit(item?.id)}>Edit</Dropdown.Item>
                                                                     )}
                                                                     {permissionType.delete && (
-                                                                        <Dropdown.Item onClick={() => onDeleteConfirm(item?.id, customerName)}>Delete</Dropdown.Item>
+                                                                        <Dropdown.Item onClick={() => onDeleteConfirm(item?.id, packageName)}>Delete</Dropdown.Item>
                                                                     )}
                                                                 </Dropdown.Menu>
                                                             </Dropdown>
@@ -826,7 +856,7 @@ const Enquiry = () => {
                                             })
                                         ) : (
                                             <tr>
-                                                <td colSpan={isSelectionMode ? 9 : 8} style={{ textAlign: "center", padding: "48px", color: "#9CA3AF" }}>
+                                                <td colSpan={isSelectionMode ? 10 : 9} style={{ textAlign: "center", padding: "48px", color: "#9CA3AF" }}>
                                                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5" style={{ display: "block", margin: "0 auto 10px" }}>
                                                         <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                                                     </svg>

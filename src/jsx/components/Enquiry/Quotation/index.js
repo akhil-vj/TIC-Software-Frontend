@@ -13,7 +13,6 @@ import { URLS } from "../../../../constants";
 import ConfirmationModal from "../../common/DeleteModal";
 
 const options = [
-  //{ value: '1', label: 'Select Status' },
   { value: "2", label: "Published" },
   { value: "3", label: "Draft" },
   { value: "4", label: "Trash" },
@@ -21,27 +20,10 @@ const options = [
   { value: "6", label: "Pending" },
 ];
 
-const tableData1 = [
-  { number: "1", title: "Privacy Policy" },
-  { number: "2", title: "Contact Us" },
-  { number: "3", title: "Price" },
-  { number: "4", title: "Blog" },
-  { number: "5", title: "Faq" },
-  { number: "6", title: "About us" },
-  { number: "7", title: "Portfolio" },
-  { number: "8", title: "Schedule" },
-  { number: "9", title: "Under Maintenance" },
-  { number: "10", title: "Comming Soon" },
-  { number: "11", title: "Faq" },
-  { number: "12", title: "About us" },
-  { number: "13", title: "Portfolio" },
-];
-
 const Quotation = () => {
   const [startDate, setStartDate] = useState(new Date());
   const [open, setOpen] = useState(false);
   const [open2, setOpen2] = useState(true);
-  const [showInsertModal, setShowInsertModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteUrl, setDeleteUrl] = useState('');
   const [deleteName, setDeleteName] = useState('');
@@ -70,32 +52,27 @@ const Quotation = () => {
       }
     }
   };
+
   // use effect
   useEffect(() => {
     setData(document.querySelectorAll("#content_wrapper tbody tr"));
-    //chackboxFun();
   }, [test]);
 
-  // Active pagginarion
+  // Active pagination
   activePag.current === 0 && chageData(0, sort);
-  // paggination
+  
+  // pagination
   let paggination = Array(Math.ceil(data.length / sort))
     .fill()
     .map((_, i) => i + 1);
 
-  // Active paggination & chage data
+  // Active pagination & change data
   const onClick = (i) => {
     activePag.current = i;
     chageData(activePag.current * sort, (activePag.current + 1) * sort);
     settest(i);
   };
 
-  const [deleteItem, setDeleteItem] = useState(tableData);
-  const handleDelete = (ind) => {
-    setDeleteItem((oldValues) => {
-      return oldValues.filter((_, i) => i !== ind);
-    });
-  };
   const chackbox = document.querySelectorAll(".sorting_1 input");
   const motherChackBox = document.querySelector(".sorting_asc input");
   const chackboxFun = (type) => {
@@ -118,9 +95,6 @@ const Quotation = () => {
     }
   };
 
-  const handleCombine = () => {
-    notify({ message: "Downloaded Successfully" });
-  };
   const onDelete = (id, name) => {
     const url = `${itineraryUrl}/${id}`
     setDeleteUrl(url)
@@ -131,21 +105,20 @@ const Quotation = () => {
   return (
     <>
       <div className="row">
-        {/* <ToastContainer /> */}
         <div className="col-xl-12">
+          {/* Filter Section */}
           <div className="filter cm-content-box box-primary">
             <div className="content-title">
               <div className="cpa">
-                <i className="fas fa-filter me-2"></i>Filter
+                <i className="fas fa-file-word me-2"></i>Quotation
               </div>
-              <div className="tools">
-                <Link
-                  to={"#"}
-                  className={`SlideToolHeader ${open ? "collapse" : "expand"}`}
-                  onClick={() => setOpen(!open)}
+              <div className="tools d-flex align-items-center gap-2">
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => navigate("itinerary")}
                 >
-                  <i className="fas fa-angle-up"></i>
-                </Link>
+                  <i className="fa fa-plus me-2"></i>Create Itinerary
+                </button>
               </div>
             </div>
 
@@ -165,6 +138,7 @@ const Quotation = () => {
                       <Select
                         options={options}
                         className="custom-react-select mb-3 mb-xxl-0"
+                        placeholder="Select Status"
                       />
                     </div>
                     <div className="col-xl-3 col-xxl-6">
@@ -195,49 +169,15 @@ const Quotation = () => {
               </div>
             </Collapse>
           </div>
-          <div className="mb-3 d-flex justify-content-between">
-            <div className="">
-              <button
-                className="btn btn-primary"
-                onClick={() => handleCombine()}
-              >
-                Combine itinerary
-              </button>
-            </div>
-            <div className="d-flex">
-              <div className="">
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setShowInsertModal(true)}
-                >
-                  Insert itinerary
-                </button>
-              </div>
-              <div className="ms-2">
-                <button
-                  className="btn btn-primary"
-                  onClick={() => navigate("itinerary")}
-                >
-                  Create itinerary
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="filter cm-content-box box-primary mt-5">
-            <div className={`content-title`}>
+
+          {/* Enquiry List Section */}
+          <div className="filter cm-content-box box-primary mt-4">
+            <div className="content-title">
               <div className="cpa">
-                <i className="fas fa-file-word me-2"></i>Enquiry List
-              </div>
-              <div className="tools">
-                <Link
-                  to={"#"}
-                  className={`SlideToolHeader ${open2 ? "collapse" : "expand"}`}
-                  onClick={() => setOpen2(!open2)}
-                >
-                  <i className="fas fa-angle-up"></i>
-                </Link>
+                <i className="fas fa-list me-2"></i>Quotation List
               </div>
             </div>
+
             <Collapse in={open2}>
               <div className="cm-content-body form excerpt">
                 <div className="card-body">
@@ -246,89 +186,43 @@ const Quotation = () => {
                       id="content_wrapper"
                       className="dataTables_wrapper no-footer"
                     >
-                      <table className="table table-bordered table-responsive-lg table-striped table-condensed flip-content">
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead>
-                          <tr>
-                            <th className="sorting_asc">
-                              <input
-                                type="checkbox"
-                                onClick={() => chackboxFun("all")}
-                                className="form-check-input"
-                                id="checkAll"
-                                required=""
-                              />
-                            </th>
-                            <th>Ref No.</th>
-                            <th>Package Name</th>
-                            <th>Pax</th>
-                            <th>From Date</th>
-                            <th>Edited by</th>
-                            {/* <th>Date of creation</th> */}
-                            {/* <th>Created By</th> */}
-                            {/* <th>Title</th> */}
-                            <th>Price</th>
-                            {/* <th>Status</th> */}
-                            <th className="text-end">Actions</th>
+                          <tr style={{ background: "#01A3FF" }}>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>SI No</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", border: "none", letterSpacing: "0.1px" }}>Ref No</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", border: "none", letterSpacing: "0.1px" }}>Package Name</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>Pax</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>From Date</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", border: "none", letterSpacing: "0.1px" }}>Edited by</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "right", border: "none", letterSpacing: "0.1px" }}>Price</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {
                             !!tableData?.length ?
                               tableData?.map((item, ind) => (
-                                <tr key={ind}>
-                                  <td className="sorting_1 ps-3">
-                                    <div className="checkbox me-0 align-self-center">
-                                      <div className="custom-control custom-checkbox ">
-                                        <input
-                                          type="checkbox"
-                                          className="form-check-input"
-                                          id={"customCheckBox2" + ind}
-                                          required=""
-                                          onClick={() => chackboxFun()}
-                                        />
-                                        <label
-                                          className="custom-control-label"
-                                          htmlFor={"customCheckBox2" + ind}
-                                        ></label>
-                                      </div>
-                                    </div>
+                                <tr key={ind} style={{ borderBottom: "1px solid #f0f3f8", transition: "background 0.15s", cursor: "pointer" }} onMouseEnter={(e) => e.currentTarget.style.background = "#f7f9fc"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"} onClick={() => navigate(`itinerary/${item.id}`)}>
+                                  <td style={{ padding: "10px", textAlign: "center", fontSize: "12px", color: "#6B7280" }}>
+                                    <span style={{
+                                      display: "inline-block", fontWeight: 700, fontSize: "12px",
+                                      color: "#6B7280", background: "#F3F4F6", border: "1px solid #E5E7EB",
+                                      borderRadius: "6px", padding: "2px 7px", letterSpacing: "0.3px",
+                                    }}>
+                                      {ind + 1}
+                                    </span>
                                   </td>
-                                  <td>{item.enquiry_ref_no || item.enquiry?.ref_no || '-'}</td>
-                                  <td>{item.package_name}</td>
-                                  <td>{`${item.adult_count} adult , ${item.child_count} child`}</td>
-                                  <td>{item.start_date}</td>
-                                  <td>{item.edited_by || '-'}</td>
-                                  {/* <td>Option 1</td> */}
-                                  {/* <td>{item.net_amount}</td> */}
-                                  {/* <td>
-=======
-                            !!tableData?.length ?
-                              tableData?.map((item, ind) => (
-                                <tr key={ind}>
-                                  <td className="sorting_1 ps-3">
-                                    <div className="checkbox me-0 align-self-center">
-                                      <div className="custom-control custom-checkbox ">
-                                        <input
-                                          type="checkbox"
-                                          className="form-check-input"
-                                          id={"customCheckBox2" + ind}
-                                          required=""
-                                          onClick={() => chackboxFun()}
-                                        />
-                                        <label
-                                          className="custom-control-label"
-                                          htmlFor={"customCheckBox2" + ind}
-                                        ></label>
-                                      </div>
-                                    </div>
+                                  <td style={{ padding: "10px", fontSize: "13px", color: "#374151", fontWeight: 500, whiteSpace: "nowrap" }}>{item.enquiry_ref_no || item.enquiry?.ref_no || '-'}</td>
+                                  <td style={{ padding: "10px", fontSize: "13px", color: "#374151", fontWeight: 500, maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.package_name}>{item.package_name}</td>
+                                  <td style={{ padding: "10px", textAlign: "center", fontSize: "13px", color: "#4B5563" }}>
+                                    <span style={{ display: "inline-block", padding: "3px 8px", borderRadius: "8px", background: "#F1F5F9", border: "1px solid #E2E8F0", whiteSpace: "nowrap" }}>
+                                      {item.adult_count}A {item.child_count > 0 ? `${item.child_count}C` : ""}
+                                    </span>
                                   </td>
-                                  <td>{ind + 1}</td>
-                                  <td>{item.package_name}</td>
-                                  <td>{`${item.adult_count} adult , ${item.child_count} child`}</td>
-                                  <td>{item.start_date}</td>
-                                  {/* <td>sahid</td> */}
-                                  {/* <td>Option 1</td> */}
-                                  <td>
+                                  <td style={{ padding: "10px", textAlign: "center", fontSize: "12px", color: "#6B7280", whiteSpace: "nowrap" }}>{item.start_date ? new Date(item.start_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "-"}</td>
+                                  <td style={{ padding: "10px", fontSize: "13px", color: "#4B5563", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.edited_by}>{item.edited_by || '-'}</td>
+                                  <td style={{ padding: "10px", textAlign: "right", fontSize: "13px", fontWeight: 600, color: "#01A3FF", whiteSpace: "nowrap" }}>
                                     {(() => {
                                       const baseTotal = parseFloat(item.grand_total || item.total_amount || item.net_amount || 0);
 
@@ -350,30 +244,42 @@ const Quotation = () => {
                                       return displayTotal.toLocaleString(undefined, { maximumFractionDigits: 2 });
                                     })()}
                                   </td>
-                                  {/* <td>
-Edited by                                <Badge bg="" className="light badge-warning">
-                                  Pending
-                                </Badge>
-                              </td> */}
-                                  <td className="text-end">
-                                    <Link
-                                      to={`itinerary/${item.id}`}
-                                      className="btn btn-warning btn-sm content-icon me-1"
-                                    >
-                                      <i className="fa fa-edit"></i>
-                                    </Link>
-                                    <button
-                                      // to={"#"}
-                                      className="btn btn-danger btn-sm content-icon ms-1"
-                                      onClick={() => onDelete(item.id, item.package_name)}
-                                    >
-                                      <i className="fa fa-trash"></i>
-                                    </button>
+                                  <td style={{ padding: "10px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                                      <button
+                                        style={{
+                                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                          width: "30px", height: "30px", borderRadius: "8px",
+                                          background: "#F1F5F9", border: "1px solid #E2E8F0",
+                                          cursor: "pointer", color: "#64748B", transition: "all 0.15s",
+                                          padding: 0
+                                        }}
+                                        onClick={(e) => { e.stopPropagation(); navigate(`itinerary/${item.id}`); }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#E0F2FE"; e.currentTarget.style.borderColor = "#BFDBFE"; e.currentTarget.style.color = "#0284C7"; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#F1F5F9"; e.currentTarget.style.borderColor = "#E2E8F0"; e.currentTarget.style.color = "#64748B"; }}
+                                      >
+                                        <i className="fa fa-edit" style={{ fontSize: "14px" }}></i>
+                                      </button>
+                                      <button
+                                        style={{
+                                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                          width: "30px", height: "30px", borderRadius: "8px",
+                                          background: "#FEE2E2", border: "1px solid #FECACA",
+                                          cursor: "pointer", color: "#DC2626", transition: "all 0.15s",
+                                          padding: 0
+                                        }}
+                                        onClick={() => onDelete(item.id, item.package_name)}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#FCA5A5"; e.currentTarget.style.borderColor = "#F87171"; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.borderColor = "#FECACA"; }}
+                                      >
+                                        <i className="fa fa-trash" style={{ fontSize: "14px" }}></i>
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))
                               :
-                              <NoData isLoading={fetchData.loading} colSpan={10} />
+                              <NoData isLoading={fetchData.loading} colSpan={8} />
                           }
                         </tbody>
                       </table>
@@ -438,11 +344,6 @@ Edited by                                <Badge bg="" className="light badge-war
           </div>
         </div>
 
-        {/* <SetupModal showModal={showSetupModal} setShowModal={setShowSetupModal}/> */}
-        <InsertModal
-          showModal={showInsertModal}
-          setShowModal={setShowInsertModal}
-        />
         <ConfirmationModal
           showModal={showDeleteModal}
           setShowModal={setShowDeleteModal}
@@ -453,4 +354,5 @@ Edited by                                <Badge bg="" className="light badge-war
     </>
   );
 };
+
 export default Quotation;

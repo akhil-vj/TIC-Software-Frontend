@@ -95,7 +95,6 @@ const enquiryMenu = [
   { name: "follow ups", path: "", component: "" },
   { name: "mail to supplier", path: "", component: "" },
   { name: "supplier payments", path: "", component: "" },
-  { name: "reports", path: "", component: "" },
   { name: "tickets", path: "", component: "" },
   { name: "payments", path: "", component: "" },
   { name: "documents", path: "", component: "" },
