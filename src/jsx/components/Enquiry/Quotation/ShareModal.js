@@ -200,14 +200,14 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   const computePriceBreakdown = (info) => {
     // quoted_options is null before API resolves, or [] if empty — both return no options
     if (!packageData?.quoted_options) return [];
-    
+
     // Parse quoted_options if string
-    const options = typeof packageData.quoted_options === "string" 
-      ? JSON.parse(packageData.quoted_options) 
+    const options = typeof packageData.quoted_options === "string"
+      ? JSON.parse(packageData.quoted_options)
       : packageData.quoted_options;
-    
+
     if (!Array.isArray(options) || options.length === 0) return [];
-    
+
     // Return ALL options so WhatsApp can display each one
     return options;
   };
@@ -218,7 +218,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
     const DIVIDER = "━━━━━━━━━━━━━━━━━━";
     const { adultCount, childCount, currencyCode, grandTotal, destinationName,
-            travelDate, nightsCount, daysCount, tripId, packageName } = info;
+      travelDate, nightsCount, daysCount, tripId, packageName } = info;
 
     const priceMode = packageData.priceOption?.value || "PER";
     const isPERMode = priceMode === "PER" || priceMode === "PER_PERSON" || priceMode === "PER_TRAVELLER";
@@ -227,8 +227,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     // HEADER
     // ─────────────────────────────────────────
     const packageTitle = (packageName || "Holiday Package").toUpperCase();
-    let text = `🌴✈️ *${packageTitle}* ✈️🌴\n`;
-    text += `*Presented by TIC TOURS*\n\n`;
+    let text = `🌴✈️ *${packageTitle}* Holiday Package ✈️🌴\n`;
+    text += `\n\n`;
     text += `${DIVIDER}\n\n`;
 
     // ─────────────────────────────────────────
@@ -265,7 +265,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
         for (let optIdx = 0; optIdx < optCount; optIdx++) {
           const optionLabel = distinctOptions[optIdx] || `Option ${optIdx + 1}`;
           const optionHotels = hotelsGrouped.filter(h => h.optionLabel === optionLabel);
-          const quotedOpt   = allOptions[optIdx] || null;
+          const quotedOpt = allOptions[optIdx] || null;
 
           const displayCurrency = quotedOpt?.currencyCode || currencyCode;
           const rows = quotedOpt?.rows || [];
@@ -292,9 +292,9 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
               let perPerson, rowTotal;
               if (isPERMode) {
                 perPerson = parseFloat(row.perPerson ?? row.total ?? 0);
-                rowTotal  = perPerson * count;
+                rowTotal = perPerson * count;
               } else {
-                rowTotal  = parseFloat(row.total ?? 0) || (parseFloat(row.perPerson ?? 0) * count);
+                rowTotal = parseFloat(row.total ?? 0) || (parseFloat(row.perPerson ?? 0) * count);
                 perPerson = count > 0 ? rowTotal / count : 0;
               }
               if (isPERMode) {
@@ -410,7 +410,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           }
         });
 
-        text += `${DIVIDER}\n\n`;
+
       }
     }
 
@@ -427,8 +427,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     }
 
     // ── Footer ──
-    text += `📞 For Booking & Confirmation\n`;
-    text += `*TIC TOURS* 🌍`;
+
 
     return text.trim();
   };
