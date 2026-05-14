@@ -289,26 +289,36 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
             // Use quoted_options rows — mirrors blade $matchedQOpt['rows']
             rows.forEach(row => {
               const count = parseInt(row.count) || 1;
-              let perPerson, rowTotal;
+              const label = row.label || "Person";
+              let perPerson;
               if (isPERMode) {
                 perPerson = parseFloat(row.perPerson ?? row.total ?? 0);
-                rowTotal = perPerson * count;
               } else {
-                rowTotal = parseFloat(row.total ?? 0) || (parseFloat(row.perPerson ?? 0) * count);
+                const rowTotal = parseFloat(row.total ?? 0) || (parseFloat(row.perPerson ?? 0) * count);
                 perPerson = count > 0 ? rowTotal / count : 0;
               }
-              if (isPERMode) {
-                text += `${displayCurrency} ${Math.round(perPerson).toLocaleString()} Per Person\n`;
+              
+              let line = `${displayCurrency} ${Math.round(perPerson).toLocaleString()}`;
+              if (label.toLowerCase().includes("child") || label.toLowerCase().includes("person")) {
+                line += ` per ${label}`;
+              } else {
+                line += ` per Person (${label})`;
               }
-              text += `👥 Total for ${adultCount} Adults: *${displayCurrency} ${Math.round(rowTotal).toLocaleString()}*\n`;
+              if (count > 1) line += ` * ${count}`;
+              text += `${line}\n`;
             });
+            
+            const totalPax = (adultCount || 0) + (childCount || 0);
+            const displayTotal = quotedOpt?.grandTotal || grandTotal;
+            text += `💰 *Total Package Cost for ${totalPax} pax: ${displayCurrency} ${Math.round(displayTotal).toLocaleString()}*\n`;
           } else {
             // No breakup rows — compute from grandTotal
             const displayTotal = quotedOpt?.grandTotal || grandTotal;
+            const totalPax = (adultCount || 0) + (childCount || 0);
             if (isPERMode && adultCount > 0) {
-              text += `${displayCurrency} ${Math.round(displayTotal / adultCount).toLocaleString()} Per Person\n`;
+              text += `${displayCurrency} ${Math.round(displayTotal / adultCount).toLocaleString()} per Person\n`;
             }
-            text += `👥 Total for ${adultCount} Adults: *${displayCurrency} ${Math.round(displayTotal).toLocaleString()}*\n`;
+            text += `💰 *Total Package Cost for ${totalPax} pax: ${displayCurrency} ${Math.round(displayTotal).toLocaleString()}*\n`;
           }
 
           text += `\n${DIVIDER}\n\n`;
@@ -324,20 +334,21 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       const firstOptLabel = hotelsGrouped.length > 0 ? hotelsGrouped[0].optionLabel : null;
       const firstOptHotels = hotelsGrouped.filter(h => h.optionLabel === firstOptLabel);
 
-      // Merge hotel nights by room-type only (so Pattaya 2N + Bangkok 2N → 4N Superior)
+      // Merge hotel nights by room-type and location
       const mergedMap = {};
       firstOptHotels.forEach(h => {
-        const key = h.room || "Room";          // merge across hotels with same room type
+        const key = `${h.room}-${h.location}`;
         if (mergedMap[key]) {
           mergedMap[key].nights += h.nights.length;
         } else {
-          mergedMap[key] = { nights: h.nights.length, room: h.room, meal: h.meal };
+          mergedMap[key] = { nights: h.nights.length, room: h.room, meal: h.meal, location: h.location };
         }
       });
 
       const inclusionLines = Object.values(mergedMap).map(mi => {
         const mealSuffix = mi.meal ? ` with ${mi.meal}` : "";
-        return `${mi.nights} Night${mi.nights !== 1 ? "s" : ""} Accommodation (${mi.room})${mealSuffix}`;
+        const locationSuffix = mi.location ? ` at ${mi.location}` : "";
+        return `${mi.nights} Night${mi.nights !== 1 ? "s" : ""} Accommodation (${mi.room})${mealSuffix}${locationSuffix}`;
       });
 
       // Transfers: use item.name directly (it already contains the full description from DB)

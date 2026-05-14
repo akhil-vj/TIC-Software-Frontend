@@ -151,6 +151,7 @@ function SetupModal() {
           endDate:parseDate(entry.end_date),
           endTime:parseTime(entry.end_time),
           subDestination: dayDestination,
+          mealPlan: entry.room?.meal_plans?.map(mp => ({ label: mp.meal_plan_name || mp.name, value: mp.meal_plan_id || mp.id })) || [],
         }
         if (existingEntry) {
           existingEntry.schedule.push(obj);
