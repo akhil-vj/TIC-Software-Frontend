@@ -66,7 +66,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
     const adultCount = packageData.adult || 0;
     const childCount = packageData.child || 0;
-    const refId = packageData.enquiry?.ref_no || "";
+    const refId = packageData.enquiry_ref_no || packageData.enquiry?.ref_no || "";
     const clientName = values.name || "Customer";
 
     let currencyCode = "USD";
@@ -218,7 +218,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
     const DIVIDER = "━━━━━━━━━━━━━━━━━━";
     const { adultCount, childCount, currencyCode, grandTotal, destinationName,
-      travelDate, nightsCount, daysCount, tripId, packageName } = info;
+      travelDate, nightsCount, daysCount, tripId, packageName, refId } = info;
 
     const priceMode = packageData.priceOption?.value || "PER";
     const isPERMode = priceMode === "PER" || priceMode === "PER_PERSON" || priceMode === "PER_TRAVELLER";
@@ -245,7 +245,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     text += `📅 *Travel Date:* ${travelDate}\n`;
     text += `🌙 *Duration:* ${nightsCount} Nights / ${daysCount} Days\n`;
     text += `👨‍👩‍👧 *Guests:* ${guestStr}\n`;
-    text += `🆔 *Trip ID:* #${tripId}\n\n`;
+    text += `📄 *Q/Ref:* ${refId || tripId}\n\n`;
     text += `${DIVIDER}\n\n`;
 
     // ─────────────────────────────────────────
@@ -383,9 +383,10 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       if (allDays.length > 0) {
         text += `🗓 *TRAVEL PLAN*\n\n`;
 
-        allDays.forEach(({ dayIndex, schedule }) => {
+        allDays.forEach(({ dayIndex, dayDate, schedule }) => {
           const dayNum = dayIndex + 1;
           const dayItems = [];
+          const dateStr = dayDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
           schedule.forEach(item => {
             const type = item.insertType?.toLowerCase();
@@ -406,7 +407,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
           if (dayItems.length > 0) {
             // Join items with → arrow (like the sample format)
-            text += `📌 *Day ${dayNum}:* ${dayItems.join(" → ")}\n\n`;
+            text += `📌 *Day ${dayNum} (${dateStr}):* ${dayItems.join(" → ")}\n\n`;
           }
         });
 
@@ -444,11 +445,10 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     let text = `Dear ${clientName},\n\n`;
     text += `Greetings from TIC Tours!\n\n`;
     text += `Thank you for your enquiry. Please find below the package details.\n\n`;
-    text += `TRIP ID: ${tripId}\n`;
     text += `PACKAGE: ${packageName}\n`;
     text += `Travel Dates: ${formatFullDate(startDate)} — ${nightsCount} Nights / ${daysCount} Days\n`;
     text += `Travellers: ${adultCount} Adults${childCount > 0 ? `, ${childCount} Children` : ""}\n`;
-    if (refId) text += `Reference ID: ${refId}\n`;
+    text += `Q/Ref: ${refId || tripId}\n`;
     text += `\n`;
 
     if (!values.hideTotalPrice) {
@@ -495,7 +495,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   const generateEmailSubject = () => {
     const info = extractPackageInfo();
     if (!info) return "Your Travel Package from TIC Tours";
-    return `${info.packageName} — ${info.nightsCount}N/${info.daysCount}D | Trip ID: ${info.tripId} | TIC Tours`;
+    return `${info.packageName} — ${info.nightsCount}N/${info.daysCount}D | Q/Ref: ${info.refId || info.tripId} | TIC Tours`;
   };
 
   // ----- Regenerate content when toggles/mode change -----

@@ -50,6 +50,7 @@ function SetupModal() {
     discount_amount: 0,
     packageName: '',           // Never undefined — prevents "null" display in ShareModal
     quoted_options: null,      // null (not []) so ShareModal falls back to grand_total before API resolves
+    enquiry_ref_no: '',
   };
   const mapSubDestinations = (items = []) =>
     items
@@ -62,6 +63,7 @@ function SetupModal() {
   const handleFormValue = (data, setFieldValue) => {
     if(data && data?.id){
       setFieldValue('seq', data.seq)
+      setFieldValue('enquiry_ref_no', data.enquiry_ref_no || data.enquiry?.ref_no || '')
       setFieldValue('packageName',checkFormValue(data.package_name))
       setFieldValue('formStartDate',parseDate(data.start_date))
       setFieldValue('formEndDate',parseDate(data.end_date))
@@ -328,6 +330,7 @@ function SetupModal() {
       setFieldValue('formEndDate',parseDate(equiryIdData.end_date))
       setFieldValue('adult',checkFormValue(equiryIdData.adult_count))
       setFieldValue('child',checkFormValue(equiryIdData.child_count))
+      setFieldValue('enquiry_ref_no', equiryIdData.ref_no || '')
       const destinationObj = {label:equiryIdData.destination.name,value:equiryIdData.destination.id}
       setFieldValue('destination',checkFormValue(destinationObj))
       // Auto-set currency based on destination
