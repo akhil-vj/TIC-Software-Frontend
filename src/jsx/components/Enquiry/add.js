@@ -359,15 +359,16 @@ const EditProfile = ({ setShowModal }) => {
         const ref = String(enq.ref_no || "");
         const parts = ref.split('/');
 
-        // Match format: agent/assigned/dest/ddmm/##
-        if (parts.length >= 5) {
-          const pNum = parts.slice(4).join('/'); 
+        // Legacy format: Agent/Assigned/Dest/Date/Seq (length >= 5)
+        // New format: Dest/Date/Assigned/Seq (length >= 4)
+        if (parts.length >= 4) {
+          const pNum = parts[parts.length - 1]; 
 
           // Ensure it's the same user
           const enqAssignedId = enq.assigned_to_user?.id || enq.assigned_to;
           const isSameUser = currentAssignedId && enqAssignedId 
                              ? (String(enqAssignedId) === String(currentAssignedId))
-                             : (parts[1] === assignedPart);
+                             : (parts.includes(assignedPart));
                              
           // Ensure it's the same month and year
           const enqDate = new Date(enq.start_date || enq.created_at || new Date());
@@ -383,7 +384,7 @@ const EditProfile = ({ setShowModal }) => {
       });
 
       const sequentialNum = String(highestNum + 1).padStart(2, "0");
-      const generatedRef = `${agentPart}/${assignedPart}/${destinationPart}/${datePart}/${sequentialNum}`;
+      const generatedRef = `${destinationPart}/${datePart}/${assignedPart}/${sequentialNum}`;
 
       // Update the reference state only if it actually differs
       if (values.refNo !== generatedRef) {
