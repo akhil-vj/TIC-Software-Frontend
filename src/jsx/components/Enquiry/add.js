@@ -347,26 +347,33 @@ const EditProfile = ({ setShowModal }) => {
       const destinationPart = getTwoLetters(destinationName);
 
       const now = new Date(values.startDate || new Date());
-      const yy = String(now.getFullYear()).slice(-2);
       const mm = String(now.getMonth() + 1).padStart(2, "0");
       const dd = String(now.getDate()).padStart(2, "0");
-      const datePart = `${yy}${mm}${dd}`;
-      const yymm = `${yy}${mm}`;
+      const datePart = `${dd}${mm}`;
 
       let highestNum = 0;
       const existingEnquiries = allEnquiriesData?.data?.data || [];
+      const currentAssignedId = values.assigned?.value || values.assigned?.id;
 
       existingEnquiries.forEach(enq => {
         const ref = String(enq.ref_no || "");
         const parts = ref.split('/');
 
-        // Match format: agent/assigned/dest/yymmdd/##
+        // Match format: agent/assigned/dest/ddmm/##
         if (parts.length >= 5) {
-          const pDate = parts[3];
-          const pNum = parts.slice(4).join('/'); // In case there are extra slashes
+          const pNum = parts.slice(4).join('/'); 
 
-          // Increment the counter uniquely based on the current Month across ALL enquiries
-          if (pDate.startsWith(yymm)) {
+          // Ensure it's the same user
+          const enqAssignedId = enq.assigned_to_user?.id || enq.assigned_to;
+          const isSameUser = currentAssignedId && enqAssignedId 
+                             ? (String(enqAssignedId) === String(currentAssignedId))
+                             : (parts[1] === assignedPart);
+                             
+          // Ensure it's the same month and year
+          const enqDate = new Date(enq.start_date || enq.created_at || new Date());
+          const isSameMonthAndYear = (enqDate.getMonth() === now.getMonth() && enqDate.getFullYear() === now.getFullYear());
+
+          if (isSameUser && isSameMonthAndYear) {
             const num = parseInt(pNum, 10);
             if (!isNaN(num) && num > highestNum) {
               highestNum = num;
