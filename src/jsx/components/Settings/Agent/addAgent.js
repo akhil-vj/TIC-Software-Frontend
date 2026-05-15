@@ -26,6 +26,7 @@ const AddAgent = ({ showModal, setShowModal, editId, setEditId }) => {
   const data = editData?.data?.data;
 
   const dispatch = useDispatch();
+  const countryData = useAsync(URLS.COUNTRY_URL);
   
   const initialValues = {
     // Company Details
@@ -42,6 +43,7 @@ const AddAgent = ({ showModal, setShowModal, editId, setEditId }) => {
     
     // Status
     status: { label: "Active", value: 1 },
+    country: null,
   };
 
   const {
@@ -60,6 +62,7 @@ const AddAgent = ({ showModal, setShowModal, editId, setEditId }) => {
       try {
         let response;
         const data = {
+          name: values.companyName,
           company_name: values.companyName,
           short_name: values.shortName,
           contact_name: values.contactName,
@@ -67,6 +70,7 @@ const AddAgent = ({ showModal, setShowModal, editId, setEditId }) => {
           email: values.email,
           address: values.address,
           status: values.status.value,
+          country_id: values.country?.value,
         };
 
         if (isEdit) {
@@ -102,6 +106,7 @@ const AddAgent = ({ showModal, setShowModal, editId, setEditId }) => {
         email: data?.email,
         address: data?.address,
         status: data?.status === 1 ? { label: "Active", value: 1 } : { label: "Inactive", value: 0 },
+        country: data?.country_id ? { label: data?.country_name, value: data?.country_id } : null,
       };
       setValues(obj);
     }
@@ -186,6 +191,17 @@ const AddAgent = ({ showModal, setShowModal, editId, setEditId }) => {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   values={values}
+                />
+              </div>
+              <div className="col-md-6 mb-2">
+                <ReactSelect
+                  isSearchable={true}
+                  label="Country"
+                  options={countryData?.data?.data}
+                  optionLabel="name"
+                  optionValue="id"
+                  value={values?.country}
+                  onChange={(selected) => setFieldValue("country", selected)}
                 />
               </div>
               <div className="col-md-6 mb-2">
