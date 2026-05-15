@@ -345,45 +345,48 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
         }
       });
 
-      const inclusionLines = Object.values(mergedMap).map(mi => {
+      let hasInclusions = false;
+      let inclusionText = `🎁 *PACKAGE INCLUSIONS*\n\n`;
+
+      Object.values(mergedMap).forEach(mi => {
         const mealSuffix = mi.meal ? ` with ${mi.meal}` : "";
         const locationSuffix = mi.location ? ` at ${mi.location}` : "";
-        return `${mi.nights} Night${mi.nights !== 1 ? "s" : ""} Accommodation (${mi.room})${mealSuffix}${locationSuffix}`;
+        inclusionText += `✅ ${mi.nights} Night${mi.nights !== 1 ? "s" : ""} Accommodation (${mi.room})${mealSuffix}${locationSuffix}\n`;
+        hasInclusions = true;
       });
 
-      // Transfers: use item.name directly (it already contains the full description from DB)
-      const transferLines = [];
-      packageData.planArr.forEach(day => {
-        day.schedule?.forEach(item => {
-          if (item.insertType === "transfer" || item.insertType?.toLowerCase() === "transfer") {
+      const inclusionsDays = getDayWiseItinerary();
+      inclusionsDays.forEach(({ dayIndex, dayDate, schedule }) => {
+        const dayNum = dayIndex + 1;
+        const dayItems = [];
+
+        schedule.forEach(item => {
+          const type = item.insertType?.toLowerCase();
+          if (type === "transfer") {
             const name = item.name || item.vehicle_name || item.description || "Transfer";
-            transferLines.push(name);
-          }
-        });
-      });
-
-      // Activities: mirrors blade activity->activity_name + entry->description
-      const activityLines = [];
-      packageData.planArr.forEach(day => {
-        day.schedule?.forEach(item => {
-          if (item.insertType === "activity" || item.insertType?.toLowerCase() === "activity") {
+            dayItems.push(name);
+          } else if (type === "activity") {
             const name = item.name || item.activity_name || "Activity";
             const desc = item.description ? ` - ${item.description}` : "";
-            activityLines.push(`${name}${desc}`);
+            dayItems.push(`${name}${desc}`);
           }
         });
+
+        if (dayItems.length > 0) {
+          const dateStr = dayDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+          inclusionText += `\n*Day ${dayNum} (${dateStr})*\n`;
+          dayItems.forEach(item => {
+            inclusionText += `✅ ${item}\n`;
+          });
+          hasInclusions = true;
+        }
       });
 
-      const allInclusions = [
-        ...inclusionLines,
-        ...transferLines,
-        ...activityLines,
-        "English Speaking Assistance",
-      ];
+      inclusionText += `✅ English Speaking Assistance\n`;
+      hasInclusions = true;
 
-      if (allInclusions.length > 0) {
-        text += `🎁 *PACKAGE INCLUSIONS*\n\n`;
-        allInclusions.forEach(line => { text += `✅ ${line}\n`; });
+      if (hasInclusions) {
+        text += inclusionText;
         text += `\n${DIVIDER}\n\n`;
       }
 
