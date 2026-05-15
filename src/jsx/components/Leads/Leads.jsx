@@ -642,16 +642,16 @@ const Leads = ({ setShowModal }) => {
 }
 
 /* Column width definitions */
-.leads-table col.col-id         { width: 55px; }
-.leads-table col.col-client     { width: 16%; }
+.leads-table col.col-id         { width: 15%; }
+.leads-table col.col-client     { width: 14%; }
 .leads-table col.col-source     { width: 12%; }
 .leads-table col.col-req        { width: 12%; }
 .leads-table col.col-pkg        { width: 15%; }
-.leads-table col.col-assigned   { width: 12%; }
+.leads-table col.col-assigned   { width: 10%; }
 .leads-table col.col-date       { width: 10%; }
-.leads-table col.col-status     { width: 60px; }
-.leads-table col.col-action     { width: 48px; }
-.leads-table col.col-chk        { width: 18px; }
+.leads-table col.col-status     { width: 10%; }
+.leads-table col.col-action     { width: 10%; }
+.leads-table col.col-chk        { width: 10%; }
 
 /* Header cells */
 .leads-table thead tr {
@@ -1029,7 +1029,7 @@ const Leads = ({ setShowModal }) => {
                       <col className="col-id" />
                       <col className="col-client" />
                       <col className="col-source" />
-                      <col className="col-req" />
+                      {/* <col className="col-req" /> */}
                       <col className="col-pkg" />
                       <col className="col-assigned" />
                       <col className="col-date" />
@@ -1046,9 +1046,9 @@ const Leads = ({ setShowModal }) => {
                         <th onClick={() => handleSort('source')} style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                           Lead Source {getSortIcon('source')}
                         </th>
-                        <th onClick={() => handleSort('requirement')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                        {/* <th onClick={() => handleSort('requirement')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                           Requirement {getSortIcon('requirement')}
-                        </th>
+                        </th> */}
                         <th onClick={() => handleSort('packageDetails')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                           Package Details {getSortIcon('packageDetails')}
                         </th>
@@ -1120,9 +1120,9 @@ const Leads = ({ setShowModal }) => {
                             </td>
 
                             {/* Requirement */}
-                            <td className="td-truncate" title={requirementText} style={{ color: "#4B5563" }}>
+                            {/* <td className="td-truncate" title={requirementText} style={{ color: "#4B5563" }}>
                               {requirementText}
-                            </td>
+                            </td> */}
 
                             {/* Package Details */}
                             <td className="td-truncate" title={pkgDetails} style={{ fontWeight: 500, color: "#1F2937" }}>
