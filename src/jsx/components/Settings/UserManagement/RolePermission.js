@@ -95,9 +95,7 @@ const tableData1 = [
   "enquiry",
   "follow ups",
   "tickets",
-  "works",
-  "finance",
-  "mails",
+  "reports",
   "settings",
 ];
 
@@ -109,7 +107,10 @@ const Permission = () => {
   const editUrl = `${url}/${id}`
   const editData = useAsync(editUrl, isEdit)
   const permissionData = useAsync(URLS.PERMISSION_URL)
-  const tableData = permissionData?.data?.data
+  const allowedModules = ["dashboard", "leads", "enquiry", "follow ups", "tickets", "reports", "settings"];
+  const tableData = permissionData?.data?.data?.filter(item => 
+    allowedModules.includes(item?.name?.toLowerCase())
+  )
 
   // console.log('dat', tableData)
   const navigate = useNavigate();
