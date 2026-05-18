@@ -64,11 +64,14 @@ const UserRole = ({ showModal, setShowModal }) => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [selectedRoleId, setSelectedRoleId] = useState(null);
+    const [updatedRoles, setUpdatedRoles] = useState({});
     const roleDetailData = useAsync(selectedRoleId ? `${url}/${selectedRoleId}` : null, !!selectedRoleId);
     const permissionData = useAsync(URLS.PERMISSION_URL);
 
-    // Use actual data from backend
-    const displayData = tableData;
+    // Use actual data from backend with local updates applied
+    const displayData = tableData.map(role => 
+        updatedRoles[role.id] ? { ...role, ...updatedRoles[role.id] } : role
+    );
 
     const onDetail = (id) => {
         setSelectedRoleId(id);
@@ -108,16 +111,11 @@ const UserRole = ({ showModal, setShowModal }) => {
             const response = await axiosPut(buildApiUrl(`${url}/${item.id}`), payload);
             if (response.success) {
                 notifySuccess(`Role ${newStatus ? 'activated' : 'disabled'} successfully`);
-                // Update local state directly so UI reflects change immediately
-                // since the backend might not return is_active in the refresh
-                if (roleData.data && roleData.data.data) {
-                    const updatedData = roleData.data.data.map(role =>
-                        role.id === item.id ? { ...role, is_active: newStatus } : role
-                    );
-                    roleData.setData({ ...roleData.data, data: updatedData });
-                } else {
-                    roleData.triggerFetch();
-                }
+                // Update local state so UI reflects change immediately
+                setUpdatedRoles(prev => ({
+                    ...prev,
+                    [item.id]: { is_active: newStatus }
+                }));
             }
         } catch (error) {
             console.error("Error toggling role status:", error);
