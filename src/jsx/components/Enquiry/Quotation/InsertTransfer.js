@@ -93,6 +93,11 @@ const InsertTransfer = ({
       // Get pricing from estimations array (from admin settings)
       if (data?.estimations && data.estimations.length > 0) {
         const estimation = data.estimations[0];
+        const estType = estimation?.type ? estimation.type.toUpperCase() : "PRIVATE";
+        setFieldValue("type", { label: estType, value: estType });
+        if (estType === "PRIVATE" && estimation?.vehicletype) {
+          setFieldValue("vehicleType", { label: estimation.vehicletype, value: estimation.vehicletype });
+        }
         setFieldValue("cost", estimation?.cost || 0);
         setFieldValue("adultCost", estimation?.adult_cost || 0);
         setFieldValue("childCost", estimation?.child_cost || 0);
@@ -191,7 +196,41 @@ const InsertTransfer = ({
                     <ReactSelect
                       label="Type"
                       value={values.type}
-                      onChange={(selected) => setFieldValue("type", selected)}
+                      onChange={(selected) => {
+                        setFieldValue("type", selected);
+                        if (data?.estimations) {
+                          if (selected?.value?.toUpperCase() === "SIC") {
+                            const matchedEstimation = data.estimations.find(est => 
+                              est.type?.toUpperCase() === "SIC"
+                            );
+                            if (matchedEstimation) {
+                              setFieldValue("cost", matchedEstimation.cost || 0);
+                              setFieldValue("adultCost", matchedEstimation.adult_cost || 0);
+                              setFieldValue("childCost", matchedEstimation.child_cost || 0);
+                            } else {
+                              setFieldValue("cost", 0);
+                              setFieldValue("adultCost", 0);
+                              setFieldValue("childCost", 0);
+                            }
+                          } else if (selected?.value?.toUpperCase() === "PRIVATE") {
+                            if (values.vehicleType) {
+                              const matchedEstimation = data.estimations.find(est => 
+                                est.type?.toUpperCase() === "PRIVATE" && 
+                                est.vehicletype === values.vehicleType.value
+                              );
+                              if (matchedEstimation) {
+                                setFieldValue("cost", matchedEstimation.cost || 0);
+                                setFieldValue("adultCost", matchedEstimation.adult_cost || 0);
+                                setFieldValue("childCost", matchedEstimation.child_cost || 0);
+                              } else {
+                                setFieldValue("cost", 0);
+                                setFieldValue("adultCost", 0);
+                                setFieldValue("childCost", 0);
+                              }
+                            }
+                          }
+                        }
+                      }}
                       onBlur={handleBlur}
                       // values={values}
                       options={typeOptions}
@@ -206,7 +245,24 @@ const InsertTransfer = ({
                         <ReactSelect
                           label="Vehicle Type"
                           value={values.vehicleType}
-                          onChange={(selected) => setFieldValue("vehicleType", selected)}
+                          onChange={(selected) => {
+                            setFieldValue("vehicleType", selected);
+                            if (data?.estimations) {
+                              const matchedEstimation = data.estimations.find(est => 
+                                est.type?.toUpperCase() === "PRIVATE" && 
+                                est.vehicletype === selected.value
+                              );
+                              if (matchedEstimation) {
+                                setFieldValue("cost", matchedEstimation.cost || 0);
+                                setFieldValue("adultCost", matchedEstimation.adult_cost || 0);
+                                setFieldValue("childCost", matchedEstimation.child_cost || 0);
+                              } else {
+                                setFieldValue("cost", 0);
+                                setFieldValue("adultCost", 0);
+                                setFieldValue("childCost", 0);
+                              }
+                            }
+                          }}
                           onBlur={handleBlur}
                           options={vehicleTypeOptions}
                           optionValue="value"

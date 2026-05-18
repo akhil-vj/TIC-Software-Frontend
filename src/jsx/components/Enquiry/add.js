@@ -383,7 +383,7 @@ const EditProfile = ({ setShowModal }) => {
         }
       });
 
-      const sequentialNum = String(highestNum + 1).padStart(2, "0");
+      const sequentialNum = String(highestNum + 1).padStart(3, "0");
       const generatedRef = `${destinationPart}/${datePart}/${assignedPart}/${sequentialNum}`;
 
       // Update the reference state only if it actually differs

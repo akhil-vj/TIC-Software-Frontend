@@ -332,7 +332,6 @@ const StepTwo = ({ formik: parentFormik }) => {
                     values={values}
                     setFieldValue={setFieldValue}
                     isMulti
-                    required
                   />
                 </div>
               </div>
