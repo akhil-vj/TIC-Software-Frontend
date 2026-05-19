@@ -231,15 +231,37 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     setFieldValue("planArr", result);
   };
   const showScheduleValue = values.planArr[`${values.planIndex}`];
+  const calculateTransferAmount = (transferValue) => {
+    // For transfers: calculate amount from cost values
+    if (transferValue.insertType === 'transfer' || transferValue.insertType === 'car') {
+      const adultCount = Number(values.adult || 0);
+      const childCount = Number(values.child || 0);
+      
+      if (transferValue.adultCost && transferValue.childCost) {
+        // SIC transfer: sum of adult and child costs
+        const calculatedAmount = Number(transferValue.adultCost) + Number(transferValue.childCost);
+        return { ...transferValue, amount: calculatedAmount };
+      } else if (transferValue.cost) {
+        // PRIVATE transfer: cost is the total
+        return { ...transferValue, amount: Number(transferValue.cost) };
+      }
+    }
+    return transferValue;
+  };
+
   const onInsert = (value, setShowModal) => {
     // check is this the insert of already existing data
     const isEdit = !!editId || editId === 0;
+    
+    // Calculate amount for transfers from cost values
+    const processedValue = calculateTransferAmount(value);
+    
     // if(values.categoryOptions !== "Hotel"){
     const insertSchedule = values.planArr.map((data, key) => {
-      if (!isEdit && value.insertType == 'hotel') {
+      if (!isEdit && processedValue.insertType == 'hotel') {
         // Normalize to date-only for comparisons and include nights (checkout exclusive)
-        const startDate = new Date(value.startDate);
-        const endDate = new Date(value.endDate);
+        const startDate = new Date(processedValue.startDate);
+        const endDate = new Date(processedValue.endDate);
         const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
         const rawEndDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
         // Treat checkout as exclusive; if checkout is same/earlier than check-in, make it one night
@@ -254,8 +276,8 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
           const stayEndDate = nextDate <= endDayExclusive ? nextDate : endDayExclusive;
           const autoDayDestination = data.dayDestination?.value
             ? data.dayDestination
-            : value.subDestination || data.dayDestination;
-          const val = { ...data, dayDestination: autoDayDestination, schedule: [...data.schedule, { ...value, startDate: currentDate, endDate: stayEndDate }] }
+            : processedValue.subDestination || data.dayDestination;
+          const val = { ...data, dayDestination: autoDayDestination, schedule: [...data.schedule, { ...processedValue, startDate: currentDate, endDate: stayEndDate }] }
           return val
         } else {
           const val = { ...data, schedule: [...data.schedule] }
@@ -267,14 +289,14 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
         if (isEdit) {
           const editArr = data.schedule.map((arrItem, key) => {
             if (key === editId) {
-              return value;
+              return processedValue;
             } else {
               return arrItem;
             }
           });
           insertData = { ...data, schedule: editArr };
         } else {
-          insertData = { ...data, schedule: [...data.schedule, value] };
+          insertData = { ...data, schedule: [...data.schedule, processedValue] };
         }
         // console.log("insert", insertData);
         return insertData;
