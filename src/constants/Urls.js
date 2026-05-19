@@ -28,6 +28,7 @@ export const URLS = {
   DAY_ITINERARY_URL: "/api/day-itineraries",
   MAIL_SETTINGS_URL: "/api/mail-settings",
   CHANGE_PASSWORD_URL: "/api/user/change-password",
+  ADMIN_RESET_PASSWORD_URL: "/api/user/admin-reset-password",
   ACTIVITY_URL: "/api/activities",
   ACTIVITY_TYPE_URL: "/api/activity-types",
   ACTIVITY_UPDATE_URL: "/api/activity-status-update",

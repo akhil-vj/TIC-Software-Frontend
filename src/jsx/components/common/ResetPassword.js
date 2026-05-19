@@ -24,7 +24,7 @@ const ResetPassword = (props) => {
   const dispatch = useDispatch();
   const date = new Date();
   const isAdmin = !!username;
-  const url = URLS.CHANGE_PASSWORD_URL;
+  const url = isAdmin ? URLS.ADMIN_RESET_PASSWORD_URL : URLS.CHANGE_PASSWORD_URL;
   const title = 'Password'
   
 
