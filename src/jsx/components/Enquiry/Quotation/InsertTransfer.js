@@ -50,6 +50,11 @@ const InsertTransfer = ({
     label: item.name,
     value: item.name
   })) || [];
+
+  // Fetch all transfers so estimations are always available (even during edit)
+  const transferFetchData = useAsync(URLS.TRANSFER_URL);
+  const allTransfers = transferFetchData?.data?.data || [];
+
   const isEdit = !!editId || editId === 0;
   const initialValues = {
     startDate: SETUP.TODAY_DATE,
@@ -71,44 +76,87 @@ const InsertTransfer = ({
     resetForm,
   } = useFormik({ initialValues });
 
+  // Resolve estimations: from data prop (add mode) or by looking up the transfer by ID (edit mode)
+  const getEstimations = () => {
+    if (data?.estimations && data.estimations.length > 0) {
+      return data.estimations;
+    }
+    // Look up by transfer ID in the full transfer list
+    const transferId = data?.id;
+    if (transferId && allTransfers.length > 0) {
+      const found = allTransfers.find(t => t.id === transferId);
+      if (found?.estimations) return found.estimations;
+    }
+    return [];
+  };
+
   const handleSetup = () => {
     onClick(values, setShowModal);
     resetForm();
   };
-  useEffect(() => {
-    setFieldValue('startDate', data?.showScheduleDate)
-    setFieldValue('endDate', data?.showScheduleDate)
-    if (isEdit) {
-      setValues(data);
-    } else {
-      const destinationObj = {
-        label: data?.destination?.name,
-        value: data?.destination?.name,
-      };
-      setFieldValue("destination", destinationObj);
-      setFieldValue("name", data?.vehicle_name);
-      setFieldValue("id", data?.id);
-      setFieldValue("image", data?.image);
 
-      // Get pricing from estimations array (from admin settings)
-      if (data?.estimations && data.estimations.length > 0) {
-        const estimation = data.estimations[0];
+  useEffect(() => {
+    if (!data) return;
+
+    if (isEdit) {
+      // --- EDIT MODE ---
+      const editType = data?.type?.value?.toUpperCase() || data?.type?.label?.toUpperCase() || "PRIVATE";
+      setValues({
+        ...initialValues,
+        ...data,
+        startDate: data?.startDate || data?.showScheduleDate || initialValues.startDate,
+        endDate: data?.endDate || data?.showScheduleDate || initialValues.endDate,
+        type: { label: editType, value: editType },
+        cost: data?.cost ?? 0,
+        adultCost: data?.adultCost ?? 0,
+        childCost: data?.childCost ?? 0,
+      });
+    } else {
+      // --- ADD MODE ---
+      let newType = initialValues.type;
+      let vehicleType = undefined;
+      let cost = 0;
+      let adultCost = 0;
+      let childCost = 0;
+
+      const estimations = getEstimations();
+      if (estimations.length > 0) {
+        const estimation = estimations[0];
         const estType = estimation?.type ? estimation.type.toUpperCase() : "PRIVATE";
-        setFieldValue("type", { label: estType, value: estType });
+        newType = { label: estType, value: estType };
         if (estType === "PRIVATE" && estimation?.vehicletype) {
-          setFieldValue("vehicleType", { label: estimation.vehicletype, value: estimation.vehicletype });
+          vehicleType = { label: estimation.vehicletype, value: estimation.vehicletype };
         }
-        setFieldValue("cost", estimation?.cost || 0);
-        setFieldValue("adultCost", estimation?.adult_cost || 0);
-        setFieldValue("childCost", estimation?.child_cost || 0);
+        cost = estimation?.cost ?? 0;
+        adultCost = estimation?.adult_cost ?? 0;
+        childCost = estimation?.child_cost ?? 0;
       }
+
+      setValues({
+        ...initialValues,
+        startDate: data?.showScheduleDate || initialValues.startDate,
+        endDate: data?.showScheduleDate || initialValues.endDate,
+        destination: {
+          label: data?.destination?.name,
+          value: data?.destination?.name,
+        },
+        name: data?.vehicle_name,
+        id: data?.id,
+        image: data?.image,
+        type: newType,
+        vehicleType: vehicleType,
+        cost: cost,
+        adultCost: adultCost,
+        childCost: childCost,
+      });
     }
-  }, [editId, data, showModal]);
+  }, [editId, data, showModal, allTransfers.length]);
+
   return (
     <>
       <CustomModal
         showModal={showModal}
-        title={"Create Transfer"}
+        title={isEdit ? "Edit Transfer" : "Create Transfer"}
         handleModalClose={() => {
           onClose(setShowModal);
           resetForm();
@@ -198,15 +246,16 @@ const InsertTransfer = ({
                       value={values.type}
                       onChange={(selected) => {
                         setFieldValue("type", selected);
-                        if (data?.estimations) {
+                        const estimations = getEstimations();
+                        if (estimations.length > 0) {
                           if (selected?.value?.toUpperCase() === "SIC") {
-                            const matchedEstimation = data.estimations.find(est => 
+                            const matchedEstimation = estimations.find(est =>
                               est.type?.toUpperCase() === "SIC"
                             );
                             if (matchedEstimation) {
-                              setFieldValue("cost", matchedEstimation.cost || 0);
-                              setFieldValue("adultCost", matchedEstimation.adult_cost || 0);
-                              setFieldValue("childCost", matchedEstimation.child_cost || 0);
+                              setFieldValue("cost", matchedEstimation.cost ?? 0);
+                              setFieldValue("adultCost", matchedEstimation.adult_cost ?? 0);
+                              setFieldValue("childCost", matchedEstimation.child_cost ?? 0);
                             } else {
                               setFieldValue("cost", 0);
                               setFieldValue("adultCost", 0);
@@ -214,14 +263,14 @@ const InsertTransfer = ({
                             }
                           } else if (selected?.value?.toUpperCase() === "PRIVATE") {
                             if (values.vehicleType) {
-                              const matchedEstimation = data.estimations.find(est => 
-                                est.type?.toUpperCase() === "PRIVATE" && 
+                              const matchedEstimation = estimations.find(est =>
+                                est.type?.toUpperCase() === "PRIVATE" &&
                                 est.vehicletype === values.vehicleType.value
                               );
                               if (matchedEstimation) {
-                                setFieldValue("cost", matchedEstimation.cost || 0);
-                                setFieldValue("adultCost", matchedEstimation.adult_cost || 0);
-                                setFieldValue("childCost", matchedEstimation.child_cost || 0);
+                                setFieldValue("cost", matchedEstimation.cost ?? 0);
+                                setFieldValue("adultCost", matchedEstimation.adult_cost ?? 0);
+                                setFieldValue("childCost", matchedEstimation.child_cost ?? 0);
                               } else {
                                 setFieldValue("cost", 0);
                                 setFieldValue("adultCost", 0);
@@ -239,7 +288,7 @@ const InsertTransfer = ({
                       isSearchable={false}
                     />
                   </div>
-                  {values.type?.label === "PRIVATE" ? (
+                  {values.type?.value?.toUpperCase() === "PRIVATE" ? (
                     <>
                       <div className="col-sm-4">
                         <ReactSelect
@@ -247,15 +296,16 @@ const InsertTransfer = ({
                           value={values.vehicleType}
                           onChange={(selected) => {
                             setFieldValue("vehicleType", selected);
-                            if (data?.estimations) {
-                              const matchedEstimation = data.estimations.find(est => 
-                                est.type?.toUpperCase() === "PRIVATE" && 
+                            const estimations = getEstimations();
+                            if (estimations.length > 0) {
+                              const matchedEstimation = estimations.find(est =>
+                                est.type?.toUpperCase() === "PRIVATE" &&
                                 est.vehicletype === selected.value
                               );
                               if (matchedEstimation) {
-                                setFieldValue("cost", matchedEstimation.cost || 0);
-                                setFieldValue("adultCost", matchedEstimation.adult_cost || 0);
-                                setFieldValue("childCost", matchedEstimation.child_cost || 0);
+                                setFieldValue("cost", matchedEstimation.cost ?? 0);
+                                setFieldValue("adultCost", matchedEstimation.adult_cost ?? 0);
+                                setFieldValue("childCost", matchedEstimation.child_cost ?? 0);
                               } else {
                                 setFieldValue("cost", 0);
                                 setFieldValue("adultCost", 0);
@@ -274,7 +324,7 @@ const InsertTransfer = ({
                         <div className="form-group mb-3">
                           <label>Cost</label>
                           <div className="form-control bg-light">
-                            {values.cost || 'N/A'}
+                            {values.cost != null && values.cost !== '' ? values.cost : 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -285,7 +335,7 @@ const InsertTransfer = ({
                         <div className="form-group mb-3">
                           <label>Adult Cost</label>
                           <div className="form-control bg-light">
-                            {values.adultCost || 'N/A'}
+                            {values.adultCost != null && values.adultCost !== '' ? values.adultCost : 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -293,7 +343,7 @@ const InsertTransfer = ({
                         <div className="form-group mb-3">
                           <label>Child Cost</label>
                           <div className="form-control bg-light">
-                            {values.childCost || 'N/A'}
+                            {values.childCost != null && values.childCost !== '' ? values.childCost : 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -345,7 +395,7 @@ const InsertTransfer = ({
                 className="btn btn-primary"
                 onClick={handleSetup}
               >
-                Setup Transfer
+                {isEdit ? "Update Transfer" : "Setup Transfer"}
               </button>
             </form>
           </div>
@@ -356,3 +406,4 @@ const InsertTransfer = ({
 };
 
 export default InsertTransfer;
+
