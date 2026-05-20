@@ -11,6 +11,8 @@ import NoData from "../../common/NoData"
 import { useAsync } from "../../../utilis/useAsync";
 import { URLS } from "../../../../constants";
 import ConfirmationModal from "../../common/DeleteModal";
+import { axiosPut } from "../../../../services/AxiosInstance";
+import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
 
 const options = [
   { value: "2", label: "Published" },
@@ -27,10 +29,11 @@ const Quotation = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteUrl, setDeleteUrl] = useState('');
   const [deleteName, setDeleteName] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
   const { id } = useParams()
   const itineraryUrl = URLS.ITINERARY_URL
-  const itineraryByEnquiryUrl = `${URLS.ITINERARY_URL}?enquiry_id=${id}`
-  const fetchData = useAsync(itineraryByEnquiryUrl)
+  const itineraryByEnquiryUrl = `${URLS.ITINERARY_URL}?enquiry_id=${id}&ref=${refreshKey}`
+  const fetchData = useAsync(itineraryByEnquiryUrl, true)
   const tableData = fetchData?.data?.data
 
   const [data, setData] = useState(
@@ -101,6 +104,33 @@ const Quotation = () => {
     setDeleteName(name)
     setShowDeleteModal(true)
   }
+
+  // ── Version History: set a previous version as current ──
+  const handleSetCurrent = async (itemId) => {
+    try {
+      const url = `${URLS.ITINERARY_SET_CURRENT_URL}${itemId}/set-current`;
+      await axiosPut(url);
+      notifyCreate('Version activated', false);
+      setRefreshKey(prev => prev + 1);
+    } catch (err) {
+      notifyError(err?.response?.data?.message || 'Failed to set version');
+    }
+  };
+
+  // ── Sort: group by parent, current first, then by version desc ──
+  const sortedTableData = React.useMemo(() => {
+    if (!tableData?.length) return [];
+    return [...tableData].sort((a, b) => {
+      // Group by parent_itinerary_id
+      const pA = a.parent_itinerary_id || a.id;
+      const pB = b.parent_itinerary_id || b.id;
+      if (pA !== pB) return 0; // keep original order across groups
+      // Within same group: current first, then by version desc
+      if (a.is_current && !b.is_current) return -1;
+      if (!a.is_current && b.is_current) return 1;
+      return (b.version || 1) - (a.version || 1);
+    });
+  }, [tableData]);
 
   return (
     <>
@@ -192,18 +222,34 @@ const Quotation = () => {
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>SI No</th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", border: "none", letterSpacing: "0.1px" }}>Ref No</th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", border: "none", letterSpacing: "0.1px" }}>Package Name</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>Version</th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>Pax</th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>From Date</th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", border: "none", letterSpacing: "0.1px" }}>Edited by</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>Edited Date</th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "right", border: "none", letterSpacing: "0.1px" }}>Price</th>
+                            <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>Status</th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {
-                            !!tableData?.length ?
-                              tableData?.map((item, ind) => (
-                                <tr key={ind} style={{ borderBottom: "1px solid #f0f3f8", transition: "background 0.15s", cursor: "pointer" }} onMouseEnter={(e) => e.currentTarget.style.background = "#f7f9fc"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"} onClick={() => navigate(`itinerary/${item.id}`)}>
+                            !!sortedTableData?.length ?
+                              sortedTableData?.map((item, ind) => {
+                                const isCurrent = !!item.is_current;
+                                const version = item.version || 1;
+                                return (
+                                <tr key={ind} style={{
+                                  borderBottom: "1px solid #f0f3f8",
+                                  transition: "background 0.15s",
+                                  cursor: "pointer",
+                                  opacity: isCurrent ? 1 : 0.75,
+                                  background: isCurrent ? "transparent" : "#fafbfc",
+                                }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = "#f7f9fc"}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = isCurrent ? "transparent" : "#fafbfc"}
+                                  onClick={() => navigate(`itinerary/${item.id}`)}
+                                >
                                   <td style={{ padding: "10px", textAlign: "center", fontSize: "12px", color: "#6B7280" }}>
                                     <span style={{
                                       display: "inline-block", fontWeight: 700, fontSize: "12px",
@@ -215,6 +261,24 @@ const Quotation = () => {
                                   </td>
                                   <td style={{ padding: "10px", fontSize: "13px", color: "#374151", fontWeight: 500, whiteSpace: "nowrap" }}>{item.enquiry_ref_no || item.enquiry?.ref_no || '-'}</td>
                                   <td style={{ padding: "10px", fontSize: "13px", color: "#374151", fontWeight: 500, maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.package_name}>{item.package_name}</td>
+
+                                  {/* ── Version Badge ── */}
+                                  <td style={{ padding: "10px", textAlign: "center" }}>
+                                    <span style={{
+                                      display: "inline-block",
+                                      padding: "3px 10px",
+                                      borderRadius: "12px",
+                                      fontSize: "11px",
+                                      fontWeight: 700,
+                                      letterSpacing: "0.5px",
+                                      background: isCurrent ? "#DBEAFE" : "#F3F4F6",
+                                      color: isCurrent ? "#1D4ED8" : "#6B7280",
+                                      border: `1px solid ${isCurrent ? "#BFDBFE" : "#E5E7EB"}`,
+                                    }}>
+                                      v{version}
+                                    </span>
+                                  </td>
+
                                   <td style={{ padding: "10px", textAlign: "center", fontSize: "13px", color: "#4B5563" }}>
                                     <span style={{ display: "inline-block", padding: "3px 8px", borderRadius: "8px", background: "#F1F5F9", border: "1px solid #E2E8F0", whiteSpace: "nowrap" }}>
                                       {item.adult_count}A {item.child_count > 0 ? `${item.child_count}C` : ""}
@@ -222,6 +286,12 @@ const Quotation = () => {
                                   </td>
                                   <td style={{ padding: "10px", textAlign: "center", fontSize: "12px", color: "#6B7280", whiteSpace: "nowrap" }}>{item.start_date ? new Date(item.start_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "-"}</td>
                                   <td style={{ padding: "10px", fontSize: "13px", color: "#4B5563", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.edited_by}>{item.edited_by || '-'}</td>
+                                  
+                                  {/* ── Edited Date Column ── */}
+                                  <td style={{ padding: "10px", textAlign: "center", fontSize: "12px", color: "#4B5563", whiteSpace: "nowrap" }}>
+                                    {item.edited_at ? new Date(item.edited_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}
+                                  </td>
+
                                   <td style={{ padding: "10px", textAlign: "right", fontSize: "13px", fontWeight: 600, color: "#01A3FF", whiteSpace: "nowrap" }}>
                                     {(() => {
                                       const baseTotal = parseFloat(item.grand_total || item.total_amount || item.net_amount || 0);
@@ -244,8 +314,61 @@ const Quotation = () => {
                                       return displayTotal.toLocaleString(undefined, { maximumFractionDigits: 2 });
                                     })()}
                                   </td>
+
+                                  {/* ── Status Badge ── */}
+                                  <td style={{ padding: "10px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                                    {isCurrent ? (
+                                      <span style={{
+                                        display: "inline-flex", alignItems: "center", gap: "5px",
+                                        padding: "4px 12px", borderRadius: "20px", fontSize: "11px",
+                                        fontWeight: 600, letterSpacing: "0.3px",
+                                        background: "#D1FAE5", color: "#065F46",
+                                        border: "1px solid #A7F3D0",
+                                      }}>
+                                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10B981", display: "inline-block" }}></span>
+                                        Current
+                                      </span>
+                                    ) : (
+                                      <span
+                                        title="Click to use this version"
+                                        style={{
+                                          display: "inline-flex", alignItems: "center", gap: "5px",
+                                          padding: "4px 12px", borderRadius: "20px", fontSize: "11px",
+                                          fontWeight: 600, letterSpacing: "0.3px",
+                                          background: "#F3F4F6", color: "#6B7280",
+                                          border: "1px solid #E5E7EB",
+                                          cursor: "pointer", transition: "all 0.15s",
+                                        }}
+                                        onClick={(e) => { e.stopPropagation(); handleSetCurrent(item.id); }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#DBEAFE"; e.currentTarget.style.color = "#1D4ED8"; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = "#6B7280"; e.currentTarget.style.borderColor = "#E5E7EB"; }}
+                                      >
+                                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#9CA3AF", display: "inline-block" }}></span>
+                                        Previous
+                                      </span>
+                                    )}
+                                  </td>
+
                                   <td style={{ padding: "10px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                                      {/* Use This Version — only for previous versions */}
+                                      {!isCurrent && (
+                                        <button
+                                          title="Use this version as current"
+                                          style={{
+                                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                            width: "30px", height: "30px", borderRadius: "8px",
+                                            background: "#DBEAFE", border: "1px solid #BFDBFE",
+                                            cursor: "pointer", color: "#1D4ED8", transition: "all 0.15s",
+                                            padding: 0
+                                          }}
+                                          onClick={(e) => { e.stopPropagation(); handleSetCurrent(item.id); }}
+                                          onMouseEnter={(e) => { e.currentTarget.style.background = "#93C5FD"; e.currentTarget.style.borderColor = "#60A5FA"; }}
+                                          onMouseLeave={(e) => { e.currentTarget.style.background = "#DBEAFE"; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+                                        >
+                                          <i className="fa fa-check" style={{ fontSize: "13px" }}></i>
+                                        </button>
+                                      )}
                                       <button
                                         style={{
                                           display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -277,9 +400,9 @@ const Quotation = () => {
                                     </div>
                                   </td>
                                 </tr>
-                              ))
+                              )})
                               :
-                              <NoData isLoading={fetchData.loading} colSpan={8} />
+                              <NoData isLoading={fetchData.loading} colSpan={11} isTableRow={true} />
                           }
                         </tbody>
                       </table>

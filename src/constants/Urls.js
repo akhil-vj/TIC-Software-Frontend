@@ -43,4 +43,5 @@ export const URLS = {
   CUSTOMER_URL: "/api/customers-search-by-mobile",
   TAX_SETTINGS_URL: "/api/tax-settings",
   ADDITIONAL_TAXES_URL: "/api/additional-taxes",
+  ITINERARY_SET_CURRENT_URL: "/api/itineraries/",  // + {id}/set-current
 };
