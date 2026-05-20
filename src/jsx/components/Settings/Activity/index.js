@@ -66,7 +66,21 @@ const Activity = () => {
   const url = URLS.ACTIVITY_URL
   const patchUrl = URLS.ACTIVITY_UPDATE_URL
   const activityData = useAsync(url)
-  const tableData = activityData?.data?.data
+  const allTableData = activityData?.data?.data
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const tableData = searchQuery.trim() === ""
+    ? allTableData
+    : allTableData?.filter((item) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          item?.activity_name?.toLowerCase().includes(q) ||
+          item?.contact_email?.toLowerCase().includes(q) ||
+          item?.destination?.name?.toLowerCase().includes(q) ||
+          item?.activity_type?.name?.toLowerCase().includes(q)
+        );
+      });
   const [data, setData] = useState(
     document.querySelectorAll("#example2_wrapper tbody tr"),
   );
@@ -139,6 +153,8 @@ const Activity = () => {
                       type="text"
                       className="form-control"
                       placeholder="Search here..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                     />
                     <span className="input-group-text">
                       <Link to={"#"}>
@@ -381,8 +397,8 @@ const Activity = () => {
           </div> */}
           <CustomTable
             tableArray={tableArray}
-            data={tableData}
-            length={tableData?.length}
+            data={tableData ?? []}
+            length={tableData?.length ?? 0}
             loading={activityData?.loading}
             url={url}
             url2={patchUrl}

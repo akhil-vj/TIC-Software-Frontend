@@ -73,7 +73,19 @@ const Transfer = () => {
   const url = URLS.TRANSFER_URL;
   const patchUrl = URLS.TRANSFER_PATCH_URL;
   const transferData = useAsync(url);
-  const tableData = transferData?.data?.data;
+  const allTableData = transferData?.data?.data;
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const tableData = searchQuery.trim() === ""
+    ? allTableData
+    : allTableData?.filter((item) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          item?.vehicle_name?.toLowerCase().includes(q) ||
+          item?.destination?.name?.toLowerCase().includes(q)
+        );
+      });
   const [data, setData] = useState(
     document.querySelectorAll("#example2_wrapper tbody tr")
   );
@@ -150,6 +162,8 @@ const Transfer = () => {
                       type="text"
                       className="form-control"
                       placeholder="Search here..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                     />
                     <span className="input-group-text">
                       <Link to={"#"}>
@@ -383,8 +397,8 @@ const Transfer = () => {
           </div> */}
           <CustomTable
             tableArray={tableArray}
-            data={tableData}
-            length={tableData?.length}
+            data={tableData ?? []}
+            length={tableData?.length ?? 0}
             loading={transferData?.loading}
             url={url}
             url2={patchUrl}
