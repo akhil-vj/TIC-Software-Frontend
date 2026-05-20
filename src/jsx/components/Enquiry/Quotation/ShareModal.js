@@ -400,28 +400,35 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
         allDays.forEach(({ dayIndex, dayDate, schedule }) => {
           const dayNum = dayIndex + 1;
           const dayItems = [];
+          const activityDescriptions = [];
           const dateStr = dayDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
           schedule.forEach(item => {
             const type = item.insertType?.toLowerCase();
 
-            // Hotels are skipped in travel plan (check-in/breakfast not needed in WhatsApp summary)
-
+            // Hotels are skipped in travel plan
             if (type === "transfer") {
-              // Use item.name directly — it already contains the full transfer description
               const name = item.name || item.vehicle_name || item.description || "Transfer";
               dayItems.push(name);
-
             } else if (type === "activity") {
               const name = item.name || item.activity_name || "Activity";
-              const desc = item.description ? ` - ${item.description}` : "";
-              dayItems.push(`${name}${desc}`);
+              dayItems.push(name);
+              // Collect the activity's own description (from Activity settings) to display below the day line
+              const actDesc = item.activity_description || item.description || "";
+              if (actDesc && actDesc.trim()) {
+                activityDescriptions.push(actDesc.trim());
+              }
             }
           });
 
           if (dayItems.length > 0) {
-            // Join items with → arrow (like the sample format)
-            text += `📌 *Day ${dayNum} (${dateStr}):* ${dayItems.join(" → ")}\n\n`;
+            // Day header: all items joined with → arrow
+            text += `📌 *Day ${dayNum} (${dateStr}):* ${dayItems.join(" → ")}\n`;
+            // Print each activity description on its own line below the header
+            activityDescriptions.forEach(desc => {
+              text += `_${desc}_\n`;
+            });
+            text += `\n`;
           }
         });
 
