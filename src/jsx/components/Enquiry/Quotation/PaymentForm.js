@@ -196,6 +196,26 @@ const person = scheduleItem.insertType === 'activity'
                   values.priceOption.value === "TOTAL"
                     ? inputValue
                     : inputValue * person;
+
+                // For transfers: sync cost values with amount
+                if (scheduleItem.insertType === "transfer" || scheduleItem.insertType === "car") {
+                  const adultCount = Number(values.adult || 0);
+                  const childCount = Number(values.child || 0);
+                  const totalCount = adultCount + childCount;
+
+                  if (scheduleItem.type?.value?.toUpperCase() === "SIC" || scheduleItem.adultCost) {
+                    // SIC transfer: split amount proportionally between adults and children
+                    if (totalCount > 0) {
+                      const adultPortion = (inputValue * adultCount) / totalCount;
+                      const childPortion = (inputValue * childCount) / totalCount;
+                      result.adultCost = getRoundOfValue(adultPortion);
+                      result.childCost = getRoundOfValue(childPortion);
+                    }
+                  } else {
+                    // PRIVATE transfer: cost is the total amount
+                    result.cost = getRoundOfValue(inputValue);
+                  }
+                }
               } else if (type === "markup") {
                 result.baseMarkup =
                   values.priceOption.value === "TOTAL"
@@ -341,8 +361,13 @@ const person = scheduleItem.insertType === 'activity'
   );
 
   const getPerPersonCost = (item) => {
-    if (item.adultCost && item.childCost)
-      return { adultCost: item.adultCost, childCost: item.childCost };
+    // For transfers and activities: use explicit cost values if available
+    if ((item.adultCost !== undefined && item.adultCost !== null) || (item.childCost !== undefined && item.childCost !== null)) {
+      return { 
+        adultCost: item.adultCost ?? 0, 
+        childCost: item.childCost ?? 0 
+      };
+    }
     
    const adultCount = (item.insertType === "activity" ? Number(item.adult) : Number(values.adult)) || 0;
 const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
