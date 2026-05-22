@@ -16,6 +16,7 @@ function SelectField(props) {
     onChange,
     showLabelValue=false,
     formik,
+    placeholder,
     ...restProps
   } = props;
 
@@ -51,6 +52,11 @@ function SelectField(props) {
           value={values && !!values[name] ? values[name] : selected}
           onChange={handleSelectChange}
         >
+          {placeholder && (
+            <option value="">
+              {placeholder}
+            </option>
+          )}
           {!!options?.length ? (
             <>
               
@@ -64,9 +70,11 @@ function SelectField(props) {
               ))}
             </>
           ) : (
-            <option value="option" disabled>
-              Empty !
-            </option>
+            !placeholder && (
+              <option value="option" disabled>
+                Empty !
+              </option>
+            )
           )}
         </select>
         <i 

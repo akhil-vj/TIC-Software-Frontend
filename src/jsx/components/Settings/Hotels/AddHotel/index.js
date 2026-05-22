@@ -22,6 +22,51 @@ import { LoadingButton } from "../../../common/LoadingBtn";
 
 const AddHotel = () => {
   const [goSteps, setGoSteps] = useState(0);
+  const handleStepChange = async (targetStep) => {
+    if (targetStep < goSteps) {
+      setGoSteps(targetStep);
+      return;
+    }
+
+    if (targetStep > goSteps + 1) {
+      return;
+    }
+
+    if (goSteps === 0 && targetStep > 0) {
+      const stepOneFields = [
+        "name",
+        "place",
+        "destination",
+        "subDestination",
+        "category",
+        "propertyType",
+        "salesEmail",
+        "phoneNumber",
+        "address"
+      ];
+      
+      const touchedFields = {};
+      stepOneFields.forEach(field => {
+        touchedFields[field] = true;
+      });
+      formik.setTouched(touchedFields);
+
+      const errors = await formik.validateForm();
+      const hasErrors = stepOneFields.some(field => !!errors[field]);
+      if (hasErrors) {
+        return;
+      }
+    }
+    
+    if (goSteps === 1 && targetStep > 1) {
+      if (!formik.values.addRoom || formik.values.addRoom.length === 0) {
+        notifyError('Add at least one room before saving the hotel');
+        return;
+      }
+    }
+
+    setGoSteps(targetStep);
+  };
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const {id} = useParams()
@@ -33,7 +78,9 @@ const AddHotel = () => {
     addRoom: [],
     hotelAmentity: [],
     hotelImg: [],
-    roomId:''
+    roomId:'',
+    category: '',
+    propertyType: ''
   }
   const url = URLS.HOTEL_URL
   const editUrl = `${URLS.HOTEL_URL}/${id}`
@@ -112,10 +159,10 @@ const AddHotel = () => {
           if(!!item.roomId){
             formData.append(`rooms[${ind}][id]`,item.roomId)
           }
-          formData.append(`rooms[${ind}][market_type_id]`, item.marketType.value);
+          formData.append(`rooms[${ind}][market_type_id]`, item.marketType?.value || "");
           formData.append(`rooms[${ind}][from_date]`, start.toLocaleDateString('en-CA'));
           formData.append(`rooms[${ind}][to_date]`, end.toLocaleDateString('en-CA'));
-          formData.append(`rooms[${ind}][room_type_id]`, item.roomType.value);
+          formData.append(`rooms[${ind}][room_type_id]`, item.roomType?.value || "");
           formData.append(`rooms[${ind}][single_bed_amount]`, item.singleBed);
           formData.append(`rooms[${ind}][double_bed_amount]`, item.doubleBed);
           formData.append(`rooms[${ind}][triple_bed_amount]`, item.tripleBed);
@@ -148,9 +195,6 @@ const AddHotel = () => {
           values.hotelAmentity.forEach((item,ind)=>{
             formData.append(`amenities[${ind}]`, item);
           })
-        }else{
-          // keep amenities key present to avoid backend undefined index
-          formData.append('amenities','');
         }
         values.hotelImg?.forEach((item,ind)=>{
           if(checkIsFile(item)){
@@ -311,10 +355,10 @@ const AddHotel = () => {
                   className="nav-wizard"
                   activeStep={goSteps}
                 >
-                  <Step className="nav-link" onClick={() => setGoSteps(0)} />
-                  <Step className="nav-link" onClick={() => setGoSteps(1)} />
-                  <Step className="nav-link" onClick={() => setGoSteps(2)} />
-                  <Step className="nav-link" onClick={() => setGoSteps(3)} />
+                  <Step className="nav-link" onClick={() => handleStepChange(0)} />
+                  <Step className="nav-link" onClick={() => handleStepChange(1)} />
+                  <Step className="nav-link" onClick={() => handleStepChange(2)} />
+                  <Step className="nav-link" onClick={() => handleStepChange(3)} />
                 </Stepper>
                 {goSteps === 0 && (
                   <>
@@ -322,8 +366,8 @@ const AddHotel = () => {
                     <div className="text-end toolbar toolbar-bottom p-2">
                       <button
                         className="btn btn-primary sw-btn-next"
-                        onClick={() => setGoSteps(1)}
-                        disabled={formik.isSubmitting || !formik.isValid || !formik.dirty}
+                        onClick={() => handleStepChange(1)}
+                        disabled={formik.isSubmitting}
                       >
                         Next
                       </button>
@@ -336,13 +380,13 @@ const AddHotel = () => {
                     <div className="text-end toolbar toolbar-bottom p-2">
                       <button
                         className="btn btn-secondary sw-btn-prev me-1"
-                        onClick={() => setGoSteps(0)}
+                        onClick={() => handleStepChange(0)}
                       >
                         Prev
                       </button>
                       <button
                         className="btn btn-primary sw-btn-next ms-1"
-                        onClick={() => setGoSteps(2)}
+                        onClick={() => handleStepChange(2)}
                       >
                         Next
                       </button>
@@ -355,13 +399,13 @@ const AddHotel = () => {
                     <div className="text-end toolbar toolbar-bottom p-2">
                       <button
                         className="btn btn-secondary sw-btn-prev me-1"
-                        onClick={() => setGoSteps(1)}
+                        onClick={() => handleStepChange(1)}
                       >
                         Prev
                       </button>
                       <button
                         className="btn btn-primary sw-btn-next ms-1"
-                        onClick={() => setGoSteps(3)}
+                        onClick={() => handleStepChange(3)}
                       >
                         Next
                       </button>
@@ -374,7 +418,7 @@ const AddHotel = () => {
                     <div className="text-end toolbar toolbar-bottom p-2">
                       <button
                         className="btn btn-secondary sw-btn-prev me-2"
-                        onClick={() => setGoSteps(2)}
+                        onClick={() => handleStepChange(2)}
                       >
                         Prev
                       </button>

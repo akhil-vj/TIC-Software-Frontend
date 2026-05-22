@@ -269,7 +269,7 @@ const StepTwo = ({ formik: parentFormik }) => {
               </div>
               <div className="row mb-3">
                 <div className="col-12">
-                  <h4>Amentities *</h4>
+                  <h4>Amentities</h4>
                 </div>
                 <div className="col-12">
                   <div className="form-group">
@@ -521,8 +521,12 @@ const StepTwo = ({ formik: parentFormik }) => {
                         className="me-0"
                         variant="primary"
                         onClick={() => {
-                          if(!values.roomAmentity?.length){
-                            notifyError('Select at least one room amenity');
+                          if (!values.marketType) {
+                            notifyError('Select a market type');
+                            return;
+                          }
+                          if (!values.roomType) {
+                            notifyError('Select a room type');
                             return;
                           }
                           if(values.editRoom === -1){

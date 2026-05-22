@@ -107,6 +107,7 @@ const StepOne = ({ formik }) => {
             optionLabel="name"
             formik={formik}
             required
+            placeholder="Select Category"
           />
         </div>
         <div className="col-lg-6 mb-2">
@@ -119,7 +120,9 @@ const StepOne = ({ formik }) => {
             options={propertyTypeData?.data?.data}
             optionValue="id"
             optionLabel="name"
+            formik={formik}
             required
+            placeholder="Select Property Type"
           />
         </div>
         <div className="col-lg-6 mb-2">
