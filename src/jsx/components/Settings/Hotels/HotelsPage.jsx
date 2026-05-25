@@ -360,155 +360,163 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
             // List View
             <div className="row">
               <div className="col-xl-12">
-                <div className="table-responsive">
-                  <table className="table table-hover hotel-list-table">
-                    <thead className="table-header-bg">
-                      <tr>
-                        <th>Hotel Name</th>
-                        <th>Location</th>
-                        <th>Category</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredHotels?.length > 0 ? (
-                        filteredHotels?.map((item, index) => {
-                          const pickImagePath = (data) => {
-                            if (!data) return "";
-                            const first = Array.isArray(data)
-                              ? data[0]
-                              : data;
-                            return (
-                              first?.file_url ||
-                              first?.file ||
-                              first?.url ||
-                              first?.original_url ||
-                              first?.path ||
-                              ""
-                            );
-                          };
-                          const buildImgUrl = (raw) => {
-                            if (!raw) return "";
-                            const newDomain = "https://tic-backend.plantriponline.com";
-                            if (
-                              typeof raw === "string" &&
-                              raw.startsWith("http")
-                            ) {
-                              return raw.replace(/https:\/\/tic\.cyberonics\.net/, newDomain);
-                            }
-                            const storageUrl = "https://tic-backend.plantriponline.com/storage";
-                            const sep = raw?.startsWith("/") ? "" : "/";
-                            return `${storageUrl}${sep}${raw}`;
-                          };
-                          const rawImg =
-                            pickImagePath(item?.document_2) ||
-                            pickImagePath(item?.media);
-                          const imageSrc = buildImgUrl(rawImg) || course1;
-
-                          return (
-                            <tr
-                              key={index}
-                              className="hotel-list-row"
-                              onClick={() => onDetail(item.id)}
-                              style={{ cursor: "pointer" }}
-                            >
-                              <td>
-                                <div className="list-hotel-info">
-                                  <img
-                                    src={imageSrc}
-                                    alt={item.name}
-                                    className="list-hotel-img"
-                                  />
-                                  <div className="list-hotel-details">
-                                    <h6 className="hotel-list-name">
-                                      {item.name}
-                                    </h6>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>
-                                <div className="location-badge">
-                                  <svg
-                                    width="14"
-                                    height="14"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                  >
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                    <circle cx="12" cy="10" r="3"></circle>
-                                  </svg>
-                                  {item.destination_name || "India, Kochi Kerala"}
-                                </div>
-                              </td>
-                              <td>
-                                <span className="category-badge">
-                                  {item.category_name || "-"}
-                                </span>
-                              </td>
-                              <td>
-                                <span className="email-text">
-                                  {item.sales_email || "-"}
-                                </span>
-                              </td>
-                              <td>
-                                <span className="phone-text">
-                                  {item.phone_number || "-"}
-                                </span>
-                              </td>
-                              <td>
-                                <div className="list-actions">
-                                  <button
-                                    className="list-action-btn edit-btn"
-                                    onClick={() => onEdit(item.id)}
-                                    title="Edit"
-                                  >
-                                    <svg
-                                      width="16"
-                                      height="16"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                    >
-                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                    </svg>
-                                  </button>
-                                  <button
-                                    className="list-action-btn delete-btn"
-                                    onClick={() => onDelete(item.id, item.name)}
-                                    title="Delete"
-                                  >
-                                    <svg
-                                      width="16"
-                                      height="16"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                    >
-                                      <polyline points="3 6 5 6 21 6"></polyline>
-                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                    </svg>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      ) : (
+                <div className="card border-0 mb-4" style={{ border: "1px solid #e2e8f0", borderRadius: "16px", overflow: "hidden", backgroundColor: "#fff", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.03)" }}>
+                  <div className="table-responsive" style={{ overflow: "hidden" }}>
+                    <table className="table table-hover hotel-list-table" style={{ tableLayout: "fixed", width: "100%", margin: 0 }}>
+                      <thead className="table-header-bg">
                         <tr>
-                          <td colSpan="6" className="text-center py-5">
-                            <NoData isLoading={hotelData?.loading} />
-                          </td>
+                          <th style={{ width: "25%", paddingLeft: "24px" }}>Hotel Name</th>
+                          <th style={{ width: "10%" }}>Location</th>
+                          <th style={{ width: "8%" }}>Category</th>
+                          <th style={{ width: "20%" }}>Email</th>
+                          <th style={{ width: "10%" }}>Phone</th>
+                          <th style={{ width: "8%", paddingRight: "24px" }}>Actions</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {filteredHotels?.length > 0 ? (
+                          filteredHotels?.map((item, index) => {
+                            const pickImagePath = (data) => {
+                              if (!data) return "";
+                              const first = Array.isArray(data)
+                                ? data[0]
+                                : data;
+                              return (
+                                first?.file_url ||
+                                first?.file ||
+                                first?.url ||
+                                first?.original_url ||
+                                first?.path ||
+                                ""
+                              );
+                            };
+                            const buildImgUrl = (raw) => {
+                              if (!raw) return "";
+                              const newDomain = "https://tic-backend.plantriponline.com";
+                              if (
+                                typeof raw === "string" &&
+                                raw.startsWith("http")
+                              ) {
+                                return raw.replace(/https:\/\/tic\.cyberonics\.net/, newDomain);
+                              }
+                              const storageUrl = "https://tic-backend.plantriponline.com/storage";
+                              const sep = raw?.startsWith("/") ? "" : "/";
+                              return `${storageUrl}${sep}${raw}`;
+                            };
+                            const rawImg =
+                              pickImagePath(item?.document_2) ||
+                              pickImagePath(item?.media);
+                            const imageSrc = buildImgUrl(rawImg) || course1;
+
+                            return (
+                              <tr
+                                key={index}
+                                className="hotel-list-row"
+                                onClick={() => onDetail(item.id)}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <td style={{ paddingLeft: "24px" }}>
+                                  <div className="list-hotel-info">
+                                    <img
+                                      src={imageSrc}
+                                      alt={item.name}
+                                      className="list-hotel-img"
+                                    />
+                                    <div className="list-hotel-details">
+                                      <h6 className="hotel-list-name" title={item.name}>
+                                        {item.name}
+                                      </h6>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="location-badge" title={item.destination_name || "Location"}>
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    >
+                                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                      <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    {item.destination_name || "India, Kochi Kerala"}
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className="category-badge" title={item.category_name || "-"}>
+                                    {item.category_name || "-"}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="email-text" title={item.sales_email || "-"}>
+                                    {item.sales_email || "-"}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="phone-text" title={item.phone_number || "-"}>
+                                    {item.phone_number || "-"}
+                                  </span>
+                                </td>
+                                <td style={{ paddingRight: "24px" }}>
+                                  <div className="list-actions">
+                                    <button
+                                      className="list-action-btn edit-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEdit(item.id);
+                                      }}
+                                      title="Edit"
+                                    >
+                                      <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                      >
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      className="list-action-btn delete-btn"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDelete(item.id, item.name);
+                                      }}
+                                      title="Delete"
+                                    >
+                                      <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                      >
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan="6" className="text-center py-5">
+                              <NoData isLoading={hotelData?.loading} />
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
@@ -768,27 +776,29 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
         }
 
         .table-header-bg {
-          background: #f8f9fa;
+          background-color: #f0f7ff !important;
         }
 
         .table-header-bg th {
-          border-bottom: 2px solid #e9ecef;
+          border-bottom: 1.5px solid #d0e7ff;
           font-weight: 600;
-          color: #495057;
-          padding: 16px 12px;
+          font-size: 13px;
+          color: #0d6efd !important;
+          letter-spacing: 0.03em;
+          padding: 16px 20px;
         }
 
         .hotel-list-row {
-          border-bottom: 1px solid #e9ecef;
+          border-bottom: 1px solid #f1f5f9;
           transition: all 0.3s ease;
         }
 
         .hotel-list-row:hover {
-          background: #f8f9fa;
+          background: #f8fafc;
         }
 
         .hotel-list-row td {
-          padding: 16px 12px;
+          padding: 16px 20px;
           vertical-align: middle;
         }
 
@@ -796,20 +806,25 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
           display: flex;
           align-items: center;
           gap: 12px;
+          overflow: hidden;
+          max-width: 100%;
         }
 
         .list-hotel-img {
-          width: 60px;
-          height: 60px;
+          width: 50px;
+          height: 50px;
           border-radius: 8px;
           object-fit: cover;
-          border: 1px solid #e9ecef;
+          border: 1px solid #e2e8f0;
+          flex-shrink: 0;
         }
 
         .list-hotel-details {
           display: flex;
           flex-direction: column;
           gap: 4px;
+          overflow: hidden;
+          flex: 1;
         }
 
         .hotel-list-name {
@@ -817,15 +832,21 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
           font-size: 15px;
           font-weight: 600;
           color: #1a1a1a;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .location-badge {
           display: flex;
           align-items: center;
           gap: 6px;
-          color: #6c757d;
-          font-size: 14px;
+          color: #64748b;
+          font-size: 13.5px;
           font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .location-badge svg {
@@ -835,22 +856,34 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
 
         .category-badge {
           display: inline-block;
-          background: #e7f3ff;
-          color: #0d6efd;
-          padding: 6px 12px;
+          background: #e0f2fe;
+          color: #0369a1;
+          padding: 4px 10px;
           border-radius: 6px;
-          font-size: 13px;
+          font-size: 12.5px;
           font-weight: 600;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 100%;
         }
 
         .email-text {
-          color: #6c757d;
-          font-size: 14px;
+          color: #64748b;
+          font-size: 13.5px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: block;
         }
 
         .phone-text {
-          color: #6c757d;
-          font-size: 14px;
+          color: #64748b;
+          font-size: 13.5px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: block;
         }
 
         .list-actions {
