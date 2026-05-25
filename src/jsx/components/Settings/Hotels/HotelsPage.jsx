@@ -46,6 +46,15 @@ const baseUrl = getApiBaseUrl();
 const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, navigate }) => {
   const hotelData = useAsync(URLS.HOTEL_URL);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const filteredHotels = hotelData?.data?.data?.filter((hotel) => {
     if (!searchTerm) return true;
@@ -56,6 +65,61 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
       hotel?.sub_destination_name?.toLowerCase().includes(searchLower)
     );
   });
+
+  const sortedHotels = React.useMemo(() => {
+    let items = [...(filteredHotels || [])];
+    if (sortConfig.key) {
+      items.sort((a, b) => {
+        let aVal = "";
+        let bVal = "";
+
+        if (sortConfig.key === "name") {
+          aVal = a?.name || "";
+          bVal = b?.name || "";
+        } else if (sortConfig.key === "location") {
+          aVal = a?.destination_name || "";
+          bVal = b?.destination_name || "";
+        } else if (sortConfig.key === "category") {
+          aVal = a?.category_name || "";
+          bVal = b?.category_name || "";
+        }
+
+        const aStr = String(aVal).toLowerCase();
+        const bStr = String(bVal).toLowerCase();
+
+        if (aStr < bStr) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aStr > bStr) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return items;
+  }, [filteredHotels, sortConfig]);
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) {
+      return (
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#718096" strokeWidth="2.5" style={{ marginLeft: "6px" }}>
+          <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
+        </svg>
+      );
+    }
+    if (sortConfig.direction === 'asc') {
+      return (
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0d6efd" strokeWidth="3.5" style={{ marginLeft: "6px" }}>
+          <path d="M18 15l-6-6-6 6" />
+        </svg>
+      );
+    }
+    return (
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0d6efd" strokeWidth="3.5" style={{ marginLeft: "6px" }}>
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    );
+  };
 
   return (
     <>
@@ -365,17 +429,41 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
                     <table className="table table-hover hotel-list-table" style={{ tableLayout: "fixed", width: "100%", margin: 0 }}>
                       <thead className="table-header-bg">
                         <tr>
-                          <th style={{ width: "25%", paddingLeft: "24px" }}>Hotel Name</th>
-                          <th style={{ width: "10%" }}>Location</th>
-                          <th style={{ width: "8%" }}>Category</th>
+                          <th 
+                            style={{ width: "25%", paddingLeft: "24px", cursor: "pointer", userSelect: "none" }}
+                            onClick={() => handleSort("name")}
+                          >
+                            <div className="d-flex align-items-center">
+                              Hotel Name
+                              {renderSortIcon("name")}
+                            </div>
+                          </th>
+                          <th 
+                            style={{ width: "10%", cursor: "pointer", userSelect: "none" }}
+                            onClick={() => handleSort("location")}
+                          >
+                            <div className="d-flex align-items-center">
+                              Location
+                              {renderSortIcon("location")}
+                            </div>
+                          </th>
+                          <th 
+                            style={{ width: "8%", cursor: "pointer", userSelect: "none" }}
+                            onClick={() => handleSort("category")}
+                          >
+                            <div className="d-flex align-items-center">
+                              Category
+                              {renderSortIcon("category")}
+                            </div>
+                          </th>
                           <th style={{ width: "20%" }}>Email</th>
                           <th style={{ width: "10%" }}>Phone</th>
                           <th style={{ width: "8%", paddingRight: "24px" }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredHotels?.length > 0 ? (
-                          filteredHotels?.map((item, index) => {
+                        {sortedHotels?.length > 0 ? (
+                          sortedHotels?.map((item, index) => {
                             const pickImagePath = (data) => {
                               if (!data) return "";
                               const first = Array.isArray(data)
