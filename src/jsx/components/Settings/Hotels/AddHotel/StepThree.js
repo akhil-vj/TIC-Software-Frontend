@@ -11,7 +11,7 @@ const StepThree = ({ formik }) => {
     <section>
       <div className="row">
         <div className="col-12">
-          <h4>Amentities *</h4>
+          <h4>Amentities</h4>
         </div>
       </div>
       <div className="row">
