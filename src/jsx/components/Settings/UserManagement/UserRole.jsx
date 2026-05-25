@@ -29,7 +29,7 @@ const AddRoleModal = ({ showModal, setShowModal }) => {
                 initialValues={{ name: "" }}
                 onSubmit={(values) => {
                     setShowModal(false);
-                    dispatch(RoleAction.setPage(values.name));
+                    dispatch(RoleAction.setName(values.name));
                     navigate("/user-role/add");
                 }}
             >

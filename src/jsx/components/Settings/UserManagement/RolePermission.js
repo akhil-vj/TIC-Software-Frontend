@@ -114,7 +114,7 @@ const Permission = () => {
 
   // console.log('dat', tableData)
   const navigate = useNavigate();
-  // const roleData = useSelector((data) => data.form);
+  const roleName = useSelector((state) => state.role.name);
   const [data, setData] = useState(
     document.querySelectorAll("#example2_wrapper tbody tr"),
   );
@@ -122,7 +122,7 @@ const Permission = () => {
   const [myObject, setMyObject] = useState({});
 
   const initialValues = {
-    name: '',
+    name: isEdit ? '' : (roleName || ''),
     permissions: [],
     permissionObj: {}
   };
@@ -220,10 +220,8 @@ const Permission = () => {
         response = await axiosPost(url, formData);
       }
       if (response.success) {
-        // dispatch(FormAction.setRefresh());
-        // formik.setFieldValue("name", "");
-        navigate("/user-role");
-        notifyCreate('User Role', isEdit)
+        notifyCreate('User Role', isEdit);
+        navigate("/settings");
       }
     } catch (error) {
       // console.log(error);
