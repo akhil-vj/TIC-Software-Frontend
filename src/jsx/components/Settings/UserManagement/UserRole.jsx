@@ -9,14 +9,41 @@ import DeleteModal from "../../common/DeleteModal";
 
 import { useAsync } from "../../../utilis/useAsync";
 import { URLS } from "../../../../constants";
-import { RoleAction } from "../../../../store/slices/roleSlice";
-import { axiosPut } from "../../../../services/AxiosInstance";
+import { axiosPost, axiosPut } from "../../../../services/AxiosInstance";
 import { buildApiUrl } from "../../../../services/apiConfig";
 import { notifyError, notifySuccess } from "../../../utilis/notifyMessage";
+import { FormAction } from "../../../../store/slices/formSlice";
 
 const AddRoleModal = ({ showModal, setShowModal }) => {
-    const navigate = useNavigate();
     const dispatch = useDispatch();
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSave = async (values, { resetForm }) => {
+        if (!values.name.trim()) return;
+        try {
+            setIsSaving(true);
+            const response = await axiosPost(URLS.USER_ROLE_URL, {
+                name: values.name.trim(),
+                is_active: 1,
+                sync: 0,
+                description: '',
+                permissions: [],  // default: none
+            });
+            if (response.success) {
+                notifySuccess('Role created successfully');
+                dispatch(FormAction.setRefresh()); // re-fetches role list
+                resetForm();
+                setShowModal(false);
+            } else {
+                notifyError(response.message || 'Failed to create role');
+            }
+        } catch (error) {
+            const msg = error?.response?.data?.message || 'Failed to create role';
+            notifyError(msg);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <CustomModal
@@ -27,11 +54,7 @@ const AddRoleModal = ({ showModal, setShowModal }) => {
         >
             <Formik
                 initialValues={{ name: "" }}
-                onSubmit={(values) => {
-                    setShowModal(false);
-                    dispatch(RoleAction.setName(values.name));
-                    navigate("/user-role/add");
-                }}
+                onSubmit={handleSave}
             >
                 {({ values, handleChange, handleBlur, handleSubmit }) => (
                     <form onSubmit={handleSubmit}>
@@ -40,8 +63,8 @@ const AddRoleModal = ({ showModal, setShowModal }) => {
                                 <InputField label="Name" name="name" onChange={handleChange} onBlur={handleBlur} values={values} />
                             </div>
                         </div>
-                        <button type="submit" className="btn btn-primary mt-4">
-                            Submit
+                        <button type="submit" className="btn btn-primary mt-4" disabled={isSaving}>
+                            {isSaving ? 'Saving...' : 'Submit'}
                         </button>
                     </form>
                 )}
