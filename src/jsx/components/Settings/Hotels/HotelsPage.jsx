@@ -429,7 +429,7 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
                     <table className="table table-hover hotel-list-table" style={{ tableLayout: "fixed", width: "100%", margin: 0 }}>
                       <thead className="table-header-bg">
                         <tr>
-                          <th 
+                          <th
                             style={{ width: "25%", paddingLeft: "24px", cursor: "pointer", userSelect: "none" }}
                             onClick={() => handleSort("name")}
                           >
@@ -438,7 +438,7 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
                               {renderSortIcon("name")}
                             </div>
                           </th>
-                          <th 
+                          <th
                             style={{ width: "10%", cursor: "pointer", userSelect: "none" }}
                             onClick={() => handleSort("location")}
                           >
@@ -447,7 +447,7 @@ const HotelsListView = ({ onEdit, onDelete, onDetail, viewType, setViewType, nav
                               {renderSortIcon("location")}
                             </div>
                           </th>
-                          <th 
+                          <th
                             style={{ width: "8%", cursor: "pointer", userSelect: "none" }}
                             onClick={() => handleSort("category")}
                           >
@@ -1106,7 +1106,7 @@ const AddEditHotelView = ({ hotelId, onBack }) => {
         "phoneNumber",
         "address"
       ];
-      
+
       const touchedFields = {};
       stepOneFields.forEach(field => {
         touchedFields[field] = true;
@@ -1119,7 +1119,7 @@ const AddEditHotelView = ({ hotelId, onBack }) => {
         return;
       }
     }
-    
+
     if (goSteps === 1 && targetStep > 1) {
       if (!formik.values.addRoom || formik.values.addRoom.length === 0) {
         notifyError('Add at least one room before saving the hotel');

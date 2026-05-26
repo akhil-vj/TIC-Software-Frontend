@@ -48,10 +48,10 @@ const Activity = () => {
   };
   const tableArray = [
     { label: "Sl no", value: "index", className: "text-center" },
-    { label: "Name", value: "activity_name" },
-    { label: "Activity Type", value: ["activity_type", "name"] },
-    { label: "Email", value: "contact_email" },
-    { label: "Destination", value: ["destination", "name"], className: 'text-center' },
+    { label: "Name", value: "activity_name", sortable: true },
+    { label: "Activity Type", value: ["activity_type", "name"], sortable: true },
+    { label: "Email", value: "contact_email", sortable: true },
+    { label: "Destination", value: ["destination", "name"], className: 'text-center', sortable: true },
     { label: "Status", value: "is_active" },
     {
       label: "Actions",

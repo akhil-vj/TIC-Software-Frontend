@@ -6,6 +6,39 @@ import { axiosDelete } from "../../../services/AxiosInstance";
 import { notifyDelete, notifyError } from "../../utilis/notifyMessage";
 
 const initialType = {write:true,update:true,delete:true}
+
+const showValue = (value) => {
+  const isArray = Array.isArray(value)
+  let listValue
+  if(isArray){
+    listValue = value?.map(item => item.name).join(', ')
+  }else{
+    listValue = value
+  }
+  return listValue
+}
+
+const getValue = (data, val, condition) => {
+  const keys = val;
+  if (Array.isArray(keys)) {
+    let value = data;
+    keys.forEach((key) => {
+      value = value?.[key];
+    });
+    if(!value && !!condition){
+      let value2 = data;
+      let keys2 = condition
+      keys2.forEach((key) => {
+        value2 = value2?.[key];
+      });
+      return showValue(value2);
+    }
+    return showValue(value);
+  } else {
+    return showValue(data[keys]);
+  }
+};
+
 export const CustomTable = ({
   children,
   length,
@@ -40,11 +73,64 @@ export const CustomTable = ({
   const [confirmationUrl, setConfirmationUrl] = useState("");
   const [confirmationName, setConfirmationName] = useState("");
   const [confirmationType, setConfirmationType] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc', valuePath: null });
+
+  const handleSort = (valuePath, label) => {
+    let direction = 'asc';
+    if (sortConfig.key === label && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key: label, direction, valuePath });
+  };
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) {
+      return (
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#718096" strokeWidth="2.5" style={{ marginLeft: "6px" }}>
+          <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
+        </svg>
+      );
+    }
+    if (sortConfig.direction === 'asc') {
+      return (
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0d6efd" strokeWidth="3.5" style={{ marginLeft: "6px" }}>
+          <path d="M18 15l-6-6-6 6" />
+        </svg>
+      );
+    }
+    return (
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0d6efd" strokeWidth="3.5" style={{ marginLeft: "6px" }}>
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    );
+  };
+
+  const sortedData = React.useMemo(() => {
+    let items = [...(data || [])];
+    if (sortConfig.key && sortConfig.valuePath) {
+      items.sort((a, b) => {
+        const aVal = getValue(a, sortConfig.valuePath) || "";
+        const bVal = getValue(b, sortConfig.valuePath) || "";
+
+        const aStr = String(aVal).toLowerCase();
+        const bStr = String(bVal).toLowerCase();
+
+        if (aStr < bStr) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aStr > bStr) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return items;
+  }, [data, sortConfig]);
 
   const totalPages = Math.ceil(length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const tableData = data.slice(startIndex, endIndex);
+  const tableData = sortedData.slice(startIndex, endIndex);
 
   const sort = 8;
   const activePag = React.useRef(0);
@@ -73,37 +159,7 @@ export const CustomTable = ({
     }
   };
 
-  const showValue = (value) => {
-    const isArray = Array.isArray(value)
-    let listValue
-    if(isArray){
-      listValue = value?.map(item => item.name).join(', ')
-    }else{
-      listValue = value
-    }
-    return listValue
-  }
 
-  const getValue = (data, val, condition) => {
-    const keys = val;
-    if (Array.isArray(keys)) {
-      let value = data;
-      keys.forEach((key) => {
-        value = value?.[key];
-      });
-      if(!value && !!condition){
-        let value2 = data;
-        let keys2 = condition
-      keys2.forEach((key) => {
-        value2 = value2?.[key];
-      });
-      return showValue(value2);
-      }
-      return showValue(value);
-    } else {
-      return showValue(data[keys]);
-    }
-  };
 
   const onConfirmation = (id,name,type='delete',updateValue) => {
     let confirmUrl = `${url}/${id}`
@@ -198,14 +254,22 @@ export const CustomTable = ({
                   </th>
                 )}
                 {/* {tHead} */}
-                {tableArray?.map((item, key) => (
-                  <th
-                    key={key}
-                    className={item?.className ? item.className : ""}
-                  >
-                    {item?.label}
-                  </th>
-                ))}
+                {tableArray?.map((item, key) => {
+                  const isSortable = item?.sortable;
+                  return (
+                    <th
+                      key={key}
+                      className={`${item?.className ? item.className : ""} ${isSortable ? "cursor-pointer" : ""}`}
+                      onClick={() => isSortable && handleSort(item.value, item.label)}
+                      style={isSortable ? { cursor: "pointer", userSelect: "none" } : {}}
+                    >
+                      <div className="d-flex align-items-center">
+                        {item?.label}
+                        {isSortable && renderSortIcon(item.label)}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>

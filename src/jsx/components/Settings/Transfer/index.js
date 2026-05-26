@@ -57,8 +57,8 @@ const Transfer = () => {
   const tableArray = [
     { label: "Sl no", value: "index", className: "text-center" },
     // { label: "Vehicle No", value: "vehicle_number" },
-    { label: "Name", value: "vehicle_name" },
-    { label: "Destination", value: ["destination", "name"] },
+    { label: "Name", value: "vehicle_name", sortable: true },
+    { label: "Destination", value: ["destination", "name"], sortable: true },
     { label: "Status", value: "is_active" },
     {
       label: "Actions",
