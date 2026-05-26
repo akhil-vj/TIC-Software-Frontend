@@ -346,9 +346,32 @@ const EditProfile = ({ setShowModal }) => {
       const assignedPart = getTwoLetters(assignedName);
       const destinationPart = getTwoLetters(destinationName);
 
-      const now = new Date(values.startDate || new Date());
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
+      // Helper to parse date to a local components object without timezone shift
+      const getYearMonthDay = (dateInput) => {
+        if (!dateInput) return null;
+        let str = "";
+        if (dateInput instanceof Date) {
+          const y = dateInput.getFullYear();
+          const m = String(dateInput.getMonth() + 1).padStart(2, '0');
+          const d = String(dateInput.getDate()).padStart(2, '0');
+          str = `${y}-${m}-${d}`;
+        } else {
+          str = String(dateInput).split('T')[0];
+        }
+        const parts = str.split('-');
+        if (parts.length === 3) {
+          return {
+            year: parseInt(parts[0], 10),
+            month: parseInt(parts[1], 10) - 1, // 0-indexed
+            day: parseInt(parts[2], 10)
+          };
+        }
+        return null;
+      };
+
+      const nowParts = getYearMonthDay(new Date());
+      const mm = String(nowParts.month + 1).padStart(2, "0");
+      const dd = String(nowParts.day).padStart(2, "0");
       const datePart = `${dd}${mm}`;
 
       let highestNum = 0;
@@ -362,22 +385,24 @@ const EditProfile = ({ setShowModal }) => {
         // Legacy format: Agent/Assigned/Dest/Date/Seq (length >= 5)
         // New format: Dest/Date/Assigned/Seq (length >= 4)
         if (parts.length >= 4) {
-          const pNum = parts[parts.length - 1]; 
+          const pNum = parts[parts.length - 1];
 
           // Ensure it's the same user
           const enqAssignedId = enq.assigned_to_user?.id || enq.assigned_to;
-          const isSameUser = currentAssignedId && enqAssignedId 
-                             ? (String(enqAssignedId) === String(currentAssignedId))
-                             : (parts.includes(assignedPart));
-                             
-          // Ensure it's the same month and year
-          const enqDate = new Date(enq.start_date || enq.created_at || new Date());
-          const isSameMonthAndYear = (enqDate.getMonth() === now.getMonth() && enqDate.getFullYear() === now.getFullYear());
+          const isSameUser = currentAssignedId && enqAssignedId
+            ? (String(enqAssignedId) === String(currentAssignedId))
+            : (parts.includes(assignedPart));
 
-          if (isSameUser && isSameMonthAndYear) {
-            const num = parseInt(pNum, 10);
-            if (!isNaN(num) && num > highestNum) {
-              highestNum = num;
+          // Ensure it's the same month and year based on creation date
+          const enqParts = getYearMonthDay(enq.created_at || enq.start_date);
+          if (enqParts) {
+            const isSameMonthAndYear = (enqParts.month === nowParts.month && enqParts.year === nowParts.year);
+
+            if (isSameUser && isSameMonthAndYear) {
+              const num = parseInt(pNum, 10);
+              if (!isNaN(num) && num > highestNum) {
+                highestNum = num;
+              }
             }
           }
         }
