@@ -329,7 +329,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     // ─────────────────────────────────────────
     // PACKAGE INCLUSIONS  (mirrors blade Tour Cost Includes)
     // ─────────────────────────────────────────
-    if (values.itinerary && packageData.planArr) {
+    if (packageData.planArr) {
       const hotelsGrouped = getGroupedHotels();
       const firstOptLabel = hotelsGrouped.length > 0 ? hotelsGrouped[0].optionLabel : null;
       const firstOptHotels = hotelsGrouped.filter(h => h.optionLabel === firstOptLabel);
@@ -394,7 +394,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       // TRAVEL PLAN  (mirrors blade Proposed Itinerary)
       // ─────────────────────────────────────────
       const allDays = getDayWiseItinerary();
-      if (allDays.length > 0) {
+      if (values.itinerary && allDays.length > 0) {
         text += `🗓 *TRAVEL PLAN*\n\n`;
 
         allDays.forEach(({ dayIndex, dayDate, schedule }) => {
