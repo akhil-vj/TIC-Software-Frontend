@@ -2,6 +2,7 @@ import { useFormik } from "formik";
 import React, { useEffect, useState } from "react";
 import ReactSelect from "../../common/ReactSelect";
 import { SETUP, URLS } from "../../../../constants";
+import { getDefaultCurrency } from "../../../../constants/destinationCurrency";
 import InputField from "../../common/InputField";
 import CustomModal from "../../../layouts/CustomModal";
 import DatePicker from "react-datepicker";
@@ -50,7 +51,7 @@ const addDays = (date, days = 1) => {
   return next;
 };
 
-const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose }) => {
+const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, itineraryDestination }) => {
   const { itineraryId } = useParams()
   const isItineraryId = !!itineraryId
   const hotelId = data?.id
@@ -96,6 +97,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose }
     const singleCount = safeNum(values.single);
     const doubleCount = safeNum(values.double);
     const tripleCount = safeNum(values.triple);
+    const quadCount = safeNum(values.quad);
     const extraCount = safeNum(values.extra);
     const childWCount = safeNum(values.childW);
     const childNCount = safeNum(values.childN);
@@ -103,6 +105,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose }
       singleCount * 1 * Number(roomData?.single_bed_amount || 0) +
       doubleCount * 2 * Number(roomData?.double_bed_amount || 0) +
       tripleCount * 3 * Number(roomData?.triple_bed_amount || 0) +
+      quadCount * 4 * Number(roomData?.quad_bed_amount || 0) +
       extraCount * 1 * Number(roomData?.extra_bed_amount || 0) +
       childWCount * 1 * Number(roomData?.child_w_bed_amount || 0) +
       childNCount * 1 * Number(roomData?.child_n_bed_amount || 0);
@@ -125,14 +128,16 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose }
         setFieldValue('name', hotelDetailData?.name)
         setFieldValue('id', hotelDetailData?.id)
         setFieldValue('roomOption', hotelDetailData?.rooms)
-        const initialMealPlan = selectedRoom?.meal_plans[0]
-        setFieldValue('mealPlan', [{ label: initialMealPlan?.name, value: initialMealPlan?.id }])
+        const initialMealPlan = hotelDetailData?.rooms[0]?.meal_plans[0]
+        if (initialMealPlan) {
+          setFieldValue('mealPlan', [{ label: initialMealPlan?.name, value: initialMealPlan?.id }])
+        }
         setFieldValue('roomType', roomTypeObj)
         setFieldValue('category', categoryObj)
         setFieldValue('image', hotelDetailData?.document_2[0]?.file_url)
       }
     }
-  }, [editId, hotelId, hotelDetailData, selectedRoom])
+  }, [editId, hotelId, hotelDetailData])
 
   const roomTypeId = values.roomType?.value
   useEffect(() => {
@@ -142,10 +147,17 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose }
         setSelectedRoom(data)
         const typeObj = { label: data?.market_type_name, value: data?.market_type_id }
         setFieldValue('type', typeObj)
+        const currentMealPlan = data?.meal_plans && data.meal_plans[0];
+        if (currentMealPlan) {
+          setFieldValue('mealPlan', [{ label: currentMealPlan.name, value: currentMealPlan.id }]);
+        } else {
+          setFieldValue('mealPlan', []);
+        }
         roomAllotement = [
           { name: "single", label: "single", allowed: data.single_bed_amount },
           { name: "double", label: "double", allowed: data.double_bed_amount },
           { name: "triple", label: "triple", allowed: data.triple_bed_amount },
+          // { name: "quad", label: "quad", allowed: data.quad_bed_amount },
           { name: "extra", label: "extra", allowed: data.extra_bed_amount },
           { name: "childW", label: "child W", allowed: data.child_w_bed_amount },
           { name: "childN", label: "child N", allowed: data.child_n_bed_amount },
@@ -265,32 +277,78 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose }
                       optionLabel="label"
                     />
                   </div>
-                  <FormSection bg={'#fffada'}>
-                    {/* <div className="col-sm-4">
-                    <InputField
-                      label="No of person"
-                      name="person"
-                      type="number"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      values={values}
-                    />
-                  </div> */}
-                    {roomAllotement?.map((data) => (
-                      <div className="col-sm-3 col-4 col-md-2">
-                        <InputField
-                          mb="0"
-                          label={data.label}
-                          name={data.name}
-                          type="number"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          values={values}
-                        />
-                        <p className="text-danger mb-3 mt-1" style={{ fontSize: '10px' }}>{`amount ${data.allowed}`}</p>
-                      </div>
-                    ))}
-                  </FormSection>
+                  <div style={{
+                    background: '#fffbea',
+                    borderRadius: '12px',
+                    border: '0.5px solid #e8e2b0',
+                    padding: '1.25rem 1.5rem',
+                    marginBottom: '1rem',
+                    width: '100%'
+                  }}>
+                    <p style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: '#a08c30',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      margin: '0 0 1rem'
+                    }}>
+                      Room Allotment
+                    </p>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
+                      gap: '12px'
+                    }}>
+                      {roomAllotement?.map((room) => {
+                        const hasAmount = room.allowed !== undefined && room.allowed !== null && room.allowed !== 0;
+                        const currencyCode = getDefaultCurrency(itineraryDestination || values.destination?.label);
+                        return (
+                          <div key={room.name} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <label style={{
+                              fontSize: '12px',
+                              color: '#6b7280',
+                              fontWeight: 500,
+                              textTransform: 'capitalize'
+                            }}>
+                              {room.label}
+                            </label>
+
+                            <input
+                              type="number"
+                              name={room.name}
+                              value={values[room.name] || ''}
+                              onChange={handleChange}
+                              onBlur={handleBlur}
+                              placeholder="0"
+                              style={{
+                                width: '100%',
+                                background: '#ffffff',
+                                border: '0.5px solid #d1d5db',
+                                borderRadius: '8px',
+                                padding: '6px 8px',
+                                fontSize: '14px',
+                                textAlign: 'center',
+                                outline: 'none'
+                              }}
+                            />
+
+                            <span style={{
+                              fontSize: '11px',
+                              borderRadius: '4px',
+                              padding: '2px 6px',
+                              textAlign: 'center',
+                              background: hasAmount ? '#fdf3c0' : '#f3f4f6',
+                              color: hasAmount ? '#a08c30' : '#9ca3af'
+                            }}>
+                              {hasAmount ? `${currencyCode} ${room.allowed}` : '—'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <FormSection>
                     <div className="col-sm-5">
                       <label>Check In</label>
