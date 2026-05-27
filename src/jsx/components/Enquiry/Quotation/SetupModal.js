@@ -131,6 +131,7 @@ function SetupModal() {
           single:entry.single_count,
           double:entry.double_count,
           triple:entry.triple_count,
+          quad:entry.quad_count,
           extra:entry.extra_count,
           childW:entry.child_w_count,
           childN:entry.child_n_count,
@@ -261,6 +262,7 @@ function SetupModal() {
           formData.append(`entries[${index}][extra_count]`,checkFormValue(data.extra,'number'))
           formData.append(`entries[${index}][child_w_count]`,checkFormValue(data.childW,'number'))
           formData.append(`entries[${index}][child_n_count]`,checkFormValue(data.childN,'number'))
+          formData.append(`entries[${index}][quad_count]`,checkFormValue(data.quad,'number'))
         }
       
         if(data.insertType === 'activity'){

@@ -173,6 +173,8 @@ const AddHotel = () => {
           formData.append(`rooms[${ind}][is_child_w_bed_available]`, item.childWBedSelect ? 1 : 0);
           formData.append(`rooms[${ind}][child_n_bed_amount]`, item.childNBed);
           formData.append(`rooms[${ind}][is_child_n_bed_available]`, item.childNBedSelect ? 1 : 0);
+          formData.append(`rooms[${ind}][quad_bed_amount]`, item.quadBed);
+          formData.append(`rooms[${ind}][is_quad_bed_available]`, item.quadBedSelect ? 1 : 0);
           formData.append(`rooms[${ind}][occupancy]`, item.occupancy);
           item.roomAmentity?.forEach((item,i)=>{
             formData.append(`rooms[${ind}][amenities][${i}]`, item);
@@ -278,6 +280,8 @@ const AddHotel = () => {
         childWBedSelect: item.is_child_w_bed_available == 1 ? true : false,
         childNBed: item.child_n_bed_amount,
         childNBedSelect: item.is_child_n_bed_available == 1 ? true : false,
+        quadBed: item.quad_bed_amount,
+        quadBedSelect: item.is_quad_bed_available == 1 ? true : false,
         occupancy: item.occupancy,
         // roomAmentity: item.amenities,
         roomImg:item.media,

@@ -621,6 +621,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
         onClose={onClose}
         editId={editId}
         data={editData}
+        itineraryDestination={values.destination?.label || values.destination?.name}
       />
       <InsertActivity
         showModal={showActivityModal}

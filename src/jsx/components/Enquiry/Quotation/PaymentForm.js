@@ -21,6 +21,7 @@ const PERSON_TYPES = [
   { key: "single", label: "Person (Single Sharing)" },
   { key: "double", label: "Person (Double Sharing)" },
   { key: "triple", label: "Person (Triple Sharing)" },
+  // { key: "quad", label: "Person (Quad Sharing)" },
   { key: "extra", label: "Person (With Extra Bed)" },
   { key: "childW", label: "Child with Extra Bed" },
   { key: "childN", label: "Child without Extra Bed" },
@@ -231,7 +232,7 @@ const person = scheduleItem.insertType === 'activity'
     // Itemized table always shows base currency — no conversion needed
     const basePaxValue = Number(newPaxValue);
 
-    const divisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+    const divisors = { single: 1, double: 2, triple: 3, quad: 4, extra: 1, childW: 1, childN: 1 };
     const divisor = divisors[occupancyKey] || 1;
     const newBaseRate = basePaxValue;
 
@@ -254,6 +255,7 @@ const person = scheduleItem.insertType === 'activity'
                 single: Number(selectedRoom?.single_bed_amount || 0),
                 double: Number(selectedRoom?.double_bed_amount || 0),
                 triple: Number(selectedRoom?.triple_bed_amount || 0),
+                quad: Number(selectedRoom?.quad_bed_amount || 0),
                 extra: Number(selectedRoom?.extra_bed_amount || 0),
                 childW: Number(selectedRoom?.child_w_bed_amount || 0),
                 childN: Number(selectedRoom?.child_n_bed_amount || 0),
@@ -262,12 +264,13 @@ const person = scheduleItem.insertType === 'activity'
                 single: safeCount(scheduleItem.single),
                 double: safeCount(scheduleItem.double),
                 triple: safeCount(scheduleItem.triple),
+                quad: safeCount(scheduleItem.quad),
                 extra: safeCount(scheduleItem.extra),
                 childW: safeCount(scheduleItem.childW),
                 childN: safeCount(scheduleItem.childN),
               };
 
-              const newTotalWeight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3) + (counts.extra * rates.extra * 1) + (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
+              const newTotalWeight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3) + (counts.quad * rates.quad * 4) + (counts.twoB * rates.twoB * 2) + (counts.threeB * rates.threeB * 3) + (counts.extra * rates.extra * 1) + (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
 
               return {
                 ...scheduleItem,
@@ -395,9 +398,9 @@ console.log('TRANSFER:', item.name, {
   };
 
   const createOptionInitialValue = () => [
-    { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
-    { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
-    { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
+    { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, quad: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
+    { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, quad: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
+    { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, quad: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
   ];
 
   // Helper to safely parse a count value — treats "", undefined, null, NaN as 0
@@ -426,6 +429,7 @@ console.log('TRANSFER:', item.name, {
           single: Number(selectedRoom?.single_bed_amount || 0),
           double: Number(selectedRoom?.double_bed_amount || 0),
           triple: Number(selectedRoom?.triple_bed_amount || 0),
+          quad: Number(selectedRoom?.quad_bed_amount || 0),
           extra: Number(selectedRoom?.extra_bed_amount || 0),
           childW: Number(selectedRoom?.child_w_bed_amount || 0),
           childN: Number(selectedRoom?.child_n_bed_amount || 0),
@@ -434,21 +438,22 @@ console.log('TRANSFER:', item.name, {
           single: safeCount(item.single),
           double: safeCount(item.double),
           triple: safeCount(item.triple),
+          quad: safeCount(item.quad),
           extra: safeCount(item.extra),
           childW: safeCount(item.childW),
           childN: safeCount(item.childN),
         };
 
-        const itemTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
+        const itemTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.quad * rates.quad) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
 
         let ratio = 1;
         if (itemTotalWeight > 0) {
           ratio = (Number(item.amount || 0)) / itemTotalWeight;
         } else {
-          const totalPax = counts.single + counts.double + counts.triple + counts.extra + counts.childW + counts.childN;
+          const totalPax = counts.single + counts.double + counts.triple + counts.quad + counts.extra + counts.childW + counts.childN;
           if (totalPax > 0) {
             const avg = Number(item.amount || 0) / totalPax;
-            rates.single = rates.double = rates.triple = rates.extra = rates.childW = rates.childN = avg;
+            rates.single = rates.double = rates.triple = rates.quad = rates.extra = rates.childW = rates.childN = avg;
             ratio = 1;
           }
         }
@@ -456,6 +461,7 @@ console.log('TRANSFER:', item.name, {
         acc[idx].single += counts.single;
         acc[idx].double += counts.double;
         acc[idx].triple += counts.triple;
+        acc[idx].quad += counts.quad;
         acc[idx].extra += counts.extra;
         acc[idx].childW += counts.childW;
         acc[idx].childN += counts.childN;
@@ -463,6 +469,7 @@ console.log('TRANSFER:', item.name, {
         acc[idx].singleDisplay = Math.max(acc[idx].singleDisplay || 0, counts.single);
         acc[idx].doubleDisplay = Math.max(acc[idx].doubleDisplay || 0, counts.double);
         acc[idx].tripleDisplay = Math.max(acc[idx].tripleDisplay || 0, counts.triple);
+        acc[idx].quadDisplay = Math.max(acc[idx].quadDisplay || 0, counts.quad);
         acc[idx].extraDisplay = Math.max(acc[idx].extraDisplay || 0, counts.extra);
         acc[idx].childWDisplay = Math.max(acc[idx].childWDisplay || 0, counts.childW);
         acc[idx].childNDisplay = Math.max(acc[idx].childNDisplay || 0, counts.childN);
@@ -470,6 +477,7 @@ console.log('TRANSFER:', item.name, {
         acc[idx].singleTotalCost += (counts.single * rates.single) * ratio;
         acc[idx].doubleTotalCost += (counts.double * rates.double) * ratio;
         acc[idx].tripleTotalCost += (counts.triple * rates.triple) * ratio;
+        acc[idx].quadTotalCost += (counts.quad * rates.quad) * ratio;
         acc[idx].extraTotalCost += (counts.extra * rates.extra) * ratio;
         acc[idx].childWTotalCost += (counts.childW * rates.childW) * ratio;
         acc[idx].childNTotalCost += (counts.childN * rates.childN) * ratio;
@@ -650,14 +658,14 @@ console.log('TRANSFER:', item.name, {
 
     const hotelRows = activeTypes.map(({ pt, count, displayCount, hotelRowCostAll }) => {
       const isPerMode = values.priceOption?.value === "PER";
-      const personShareDivisors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+      const personShareDivisors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1 };
       const sharingFactor = personShareDivisors[pt.key] || 1;
 
       const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
       const hotelLineMarkup = Number(item.markup || 0);
 
       let rowHotelGross = hotelRowCostAll + (hotelLineMarkup * hotelFraction);
-      if (isPerMode && (pt.key === 'double' || pt.key === 'triple')) {
+      if (isPerMode && (pt.key === 'double' || pt.key === 'triple' || pt.key === 'quad' || pt.key === 'twoB' || pt.key === 'threeB')) {
         rowHotelGross = rowHotelGross / sharingFactor;
       }
 
@@ -756,7 +764,7 @@ console.log('TRANSFER:', item.name, {
         const hasConversion = rate > 0;
         const convert = (val) => hasConversion ? getRoundOfValue(val / rate) : val;
 
-        const occupancyFactors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+        const occupancyFactors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1 };
         const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
 
         const mappedRows = pRows.map(pt => {
