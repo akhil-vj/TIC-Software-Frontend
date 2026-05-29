@@ -259,14 +259,14 @@ const StepTwo = ({ formik: parentFormik }) => {
                 handleBlur={handleBlur}
                 setFieldValue={setFieldValue}
               />
-              {/* <SelectInputComponent
+              <SelectInputComponent
                 label={"Quad Bed"}
                 name="quadBed"
                 values={values}
                 handleChange={handleChange}
                 handleBlur={handleBlur}
                 setFieldValue={setFieldValue}
-              /> */}
+              />
               <div className="col-6 col-sm-4 col-md-3 col-lg-2  mb-2">
                 <InputField
                   label="Occupancy"

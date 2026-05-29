@@ -21,7 +21,7 @@ const PERSON_TYPES = [
   { key: "single", label: "Person (Single Sharing)" },
   { key: "double", label: "Person (Double Sharing)" },
   { key: "triple", label: "Person (Triple Sharing)" },
-  // { key: "quad", label: "Person (Quad Sharing)" },
+  { key: "quad", label: "Person (Quad Sharing)" },
   { key: "extra", label: "Person (With Extra Bed)" },
   { key: "childW", label: "Child with Extra Bed" },
   { key: "childN", label: "Child without Extra Bed" },

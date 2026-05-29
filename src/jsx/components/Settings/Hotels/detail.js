@@ -32,7 +32,7 @@ function HotelDetail() {
         { tableLabel: 'Single', tableValue: 'single_bed_amount' },
         { tableLabel: 'Double', tableValue: 'double_bed_amount' },
         { tableLabel: 'Triple', tableValue: 'triple_bed_amount' },
-        // { tableLabel: 'Quad', tableValue: 'quad_bed_amount' },
+        { tableLabel: 'Quad', tableValue: 'quad_bed_amount' },
         { tableLabel: 'Extra', tableValue: 'extra_bed_amount' },
         { tableLabel: 'Child W', tableValue: 'child_w_bed_amount' },
         { tableLabel: 'Child N', tableValue: 'child_n_bed_amount' },
