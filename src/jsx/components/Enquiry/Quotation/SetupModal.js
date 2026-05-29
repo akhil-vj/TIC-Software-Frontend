@@ -37,11 +37,13 @@ function SetupModal() {
   const draftEngine = useFormDraft(`itineraryBuilder_${id || 'new'}`);
 
   const date = new Date();
+  const validityDateDefault = new Date();
+  validityDateDefault.setDate(date.getDate() + 7);
   const initialValues = {
     categoryOptions: "Hotel",
     formStartDate: date,
     formEndDate: date,
-    formValidityDate: date,
+    formValidityDate: validityDateDefault,
     planArr:[],
     planIndex:0,
     priceOption:{value:'PER',label:'Price Per Traveller'},
@@ -70,6 +72,9 @@ function SetupModal() {
       setFieldValue('packageName',checkFormValue(data.package_name))
       setFieldValue('formStartDate',parseDate(data.start_date))
       setFieldValue('formEndDate',parseDate(data.end_date))
+      if (data.valid_until) {
+        setFieldValue('formValidityDate', parseDate(data.valid_until))
+      }
       setFieldValue('adult',checkFormValue(data.adult_count))
       setFieldValue('child',checkFormValue(data.child_count))
       setFieldValue('baseMarkupInput',checkFormValue(data.extra_markup_percentage))

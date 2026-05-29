@@ -8,12 +8,12 @@ import { URLS } from "../../../../constants";
 import ReactSelect from "../../common/ReactSelect";
 import { parseDate } from "../../../utilis/date";
 import { checkFormValue } from "../../../utilis/check";
-import {ModeBtn} from "../../common/ModeBtn";
+import { ModeBtn } from "../../common/ModeBtn";
 import { notifyError } from "../../../utilis/notifyMessage";
 
 import { useFormDraft } from "../../../utilis/useFormDraft";
 
-const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit }) => {
+const SetupForm = ({ formik, setFormComponent, setShowModal, showModal, isEdit }) => {
   const {
     values,
     errors,
@@ -89,17 +89,17 @@ const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit })
           <div className="basic-form">
             <form>
               <div className="row">
-              {/* {isEdit &&
+                {/* {isEdit &&
                   <div className="col-sm-12 d-flex justify-content-end">
                     <button className="btn btn-primary mb-3" type="button" onClick={()=>{setReadOnly((prev)=>!prev)}}>{readOnly?'Read Mode':'Write Mode'}</button>
                   </div>
                   
                   } */}
-                  <ModeBtn className="col-sm-12 d-flex justify-content-end" isEdit={isEdit} 
-                  readOnly={readOnly} setReadOnly={setReadOnly}/>
+                <ModeBtn className="col-sm-12 d-flex justify-content-end" isEdit={isEdit}
+                  readOnly={readOnly} setReadOnly={setReadOnly} />
                 <div className="col-md-4">
                   <InputField
-                    inputClassName={readOnly?'':"custom-input"}
+                    inputClassName={readOnly ? '' : "custom-input"}
                     label="Package Name"
                     name="packageName"
                     onChange={handleChange}
@@ -113,7 +113,7 @@ const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit })
                 <div className="form-group mb-3 col-md-4">
                   <label>Start Date</label>
                   <DatePicker
-                    className={readOnly?'form-control ':"form-control custom-input"}
+                    className={readOnly ? 'form-control ' : "form-control custom-input"}
                     selected={values.formStartDate}
                     onChange={(date) => setFieldValue("formStartDate", date)}
                     disabled={readOnly}
@@ -122,7 +122,7 @@ const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit })
                 <div className="form-group mb-3 col-md-4">
                   <label>End Date</label>
                   <DatePicker
-                    className={readOnly?'form-control ':"form-control custom-input"}
+                    className={readOnly ? 'form-control ' : "form-control custom-input"}
                     selected={values.formEndDate}
                     onChange={(date) => setFieldValue("formEndDate", date)}
                     disabled={readOnly}
@@ -130,7 +130,7 @@ const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit })
                 </div>
                 <div className="col-md-4">
                   <InputField
-                    inputClassName={readOnly?'':"custom-input"}
+                    inputClassName={readOnly ? '' : "custom-input"}
                     label="Adult"
                     name="adult"
                     type='number'
@@ -144,7 +144,7 @@ const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit })
                 </div>
                 <div className="col-md-4">
                   <InputField
-                    inputClassName={readOnly?'':"custom-input"}
+                    inputClassName={readOnly ? '' : "custom-input"}
                     label="Child"
                     name="child"
                     type='number'
@@ -157,25 +157,25 @@ const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit })
                   />
                 </div>
                 <div className="col-md-4">
-                <ReactSelect
-                  label="Destination"
-                  options={destinationData?.data?.data}
-                  value={values.destination}
-                  onChange={(selected) => setFieldValue("destination", selected)}
-                  optionValue="id"
-                  optionLabel="name"
-                  inputId='destination'
-                  formik={formik}
-                  onBlur={handleBlur}
-                  className='custom-input'
-                  required
-                  isDisabled={readOnly}
-                />
+                  <ReactSelect
+                    label="Destination"
+                    options={destinationData?.data?.data}
+                    value={values.destination}
+                    onChange={(selected) => setFieldValue("destination", selected)}
+                    optionValue="id"
+                    optionLabel="name"
+                    inputId='destination'
+                    formik={formik}
+                    onBlur={handleBlur}
+                    className='custom-input'
+                    required
+                    isDisabled={readOnly}
+                  />
                 </div>
                 <div className="form-group mb-3 col-md-4">
                   <label>Validity</label>
                   <DatePicker
-                    className={readOnly?'form-control ':"form-control custom-input"}
+                    className={readOnly ? 'form-control ' : "form-control custom-input"}
                     selected={values.formValidityDate}
                     onChange={(date) => setFieldValue("formValidityDate", date)}
                     disabled={readOnly}
