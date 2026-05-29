@@ -7,7 +7,7 @@ export const useAsync = (url, condition = true) => {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  //   const [url, setUrl] = useState(initialUrl);
+  const [trigger, setTrigger] = useState(0);
   const refresh = useSelector((state) => state.form.refresh);
 
   useEffect(() => {
@@ -28,7 +28,11 @@ export const useAsync = (url, condition = true) => {
     if (url && condition) {
       fetchData();
     }
-  }, [url, condition, refresh]);
+  }, [url, condition, refresh, trigger]);
 
-  return { data, error, loading };
+  const refetch = () => {
+    setTrigger((prev) => prev + 1);
+  };
+
+  return { data, error, loading, refetch };
 };

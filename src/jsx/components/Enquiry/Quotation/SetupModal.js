@@ -13,6 +13,7 @@ import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatDate, formatTimeToHis, parseDate, parseTime } from "../../../utilis/date";
 import { useAsync } from "../../../utilis/useAsync";
+import { useFormDraft } from "../../../utilis/useFormDraft";
 
 function SetupModal() {
   const navigate = useNavigate()
@@ -32,6 +33,8 @@ function SetupModal() {
   const [refresh, setRefresh] = useState(false);
   const [formStartDate, setFormStartDate] = useState(new Date());
   const [formComponent, setFormComponent] = useState("setupForm");
+  
+  const draftEngine = useFormDraft(`itineraryBuilder_${id || 'new'}`);
 
   const date = new Date();
   const initialValues = {
@@ -299,6 +302,7 @@ function SetupModal() {
       // navigate('add/profile')
     }
     if(response?.success){
+      draftEngine.clearDraft(); // Successful save, clear draft
       if(!isEdit){
         formik.setFieldValue('itineraryId',response?.data?.id)
         navigate(response?.data?.id)
@@ -309,7 +313,10 @@ function SetupModal() {
     } catch (error) {
       // Helpful debugging to surface backend validation errors
       console.error('itinerary save error', error?.response?.data || error);
-      notifyError(error?.response?.data?.message || error)
+      const errorMsg = error?.response?.data?.message || error?.message || 'Failed to save';
+      // Mute notifyError since SweetAlert will show it
+      // notifyError(errorMsg)
+      draftEngine.promptSaveDraftOnError(values, errorMsg);
     }
    
   }
@@ -327,6 +334,33 @@ function SetupModal() {
   })
   const {setFieldValue} = formik
   
+  useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      // Re-hydrate dates
+      if (draftData.formStartDate) draftData.formStartDate = new Date(draftData.formStartDate);
+      if (draftData.formEndDate) draftData.formEndDate = new Date(draftData.formEndDate);
+      if (draftData.formValidityDate) draftData.formValidityDate = new Date(draftData.formValidityDate);
+      
+      // Re-hydrate dates in planArr
+      if (draftData.planArr) {
+        draftData.planArr.forEach(plan => {
+          if (plan.date) plan.date = new Date(plan.date);
+          plan.schedule?.forEach(sched => {
+            if (sched.startDate) sched.startDate = new Date(sched.startDate);
+            if (sched.endDate) sched.endDate = new Date(sched.endDate);
+          });
+        });
+      }
+      
+      formik.setValues(draftData);
+      
+      // Seamlessly restore the exact page component they were on
+      if (draftData.__formComponent) {
+        setFormComponent(draftData.__formComponent);
+      }
+    }
+  }, []);
 
   useEffect(()=>{
     if(equiryIdData && !isEdit){
@@ -367,7 +401,8 @@ function SetupModal() {
     handleFormValue(editItineraryData, setFieldValue)
 
   },[itineraryId,editItineraryData?.id])
-  
+  draftEngine.useDraftAutoSave({ ...formik.values, __formComponent: formComponent }, formik.dirty || formComponent !== 'setupForm');
+
   return (
     <>
       {/* <Formik

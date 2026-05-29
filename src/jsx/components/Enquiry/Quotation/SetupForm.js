@@ -11,6 +11,8 @@ import { checkFormValue } from "../../../utilis/check";
 import {ModeBtn} from "../../common/ModeBtn";
 import { notifyError } from "../../../utilis/notifyMessage";
 
+import { useFormDraft } from "../../../utilis/useFormDraft";
+
 const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit }) => {
   const {
     values,
@@ -20,12 +22,15 @@ const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit })
     handleSubmit,
     isSubmitting,
     setFieldValue,
+    dirty,
   } = formik;
 
   const navigate = useNavigate();
   const destinationData = useAsync(URLS.DESTINATION_URL)
   const [readOnly, setReadOnly] = useState(isEdit);
-
+  
+  const { id } = useParams();
+  const draftEngine = useFormDraft(`itineraryBuilder_${id || 'new'}`);
 
   const formSubmit = (e) => {
     // Validate all mandatory fields
@@ -67,9 +72,17 @@ const SetupForm = ({ formik, setFormComponent, setShowModal, showModal,isEdit })
         showModal={showModal}
         title={"Create itinerary"}
         handleModalClose={() => {
-          setShowModal(false);
-          setFormComponent("setupForm");
-          navigate(-1);
+          if (dirty) {
+            draftEngine.promptSaveDraftOnBack(values, () => {
+              setShowModal(false);
+              setFormComponent("setupForm");
+              navigate(-1);
+            });
+          } else {
+            setShowModal(false);
+            setFormComponent("setupForm");
+            navigate(-1);
+          }
         }}
       >
         <div className="card-body">

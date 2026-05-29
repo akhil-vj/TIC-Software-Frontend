@@ -51,6 +51,8 @@ const addDays = (date, days = 1) => {
   return next;
 };
 
+import { useFormDraft } from "../../../utilis/useFormDraft";
+
 const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, itineraryDestination }) => {
   const { itineraryId } = useParams()
   const isItineraryId = !!itineraryId
@@ -83,8 +85,21 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
     isSubmitting,
     setFieldValue,
     setValues,
-    resetForm
+    resetForm,
+    dirty
   } = useFormik({ initialValues });
+
+  const draftEngine = useFormDraft(`itineraryBuilder_InsertHotel_${itineraryId || 'new'}`);
+  draftEngine.useDraftAutoSave(values, dirty);
+
+  useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      if (draftData.startDate) draftData.startDate = new Date(draftData.startDate);
+      if (draftData.endDate) draftData.endDate = new Date(draftData.endDate);
+      setValues(draftData);
+    }
+  }, []);
 
   const handleSetup = () => {
     // Calculate hotel amount from room counts × room rates so the pricing page
@@ -109,14 +124,18 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
       extraCount * 1 * Number(roomData?.extra_bed_amount || 0) +
       childWCount * 1 * Number(roomData?.child_w_bed_amount || 0) +
       childNCount * 1 * Number(roomData?.child_n_bed_amount || 0);
+    draftEngine.clearDraft(); // Clear draft successfully
     onClick({ ...values, amount: totalAmount, markup: values.markup || 0 }, setShowModal);
   };
   useEffect(() => {
-    const showScheduleDate = data?.showScheduleDate
+    const showScheduleDate = data?.showScheduleDate ? new Date(data.showScheduleDate) : null;
     setFieldValue('startDate', showScheduleDate || defaultStartDate)
     setFieldValue('endDate', showScheduleDate ? addDays(showScheduleDate) : defaultEndDate)
     if (isEdit) {
-      setValues(data)
+      const parsedData = { ...data };
+      if (parsedData.startDate) parsedData.startDate = new Date(parsedData.startDate);
+      if (parsedData.endDate) parsedData.endDate = new Date(parsedData.endDate);
+      setValues(parsedData)
     } else {
       if (hotelDetailData) {
         const destinationObj = { label: hotelDetailData?.destination_name, value: hotelDetailData?.destination_id }
@@ -171,6 +190,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
         showModal={showModal}
         title={`${isEdit ? 'Edit' : 'Create'} Hotel`}
         handleModalClose={() => {
+          draftEngine.clearDraft(); // clear draft on manual cancel
           onClose(setShowModal)
           resetForm()
         }}

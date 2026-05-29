@@ -11,6 +11,8 @@ import "react-time-picker/dist/TimePicker.css";
 import "react-clock/dist/Clock.css";
 import { FormSection } from "../../common/FormSection";
 import { useAsync } from "../../../utilis/useAsync";
+import { useParams } from "react-router-dom";
+import { useFormDraft } from "../../../utilis/useFormDraft";
 const nameOptions = [
   { label: "Vechile 1", value: "1" },
   { label: "Vechile 2", value: "2" },
@@ -43,6 +45,7 @@ const InsertTransfer = ({
   editId,
   onClose,
 }) => {
+  const { itineraryId } = useParams();
   const destination = useAsync(URLS.DESTINATION_URL);
   const destinationOptions = destination?.data?.data;
   const vehicleTypeData = useAsync(URLS.VEHICLE_TYPE_URL);
@@ -74,7 +77,20 @@ const InsertTransfer = ({
     setFieldValue,
     setValues,
     resetForm,
+    dirty
   } = useFormik({ initialValues });
+
+  const draftEngine = useFormDraft(`itineraryBuilder_InsertTransfer_${itineraryId || 'new'}`);
+  draftEngine.useDraftAutoSave(values, dirty);
+
+  useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      if (draftData.startDate) draftData.startDate = new Date(draftData.startDate);
+      if (draftData.endDate) draftData.endDate = new Date(draftData.endDate);
+      setValues(draftData);
+    }
+  }, []);
 
   // Resolve estimations: from data prop (add mode) or by looking up the transfer by ID (edit mode)
   const getEstimations = () => {
@@ -91,6 +107,7 @@ const InsertTransfer = ({
   };
 
   const handleSetup = () => {
+    draftEngine.clearDraft();
     onClick(values, setShowModal);
     resetForm();
   };
@@ -104,8 +121,8 @@ const InsertTransfer = ({
       setValues({
         ...initialValues,
         ...data,
-        startDate: data?.startDate || data?.showScheduleDate || initialValues.startDate,
-        endDate: data?.endDate || data?.showScheduleDate || initialValues.endDate,
+        startDate: data?.startDate ? new Date(data.startDate) : (data?.showScheduleDate ? new Date(data.showScheduleDate) : initialValues.startDate),
+        endDate: data?.endDate ? new Date(data.endDate) : (data?.showScheduleDate ? new Date(data.showScheduleDate) : initialValues.endDate),
         type: { label: editType, value: editType },
         cost: data?.cost ?? 0,
         adultCost: data?.adultCost ?? 0,
@@ -134,8 +151,8 @@ const InsertTransfer = ({
 
       setValues({
         ...initialValues,
-        startDate: data?.showScheduleDate || initialValues.startDate,
-        endDate: data?.showScheduleDate || initialValues.endDate,
+        startDate: data?.showScheduleDate ? new Date(data.showScheduleDate) : initialValues.startDate,
+        endDate: data?.showScheduleDate ? new Date(data.showScheduleDate) : initialValues.endDate,
         destination: {
           label: data?.destination?.name,
           value: data?.destination?.name,
@@ -158,6 +175,7 @@ const InsertTransfer = ({
         showModal={showModal}
         title={isEdit ? "Edit Transfer" : "Create Transfer"}
         handleModalClose={() => {
+          draftEngine.clearDraft(); // clear draft on manual cancel
           onClose(setShowModal);
           resetForm();
         }}

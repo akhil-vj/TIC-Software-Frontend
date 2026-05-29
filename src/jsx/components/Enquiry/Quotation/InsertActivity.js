@@ -12,6 +12,8 @@ import "react-clock/dist/Clock.css";
 import { useEffect } from "react";
 import { FormSection } from "../../common/FormSection";
 import { useAsync } from "../../../utilis/useAsync";
+import { useParams } from "react-router-dom";
+import { useFormDraft } from "../../../utilis/useFormDraft";
 const typeOptions = [
   { label: "Type 1", value: "1" },
   { label: "Type 2", value: "2" },
@@ -39,14 +41,16 @@ const InsertActivity = ({
   onClick,
   editId,
   onClose,
+  itineraryDestination,
 }) => {
+  const { itineraryId } = useParams();
   const destination = useAsync(URLS.DESTINATION_URL);
   const destinationOptions = destination?.data?.data;
   const isEdit = !!editId || editId === 0;
   const initialValues = {
     startDate: SETUP.TODAY_DATE,
-    endDate: SETUP.TODAY_DATE,
     startTime: SETUP.START_TIME,
+    endDate: SETUP.TODAY_DATE,
     endTime: SETUP.END_TIME,
     insertType: "activity",
     adultCost: 0,
@@ -64,23 +68,40 @@ const InsertActivity = ({
     setFieldValue,
     setValues,
     resetForm,
+    dirty,
   } = useFormik({ initialValues });
 
+  const draftEngine = useFormDraft(`itineraryBuilder_InsertActivity_${itineraryId || 'new'}`);
+  draftEngine.useDraftAutoSave(values, dirty);
+
+  useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      if (draftData.startDate) draftData.startDate = new Date(draftData.startDate);
+      if (draftData.endDate) draftData.endDate = new Date(draftData.endDate);
+      setValues(draftData);
+    }
+  }, []);
+
   const handleSetup = () => {
+    draftEngine.clearDraft();
     onClick(values, setShowModal);
     resetForm();
   };
   useEffect(() => {
     console.log("edi", data);
-    const showScheduleDateValue = data?.showScheduleDate
-    if(showScheduleDateValue){
+    const showScheduleDateValue = data?.showScheduleDate ? new Date(data.showScheduleDate) : null;
+    if(showScheduleDateValue && !isNaN(showScheduleDateValue)){
       setFieldValue('startDate',showScheduleDateValue)
       setFieldValue('endDate',showScheduleDateValue)
     }
     setFieldValue('adult', data?.adult ?? data?.adultCount ?? 0)
     setFieldValue('child', data?.child ?? data?.childCount ?? 0)
     if (isEdit) {
-      setValues(data);
+      const parsedData = { ...data };
+      if (parsedData.startDate) parsedData.startDate = new Date(parsedData.startDate);
+      if (parsedData.endDate) parsedData.endDate = new Date(parsedData.endDate);
+      setValues(parsedData);
     } else {
       const destinationObj = {
         label: data?.destination?.name,
@@ -97,6 +118,7 @@ const InsertActivity = ({
         showModal={showModal}
         title={`${isEdit ? "Edit" : "Create"} Activity`}
         handleModalClose={() => {
+          draftEngine.clearDraft(); // clear draft on manual cancel
           onClose(setShowModal);
           resetForm();
         }}

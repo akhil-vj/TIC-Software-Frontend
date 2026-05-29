@@ -20,6 +20,7 @@ import axiosInstance from '../../../../services/AxiosInstance';
 import { ViewerModal } from "../../common/Viewer";
 import pdfFile from '../../../../pdf/diet-sheet.pdf';
 import ItineraryPreview from "./ItineraryPreview";
+import { useFormDraft } from "../../../utilis/useFormDraft";
 
 
 const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
@@ -48,6 +49,23 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
   const [datesArray, setDatesArray] = useState([]);
   const [readOnly, setReadOnly] = useState(isEdit);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const draftEngineUI = useFormDraft(`itineraryBuilder_UI_${values.itineraryId || 'new'}`);
+  draftEngineUI.useDraftAutoSave({
+    showHotelModal, showActivityModal, showTransferModal, editData, editId, selectedModalData
+  }, true);
+
+  useEffect(() => {
+    const draftUI = draftEngineUI.getDraft();
+    if (draftUI) {
+      if (draftUI.showHotelModal) setShowHotelModal(true);
+      if (draftUI.showActivityModal) setShowActivityModal(true);
+      if (draftUI.showTransferModal) setShowTransferModal(true);
+      if (draftUI.editData) setEditData(draftUI.editData);
+      if (draftUI.editId) setEditId(draftUI.editId);
+      if (draftUI.selectedModalData) setSelectedModalData(draftUI.selectedModalData);
+    }
+  }, []);
 
   const dayList = [1, 2, 3, 4];
   const scheduleData = [1, 2];
@@ -126,8 +144,8 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     while (currentDate <= endDate) {
       // datesArr.push(new Date(currentDate));
       const existingPlan = planArrValue.find((item) => {
-        // console.log(formatDate(currentDate),'item',item)
-        return item.date === formatDate(currentDate)
+        const itemDateStr = item.date instanceof Date ? formatDate(item.date) : item.date;
+        return itemDateStr === formatDate(currentDate)
       }
       )
       if (existingPlan) {
@@ -198,11 +216,11 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     if (data) {
       const adultCount = values.adult || 0;
       const childCount = values.child || 0;
-      const value = { 
-        ...data, 
-        showScheduleDate: new Date(showScheduleValue?.date), 
+      const value = {
+        ...data,
+        showScheduleDate: new Date(showScheduleValue?.date),
         adultCount,
-        childCount 
+        childCount
       }
       setEditData(value);
     }
@@ -236,7 +254,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     if (transferValue.insertType === 'transfer' || transferValue.insertType === 'car') {
       const adultCount = Number(values.adult || 0);
       const childCount = Number(values.child || 0);
-      
+
       if (transferValue.adultCost && transferValue.childCost) {
         // SIC transfer: sum of adult and child costs
         const calculatedAmount = Number(transferValue.adultCost) + Number(transferValue.childCost);
@@ -252,10 +270,10 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
   const onInsert = (value, setShowModal) => {
     // check is this the insert of already existing data
     const isEdit = !!editId || editId === 0;
-    
+
     // Calculate amount for transfers from cost values
     const processedValue = calculateTransferAmount(value);
-    
+
     // if(values.categoryOptions !== "Hotel"){
     const insertSchedule = values.planArr.map((data, key) => {
       if (!isEdit && processedValue.insertType == 'hotel') {
@@ -586,7 +604,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                         />
                       </div>
                     )}
-                    <h6 
+                    <h6
                       className="m-2"
                       onClick={() => !readOnly && handleCardAdd(values.categoryOptions, list)}
                       style={{ cursor: readOnly ? "default" : "pointer" }}
