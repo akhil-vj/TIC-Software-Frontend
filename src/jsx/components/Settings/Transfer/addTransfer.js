@@ -16,6 +16,7 @@ import { checkFormValue, checkIsFile } from "../../../utilis/check";
 import { useDispatch } from "react-redux";
 import { FormAction } from "../../../../store/slices/formSlice";
 import { LoadingButton } from "../../../components/common/LoadingBtn"
+import { useFormDraft } from "../../../utilis/useFormDraft";
 
 const typeOptions = [
   { label: "Private", value: "Private" },
@@ -91,6 +92,7 @@ const AddTransfer = () => {
         response = await filePost(url, formData)
       }
       if (response.success) {
+        draftEngine.clearDraft();
         notifyCreate("Transfer", isEdit);
         navigate("/transfer");
       }
@@ -104,6 +106,19 @@ const AddTransfer = () => {
     initialValues,
     onSubmit: handleClick
   });
+
+  const draftEngine = useFormDraft(`addTransfer_${id || 'new'}`);
+  draftEngine.useDraftAutoSave(formik.values, formik.dirty);
+
+  useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      if (draftData.fromDate) draftData.fromDate = new Date(draftData.fromDate);
+      if (draftData.toDate) draftData.toDate = new Date(draftData.toDate);
+      formik.setValues(draftData);
+    }
+  }, []);
+
   const tableData = formik?.values?.costArr;
   const destinationId = formik.values.destination?.value;
   const subDestinationUrl = destinationId ? `${URLS.SUB_DESTINATION_URL}?destination_id=${destinationId}` : null;

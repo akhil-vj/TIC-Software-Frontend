@@ -13,6 +13,7 @@ import { checkFormValue, checkIsFile } from "../../../utilis/check";
 import { LoadingButton } from "../../common/LoadingBtn";
 import { useDispatch } from "react-redux";
 import { FormAction } from "../../../../store/slices/formSlice";
+import { useFormDraft } from "../../../utilis/useFormDraft";
 
 const typeOptions = [
   { label: "Private", value: "Private" },
@@ -98,6 +99,7 @@ const TransferFormModal = ({ onSuccess, onCancel }) => {
         const response = await filePost(URLS.TRANSFER_URL, formData);
 
         if (response.success) {
+          draftEngine.clearDraft();
           notifyCreate("Transfer", false);
           dispatch(FormAction.setLoading(false));
           if (onSuccess) {
@@ -117,7 +119,17 @@ const TransferFormModal = ({ onSuccess, onCancel }) => {
     },
   });
 
-  const { values, errors, handleChange, handleBlur, setFieldValue, isSubmitting } = formik;
+  const { values, errors, handleChange, handleBlur, setFieldValue, isSubmitting, setValues, dirty } = formik;
+
+  const draftEngine = useFormDraft(`createTransferModal_new`);
+  draftEngine.useDraftAutoSave(values, dirty);
+
+  React.useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      setValues(draftData);
+    }
+  }, []);
 
   const destinationFetchData = useAsync(URLS.DESTINATION_URL);
   const destinationData = destinationFetchData?.data?.data || [];

@@ -19,6 +19,7 @@ import { LoadingButton } from "../../common/LoadingBtn";
 // Imports from Store, Services, Utils, Constants
 import { FormAction } from "../../../../store/slices/formSlice";
 import { useAsync } from "../../../utilis/useAsync";
+import { useFormDraft } from "../../../utilis/useFormDraft";
 import { URLS } from "../../../../constants";
 import {
   axiosDelete,
@@ -1288,6 +1289,7 @@ const AddEditHotelView = ({ hotelId, onBack }) => {
           response = await filePost(url, formData);
         }
         if (response.success) {
+          draftEngine.clearDraft();
           dispatch(FormAction.setRefresh());
           if (isEdit) {
             dispatch(FormAction.setEditId());
@@ -1309,6 +1311,21 @@ const AddEditHotelView = ({ hotelId, onBack }) => {
       }
     },
   });
+
+  const draftEngine = useFormDraft(`addHotel_${hotelId || 'new'}`);
+  draftEngine.useDraftAutoSave({ ...formik.values, __goSteps: goSteps }, formik.dirty || goSteps > 0);
+
+  useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      const parsedData = { ...draftData };
+      if (parsedData.__goSteps !== undefined) {
+        setGoSteps(parsedData.__goSteps);
+        delete parsedData.__goSteps;
+      }
+      formik.setValues(parsedData);
+    }
+  }, []);
 
   const editValues = editData?.data?.data;
   useEffect(() => {
@@ -1386,7 +1403,10 @@ const AddEditHotelView = ({ hotelId, onBack }) => {
             <div className="card-header d-flex justify-content-between align-items-center">
               <h4 className="card-title">{`${isEdit ? "Edit" : "Add"} Hotel`}</h4>
               <button
-                onClick={onBack}
+                onClick={() => {
+                  draftEngine.clearDraft();
+                  onBack();
+                }}
                 className="btn btn-sm btn-secondary"
                 style={{
                   display: "flex",
@@ -1617,10 +1637,25 @@ const HotelDetailView = ({ hotelId, onBack }) => {
 
 // ==================== MAIN HOTELS PAGE COMPONENT ====================
 const HotelsPage = () => {
-  const [currentView, setCurrentView] = useState("list"); // 'list', 'add', 'edit', 'detail'
-  const [selectedId, setSelectedId] = useState(null);
+  const [currentView, setCurrentView] = useState(() => {
+    return localStorage.getItem("hotelsPage_currentView") || "list";
+  }); // 'list', 'add', 'edit', 'detail'
+  
+  const [selectedId, setSelectedId] = useState(() => {
+    return localStorage.getItem("hotelsPage_selectedId") || null;
+  });
+  
   const [viewType, setViewType] = useState("card");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    localStorage.setItem("hotelsPage_currentView", currentView);
+    if (selectedId) {
+      localStorage.setItem("hotelsPage_selectedId", selectedId);
+    } else {
+      localStorage.removeItem("hotelsPage_selectedId");
+    }
+  }, [currentView, selectedId]);
 
   const handleEdit = (id) => {
     setSelectedId(id);

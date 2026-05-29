@@ -16,6 +16,7 @@ import { checkFormValue } from "../../../utilis/check";
 import { LoadingButton } from "../../common/LoadingBtn";
 import { useDispatch } from "react-redux";
 import { FormAction } from "../../../../store/slices/formSlice";
+import { useFormDraft } from "../../../utilis/useFormDraft";
 
 
 const typeOptions = [
@@ -89,6 +90,7 @@ const AddActivity = () => {
         response = await axiosPost(url,formData)
       }
       if(response.success){
+        draftEngine.clearDraft();
         notifyCreate("Activity",isEdit);
         navigate("/activity");
       }
@@ -104,6 +106,19 @@ const AddActivity = () => {
     validationSchema:formSchema,
     onSubmit:handleClick
   });
+
+  const draftEngine = useFormDraft(`addActivity_${id || 'new'}`);
+  draftEngine.useDraftAutoSave(formik.values, formik.dirty);
+
+  useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      if (draftData.fromDate) draftData.fromDate = new Date(draftData.fromDate);
+      if (draftData.toDate) draftData.toDate = new Date(draftData.toDate);
+      formik.setValues(draftData);
+    }
+  }, []);
+
   console.log('errrrr',formik.errors)
   const tableData = formik?.values?.costArr;
   const destinationId = formik.values.destination?.value

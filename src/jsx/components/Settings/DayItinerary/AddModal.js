@@ -9,6 +9,7 @@ import { FormAction } from "../../../../store/slices/formSlice";
 import { URLS } from "../../../../constants";
 import { useAsync } from "../../../utilis/useAsync";
 import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
+import { useFormDraft } from "../../../utilis/useFormDraft";
 
 const AddModal = ({ showModal, setShowModal, editId, setEditId }) => {
   const dispatch = useDispatch();
@@ -38,6 +39,7 @@ const AddModal = ({ showModal, setShowModal, editId, setEditId }) => {
           response = await axiosPost(URLS.DAY_ITINERARY_URL, values);
         }
         if (response?.success) {
+          draftEngine.clearDraft();
           dispatch(FormAction.setRefresh());
           notifyCreate("Day Itinerary", isEdit);
           setShowModal(false);
@@ -49,6 +51,16 @@ const AddModal = ({ showModal, setShowModal, editId, setEditId }) => {
       }
     },
   });
+
+  const draftEngine = useFormDraft(`addDayItinerary_${editId || 'new'}`);
+  draftEngine.useDraftAutoSave(formik.values, formik.dirty);
+
+  useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      formik.setValues(draftData);
+    }
+  }, []);
 
   const filteredSubDestinations = useMemo(() => {
     const selectedDestination = formik.values.destination_id;
@@ -78,6 +90,7 @@ const AddModal = ({ showModal, setShowModal, editId, setEditId }) => {
       showModal={showModal}
       title={`${isEdit ? "Edit" : "Add"} Day Itinerary`}
       handleModalClose={() => {
+        draftEngine.clearDraft();
         setShowModal(false);
         setEditId("");
         formik.resetForm();

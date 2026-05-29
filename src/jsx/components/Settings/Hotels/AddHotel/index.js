@@ -14,8 +14,8 @@ import { FormAction } from "../../../../../store/slices/formSlice";
 import { useFormik } from "formik";
 import { URLS } from "../../../../../constants";
 import { axiosPost, axiosPut, filePost } from "../../../../../services/AxiosInstance";
-import { notifyCreate, notifyError } from "../../../../utilis/notifyMessage";
 import { useAsync } from "../../../../utilis/useAsync";
+import { useFormDraft } from "../../../../utilis/useFormDraft";
 import * as Yup from "yup";
 import { checkFormValue, checkIsFile } from "../../../../utilis/check";
 import { LoadingButton } from "../../../common/LoadingBtn";
@@ -211,6 +211,7 @@ const AddHotel = () => {
         }
         console.log('Hotel save response:', response);
         if (response.success) {
+          draftEngine.clearDraft();
           // If response includes the hotel data with images, use it to refresh the store
           // Otherwise, the next page fetch will get the updated data
           dispatch(FormAction.setRefresh());
@@ -238,6 +239,21 @@ const AddHotel = () => {
       }
     },
   })
+
+  const draftEngine = useFormDraft(`addHotel_${id || 'new'}`);
+  draftEngine.useDraftAutoSave({ ...formik.values, __goSteps: goSteps }, formik.dirty || goSteps > 0);
+
+  useEffect(() => {
+    const draftData = draftEngine.getDraft();
+    if (draftData) {
+      const parsedData = { ...draftData };
+      if (parsedData.__goSteps !== undefined) {
+        setGoSteps(parsedData.__goSteps);
+        delete parsedData.__goSteps;
+      }
+      formik.setValues(parsedData);
+    }
+  }, []);
 
   const editValues = editData?.data?.data
   useEffect(()=>{
