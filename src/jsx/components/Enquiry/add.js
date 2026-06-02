@@ -469,6 +469,19 @@ const EditProfile = ({ setShowModal }) => {
                       optionValue="id"
                       optionLabel={isB2b ? "name" : "name"}
                       isDisabled={readOnly}
+                      noOptionsMessage={() =>
+                        isB2b ? (
+                          <span
+                            style={{ cursor: "pointer", color: "#007bff" }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              navigate("/agent");
+                            }}
+                          >
+                            ➕ Create new agent
+                          </span>
+                        ) : "No options"
+                      }
                     />
                   </div>
                   <div className="col-sm-4">
