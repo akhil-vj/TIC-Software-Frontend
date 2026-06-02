@@ -615,25 +615,53 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       });
     } else {
       // Email: copy HTML so it pastes with formatting in Gmail/Outlook
-      try {
-        const blob = new Blob([generatedHtml], { type: 'text/html' });
-        const plainBlob = new Blob([generatedText], { type: 'text/plain' });
-        const clipboardItem = new ClipboardItem({
-          'text/html': blob,
-          'text/plain': plainBlob,
-        });
-        navigator.clipboard.write([clipboardItem]).then(() => {
-          notifyCreate("Copied formatted content to clipboard — paste into Gmail/Outlook", true);
-        }).catch(err => {
-          // Fallback to plain text
+      // Safari requires ClipboardItem values to be Promises (not raw Blobs).
+      // Chrome accepts both, but Safari only accepts the Promise form.
+      const htmlBlob = new Blob([generatedHtml], { type: 'text/html' });
+      const plainBlob = new Blob([generatedText], { type: 'text/plain' });
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        try {
+          const clipboardItem = new ClipboardItem({
+            'text/html': Promise.resolve(htmlBlob),   // Safari requires Promise-wrapped values
+            'text/plain': Promise.resolve(plainBlob),
+          });
+          navigator.clipboard.write([clipboardItem]).then(() => {
+            notifyCreate("Copied formatted content to clipboard — paste into Gmail/Outlook", true);
+          }).catch(err => {
+            console.error('clipboard.write failed:', err);
+            // Fallback to plain text
+            navigator.clipboard.writeText(generatedText).then(() => {
+              notifyCreate("Copied as plain text", true);
+            }).catch(() => notifyError("Failed to copy"));
+          });
+        } catch (err) {
+          // ClipboardItem constructor failed (very old Safari)
           navigator.clipboard.writeText(generatedText).then(() => {
             notifyCreate("Copied as plain text", true);
-          });
-        });
-      } catch (err) {
-        navigator.clipboard.writeText(generatedText).then(() => {
-          notifyCreate("Copied as plain text", true);
-        });
+          }).catch(() => notifyError("Failed to copy"));
+        }
+      } else {
+        // execCommand fallback for browsers without Clipboard API support
+        const el = document.createElement('div');
+        el.innerHTML = generatedHtml;
+        el.style.position = 'fixed';
+        el.style.pointerEvents = 'none';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        try {
+          document.execCommand('copy');
+          notifyCreate("Copied formatted content to clipboard — paste into Gmail/Outlook", true);
+        } catch (e) {
+          notifyError("Failed to copy");
+        }
+        sel.removeAllRanges();
+        document.body.removeChild(el);
       }
     }
   };

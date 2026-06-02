@@ -69,6 +69,11 @@ export const CustomTable = ({
   });
 
   const [currentPage, setCurrentPage] = React.useState(1);
+
+  // Reset to page 1 whenever data changes (e.g. search/filter applied)
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [data]);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [confirmationUrl, setConfirmationUrl] = useState("");
   const [confirmationName, setConfirmationName] = useState("");
