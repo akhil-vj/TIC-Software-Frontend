@@ -1,4 +1,6 @@
 import React, { useEffect } from "react";
+import { CKEditor } from "@ckeditor/ckeditor5-react";
+import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
 import InputField from "../../common/InputField";
 import { useAsync } from "../../../utilis/useAsync";
 import { SETUP, URLS } from "../../../../constants";
@@ -328,16 +330,17 @@ const AddTransfer = () => {
                       />
                     </div>
                   </div> */}
-                  <div className="col-lg-6 mb-2">
-                    <InputField
-                      isTextarea
-                      label="Description"
-                      name="description"
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      values={formik.values}
-                      formik={formik}
-                    />
+                  <div className="col-lg-12 mb-2">
+                    <div className="form-group mb-3">
+                      <label className="form-label">Description</label>
+                      <CKEditor
+                        editor={ClassicEditor}
+                        data={formik.values.description || ""}
+                        onChange={(event, editor) => {
+                          formik.setFieldValue("description", editor.getData());
+                        }}
+                      />
+                    </div>
                   </div>
                   <div className="col-lg-6 mb-2">
                     <ReactSelect
