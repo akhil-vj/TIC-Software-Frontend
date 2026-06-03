@@ -275,7 +275,7 @@ const AddUserModal = ({ showModal, setShowModal, editId, setEditId }) => {
                         <InputField label="First Name" name="firstName" onChange={formik.handleChange} onBlur={formik.handleBlur} values={formik.values} />
                     </div>
                     <div className="col-md-6 mb-2">
-                        <InputField label="Last Name" name="secondName" onChange={formik.handleChange} onBlur={formik.handleBlur} values={formik.values} />
+                        <InputField label="User Code" name="secondName" onChange={formik.handleChange} onBlur={formik.handleBlur} values={formik.values} />
                     </div>
                     <div className="col-md-6 mb-2">
                         <InputField label="Phone" name="phone" onChange={formik.handleChange} onBlur={formik.handleBlur} values={formik.values} />
@@ -339,14 +339,14 @@ const UserTableRow = ({ item, navigate, getRoleBadgeClass, handleEdit, handleRes
             </td>
             <td>
                 <div className="action-buttons-modern">
-                    <button 
-                        className="action-icon-btn" 
+                    <button
+                        className="action-icon-btn"
                         onClick={() => handleEdit(item.id)}
                         title="Edit"
                     >
                         <i className="fa-solid fa-pen"></i>
                     </button>
-                    <button 
+                    <button
                         className="action-icon-btn"
                         onClick={() => navigate(item.id)}
                         title="View"
@@ -820,7 +820,7 @@ const User = () => {
                                             </tr>
                                         ) : (
                                             tableData?.data?.map((item) => (
-                                                <UserTableRow 
+                                                <UserTableRow
                                                     key={item.id}
                                                     item={item}
                                                     navigate={navigate}
@@ -840,7 +840,7 @@ const User = () => {
                                         {data.length > (activePag.current + 1) * sort ? (activePag.current + 1) * sort : data.length} of {data.length} entries
                                     </div>
                                     <div className="pagination-buttons-modern">
-                                        <Link 
+                                        <Link
                                             className={`pagination-btn-modern ${activePag.current === 0 ? 'disabled' : ''}`}
                                             to="#"
                                             onClick={() => activePag.current > 0 && handlePageChange(activePag.current - 1)}
@@ -849,9 +849,9 @@ const User = () => {
                                         </Link>
                                         <span>
                                             {pagination.map((number, i) => (
-                                                <Link 
-                                                    key={i} 
-                                                    to="#" 
+                                                <Link
+                                                    key={i}
+                                                    to="#"
                                                     className={`pagination-btn-modern ${activePag.current === i ? 'current' : ''}`}
                                                     onClick={() => handlePageChange(i)}
                                                 >
@@ -859,7 +859,7 @@ const User = () => {
                                                 </Link>
                                             ))}
                                         </span>
-                                        <Link 
+                                        <Link
                                             className={`pagination-btn-modern ${activePag.current + 1 >= pagination.length ? 'disabled' : ''}`}
                                             to="#"
                                             onClick={() => activePag.current + 1 < pagination.length && handlePageChange(activePag.current + 1)}

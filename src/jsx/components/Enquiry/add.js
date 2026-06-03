@@ -284,6 +284,8 @@ const EditProfile = ({ setShowModal }) => {
       setFieldValue("assigned", {
         value: editData.assigned_to_user?.id,
         label: editData.assigned_to_user?.first_name,
+        last_name: editData.assigned_to_user?.last_name,
+        first_name: editData.assigned_to_user?.first_name,
       });
       setFieldValue("refNo", checkFormValue(editData.ref_no));
       const subDestinationArr = editData.sub_destinations.map((data) => {
@@ -330,7 +332,7 @@ const EditProfile = ({ setShowModal }) => {
   useEffect(() => {
     if (!readOnly && !isEdit) {
       const agentName = values.typeValue?.name || "";
-      const assignedName = values.assigned?.first_name || "";
+      const assignedUserCode = values.assigned?.last_name || "";
       const destinationName = values.destination?.name || "";
 
       const getTwoLetters = (name) => {
@@ -343,7 +345,8 @@ const EditProfile = ({ setShowModal }) => {
       };
 
       const agentPart = getTwoLetters(agentName);
-      const assignedPart = getTwoLetters(assignedName);
+      // Use the user code (last_name) directly; fall back to "XX" if not set
+      const assignedPart = assignedUserCode ? String(assignedUserCode).toUpperCase() : "XX";
       const destinationPart = getTwoLetters(destinationName);
 
       // Helper to parse date to a local components object without timezone shift
@@ -416,7 +419,7 @@ const EditProfile = ({ setShowModal }) => {
         setFieldValue("refNo", generatedRef);
       }
     }
-  }, [values.typeValue?.name, values.assigned?.first_name, values.destination?.name, values.startDate, isEdit, readOnly, allEnquiriesData?.data?.data]);
+  }, [values.typeValue?.name, values.assigned?.last_name, values.destination?.name, values.startDate, isEdit, readOnly, allEnquiriesData?.data?.data]);
 
   return (
     <>
