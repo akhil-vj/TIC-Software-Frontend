@@ -109,8 +109,10 @@ function SetupModal() {
       setFieldValue('baseCurrency', baseCurr);
       const priceInObj = {label:data.currency,value:data.currency};
       setFieldValue('priceIn',priceInObj);
-      const destinationObj = {label:data.destination.name,value:data.destination.id}
-      setFieldValue('destination',checkFormValue(destinationObj))
+      const destinationObj = data.destination
+        ? {label:data.destination.name, value:data.destination.id}
+        : null;
+      setFieldValue('destination', checkFormValue(destinationObj))
       const getSubDestinationOption = (entry) => {
         const sub =
           entry.sub_destination ||
@@ -121,21 +123,23 @@ function SetupModal() {
       };
       const sortedArray = data.entries?.reduce((acc, entry) => {
         const existingEntry = acc.find((item) => item.date === entry.date);
-        const insertType = entry.entry_type.toLowerCase()
+        const insertType = (entry.entry_type || '').toLowerCase()
         const transferType = {label:entry.transfer_type,value:entry.transfer_type}
         const hotelOption = {label:entry.option,value:entry.option}
-        const image = insertType === 'hotel' ? entry.subject?.document_2[0]?.file_url : entry.subject.image
+        const image = insertType === 'hotel'
+          ? entry.subject?.document_2?.[0]?.file_url
+          : entry.subject?.image
         const dayDestination = getSubDestinationOption(entry)
         const obj = {
           insertType:insertType,
           entryId:entry.id,
           id:entry.subject_id,
-          name:entry.subject.name || entry.subject.activity_name || entry.subject.vehicle_name,
+          name:entry.subject?.name || entry.subject?.activity_name || entry.subject?.vehicle_name || '',
           image:image,
           option:hotelOption,
           roomType:{value:entry.room?.id,label:entry.room?.room_type_name},
-          destination:{value:entry.subject?.destination?.id || entry.subject?.destination_id,label:entry.subject?.destination?.name || entry.subject?.destination_name},
-          roomOption:entry.subject.rooms,
+          destination:{value:entry.subject?.destination?.id || entry.subject?.destination_id, label:entry.subject?.destination?.name || entry.subject?.destination_name},
+          roomOption:entry.subject?.rooms,
           single:entry.single_count,
           double:entry.double_count,
           triple:entry.triple_count,
@@ -374,12 +378,14 @@ function SetupModal() {
       setFieldValue('adult',checkFormValue(equiryIdData.adult_count))
       setFieldValue('child',checkFormValue(equiryIdData.child_count))
       setFieldValue('enquiry_ref_no', equiryIdData.ref_no || '')
-      const destinationObj = {label:equiryIdData.destination.name,value:equiryIdData.destination.id}
-      setFieldValue('destination',checkFormValue(destinationObj))
-      // Auto-set currency based on destination
-      const currencyCode = getDefaultCurrency(equiryIdData.destination?.name);
-      setFieldValue('baseCurrency', currencyCode);
-      setFieldValue('priceIn', { value: currencyCode, label: currencyCode });
+      if (equiryIdData.destination) {
+        const destinationObj = {label:equiryIdData.destination.name,value:equiryIdData.destination.id}
+        setFieldValue('destination',checkFormValue(destinationObj))
+        // Auto-set currency based on destination
+        const currencyCode = getDefaultCurrency(equiryIdData.destination?.name);
+        setFieldValue('baseCurrency', currencyCode);
+        setFieldValue('priceIn', { value: currencyCode, label: currencyCode });
+      }
     }
   },[equiryIdData?.id,isEdit])
   useEffect(() => {
