@@ -128,11 +128,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
             const shouldDivide = scheduleItem.insertType !== 'hotel';
             const isTransferItem = scheduleItem.insertType === 'transfer' || scheduleItem.insertType === 'car';
-const person = scheduleItem.insertType === 'activity'
-  ? ((Number(scheduleItem.adult || 0) + Number(scheduleItem.child || 0)) || 1)
-  : isTransferItem
-    ? ((values.adult || 0) || 1)
-    : ((values.adult || 0) + (values.child || 0)) || 1;
+            const person = scheduleItem.insertType === 'activity'
+              ? ((Number(scheduleItem.adult || 0) + Number(scheduleItem.child || 0)) || 1)
+              : isTransferItem
+                ? ((values.adult || 0) || 1)
+                : ((values.adult || 0) + (values.child || 0)) || 1;
 
             return {
               ...scheduleItem,
@@ -186,7 +186,7 @@ const person = scheduleItem.insertType === 'activity'
                 scheduleItem.insertType === "activity"
                   ? (Number(scheduleItem.adult || 0) + Number(scheduleItem.child || 0)) || 1
                   : values.adult + values.child;
-                  
+
               if (type === "amount") {
                 result.baseAmount =
                   values.priceOption.value === "TOTAL"
@@ -340,15 +340,15 @@ const person = scheduleItem.insertType === 'activity'
   const totals = scheduleArr.reduce(
     (acc, { item }) => {
       if (item.insertType !== "hotel") {
-        const person = (item.insertType === "activity") 
-          ? ((Number(item.adult || 0) + Number(item.child || 0)) || 1) 
+        const person = (item.insertType === "activity")
+          ? ((Number(item.adult || 0) + Number(item.child || 0)) || 1)
           : (item.insertType === "transfer" || item.insertType === "car")
             ? (includeChildTransfer ? ((values.adult || 0) + (values.child || 0)) : (values.adult || 0)) || 1
             : (((values.adult || 0) + (values.child || 0)) || 1);
-        
+
         const trueBase = item.baseAmount !== undefined ? item.baseAmount : (values.priceOption.value === "PER" ? item.amount * person : item.amount);
         const trueMarkup = item.baseMarkup !== undefined ? item.baseMarkup : (values.priceOption.value === "PER" ? item.markup * person : item.markup);
-        
+
         acc.totalAmount += item.amount;
         acc.trueTotalAmount = (acc.trueTotalAmount || 0) + trueBase;
         acc.totalMarkup = (acc.totalMarkup || 0) + trueMarkup;
@@ -361,30 +361,30 @@ const person = scheduleItem.insertType === 'activity'
   const getPerPersonCost = (item) => {
     // For transfers and activities: use explicit cost values if available
     if ((item.adultCost !== undefined && item.adultCost !== null) || (item.childCost !== undefined && item.childCost !== null)) {
-      return { 
-        adultCost: item.adultCost ?? 0, 
-        childCost: item.childCost ?? 0 
+      return {
+        adultCost: item.adultCost ?? 0,
+        childCost: item.childCost ?? 0
       };
     }
-    
-   const adultCount = (item.insertType === "activity" ? Number(item.adult) : Number(values.adult)) || 0;
-const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
-const isTransferType = item.insertType === "transfer" || item.insertType === "car";
 
-console.log('TRANSFER:', item.name, {
-  insertType: item.insertType,
-  isTransferType,
-  amount: item.amount,
-  baseAmount: item.baseAmount,
-  valuesAdult: values.adult,
-  valuesChild: values.child,
-  adultCount,
-  childCount,
-  includeChildTransfer,
-  effectiveDivisorWouldBe: isTransferType
-    ? (includeChildTransfer ? (adultCount + childCount) : adultCount)
-    : (adultCount + childCount),
-});
+    const adultCount = (item.insertType === "activity" ? Number(item.adult) : Number(values.adult)) || 0;
+    const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
+    const isTransferType = item.insertType === "transfer" || item.insertType === "car";
+
+    console.log('TRANSFER:', item.name, {
+      insertType: item.insertType,
+      isTransferType,
+      amount: item.amount,
+      baseAmount: item.baseAmount,
+      valuesAdult: values.adult,
+      valuesChild: values.child,
+      adultCount,
+      childCount,
+      includeChildTransfer,
+      effectiveDivisorWouldBe: isTransferType
+        ? (includeChildTransfer ? (adultCount + childCount) : adultCount)
+        : (adultCount + childCount),
+    });
     const totalPersons = adultCount + childCount;
 
     if (totalPersons > 0 && item.amount) {
@@ -579,7 +579,7 @@ console.log('TRANSFER:', item.name, {
     scheduleArr.forEach(({ item: schedItem }) => {
       if (schedItem.insertType !== "hotel") {
         const rawType = (schedItem.insertType || 'other').toLowerCase();
-        
+
         // 1. Recover the true total amount for this item
         let personDivisor = 1;
         const itemAdultCount = (rawType === 'activity' ? Number(schedItem.adult) : adultCount) || 0;
@@ -595,10 +595,10 @@ console.log('TRANSFER:', item.name, {
         }
 
         const isPerMode = values.priceOption?.value === "PER";
-        const trueBaseAmount = schedItem.baseAmount !== undefined 
-          ? Number(schedItem.baseAmount) 
+        const trueBaseAmount = schedItem.baseAmount !== undefined
+          ? Number(schedItem.baseAmount)
           : (isPerMode ? (Number(schedItem.amount || 0) * personDivisor) : Number(schedItem.amount || 0));
-        
+
         const trueMarkup = schedItem.baseMarkup !== undefined
           ? Number(schedItem.baseMarkup)
           : (isPerMode ? (Number(schedItem.markup || 0) * personDivisor) : Number(schedItem.markup || 0));
@@ -609,10 +609,10 @@ console.log('TRANSFER:', item.name, {
             const explicitAdultBase = Number(schedItem.adultCost);
             const explicitChildBase = Number(schedItem.childCost);
             const explicitTotal = explicitAdultBase + explicitChildBase;
-            
+
             const adultMarkup = explicitTotal > 0 ? (trueMarkup * explicitAdultBase / explicitTotal) : 0;
             const childMarkup = explicitTotal > 0 ? (trueMarkup * explicitChildBase / explicitTotal) : 0;
-            
+
             adultActivityTransferBase += explicitAdultBase;
             childActivityTransferBase += explicitChildBase;
             adultActivityTransferMarkup += adultMarkup;
@@ -665,18 +665,13 @@ console.log('TRANSFER:', item.name, {
       const hotelLineMarkup = Number(item.markup || 0);
 
       let rowHotelGross = hotelRowCostAll + (hotelLineMarkup * hotelFraction);
-      if (isPerMode) {
-        rowHotelGross = rowHotelGross / (Math.max(1, displayCount) * sharingFactor);
-      }
 
       const isChildType = pt.key === 'childW' || pt.key === 'childN';
       const actTransferPerPersonType = isChildType
         ? (actTransferBasePerChild + actTransferMarkupPerChild)
         : (actTransferBasePerAdult + actTransferMarkupPerAdult);
 
-      const actTotalToAdd = isPerMode
-        ? actTransferPerPersonType
-        : (actTransferPerPersonType * sharingFactor * displayCount);
+      const actTotalToAdd = actTransferPerPersonType * sharingFactor * displayCount;
 
       const rowGrossBeforeFinalMarkup = rowHotelGross + actTotalToAdd;
 
@@ -685,13 +680,11 @@ console.log('TRANSFER:', item.name, {
         inputMarkupShare = rowGrossBeforeFinalMarkup * Number(values.baseMarkup) * 0.01;
       } else if (useExtraMarkup) {
         const totalPackageGross = (item.amount || 0) + (item.markup || 0) + (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0);
-        const rowTotalPackageShare = isPerMode
-          ? (rowGrossBeforeFinalMarkup * sharingFactor * displayCount)
-          : rowGrossBeforeFinalMarkup;
+        const rowTotalPackageShare = rowGrossBeforeFinalMarkup;
         const totalOptionMarkupShare = totalPackageGross > 0
           ? (extraMarkupValue * rowTotalPackageShare / totalPackageGross)
           : (extraMarkupValue / activeTypes.length);
-        inputMarkupShare = isPerMode ? (totalOptionMarkupShare / (Math.max(1, displayCount) * sharingFactor)) : totalOptionMarkupShare;
+        inputMarkupShare = totalOptionMarkupShare;
       }
 
       const finalRowTotal = rowGrossBeforeFinalMarkup + inputMarkupShare;
@@ -708,7 +701,7 @@ console.log('TRANSFER:', item.name, {
 
     return hotelRows;
   };
- 
+
 
   // ─── Handle billing submission ────────────────────────────────────────────────
   const handleBilling = async () => {
@@ -768,17 +761,11 @@ console.log('TRANSFER:', item.name, {
         const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
 
         const mappedRows = pRows.map(pt => {
-          const pCount = isPERMode ? (pt.count * (occupancyFactors[pt.key] || 1)) : pt.count;
+          const pCount = pt.count * (occupancyFactors[pt.key] || 1);
           const rowPriceInUI = convert(pt.total);
 
-          let perPerson, itemizedTotal;
-          if (isPERMode) {
-            perPerson = rowPriceInUI;
-            itemizedTotal = perPerson * pCount;
-          } else {
-            itemizedTotal = rowPriceInUI;
-            perPerson = pCount > 0 ? (itemizedTotal / pCount) : 0;
-          }
+          const itemizedTotal = rowPriceInUI;
+          const perPerson = pCount > 0 ? (itemizedTotal / pCount) : 0;
 
           return {
             key: pt.key,
@@ -933,7 +920,7 @@ console.log('TRANSFER:', item.name, {
             if (rawType === 'activity' || type === 'car') {
               const adultCount = (rawType === 'activity' ? Number(item.adult) : Number(values.adult)) || 0;
               const childCount = (rawType === 'activity' ? Number(item.child) : Number(values.child)) || 0;
-              
+
               if (rawType === 'activity') {
                 if (item.adultCost && item.childCost && (Number(item.adultCost) + Number(item.childCost)) > 0) {
                   const adultTotalCost = Number(item.adultCost) || 0;
@@ -941,11 +928,11 @@ console.log('TRANSFER:', item.name, {
                   const totalExplicitCost = adultTotalCost + childTotalCost;
                   const adultMarkup = totalExplicitCost > 0 ? (itemMarkupTotal * adultTotalCost / totalExplicitCost) : 0;
                   const childMarkup = totalExplicitCost > 0 ? (itemMarkupTotal * childTotalCost / totalExplicitCost) : 0;
-                  
+
                   // Round the per-person rates to match the breakdown rows
                   const adultRate = getRoundOfValue((adultTotalCost + adultMarkup) / (adultCount || 1));
                   const childRate = getRoundOfValue((childTotalCost + childMarkup) / (childCount || 1));
-                  
+
                   acc.activityAdult = (acc.activityAdult || 0) + (adultRate * adultCount);
                   acc.activityChild = (acc.activityChild || 0) + (childRate * childCount);
                 } else {
@@ -956,7 +943,7 @@ console.log('TRANSFER:', item.name, {
                 }
               } else if (type === 'car') {
                 const divisor = includeChildTransfer ? (adultCount + childCount) : adultCount;
-                
+
                 if (includeChildTransfer) {
                   const totalPax = adultCount + childCount;
                   if (totalPax > 0) {
@@ -1071,7 +1058,18 @@ console.log('TRANSFER:', item.name, {
                             };
                             // Weight without occupancy multipliers - just count * rate
                             const weight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
-                            const ratio = weight > 0 ? (Number(item.amount || 0) / weight) : 0;
+                            
+                            let ratio = 1;
+                            if (weight > 0) {
+                              ratio = Number(item.amount || 0) / weight;
+                            } else {
+                              const totalRooms = counts.single + counts.double + counts.triple + counts.extra + counts.childW + counts.childN;
+                              if (totalRooms > 0) {
+                                const avg = Number(item.amount || 0) / totalRooms;
+                                rates.single = rates.double = rates.triple = rates.extra = rates.childW = rates.childN = avg;
+                              }
+                              ratio = 1;
+                            }
                             const markupRatio = Number(item.amount || 0) > 0 ? (Number(item.markup || 0) / Number(item.amount || 0)) : 0;
 
                             const types = [
@@ -1097,75 +1095,75 @@ console.log('TRANSFER:', item.name, {
                                 };
                               });
                           } else if ((item.insertType === "transfer" || item.insertType === "car" || item.insertType === "activity") && isPer) {
-  const adultCount = (item.insertType === "activity" ? Number(item.adult) : Number(values.adult)) || 0;
-  const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
-  const isTransferType = item.insertType === "transfer" || item.insertType === "car";
+                            const adultCount = (item.insertType === "activity" ? Number(item.adult) : Number(values.adult)) || 0;
+                            const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
+                            const isTransferType = item.insertType === "transfer" || item.insertType === "car";
 
-  // Recover the true total cost using the same person count logic as during conversion
-  const activityPersonCount = (Number(item.adult || 0) + Number(item.child || 0));
-  const globalAdultCount = Number(values.adult || 0);
-  const globalTotalCount = (Number(values.adult || 0) + Number(values.child || 0));
+                            // Recover the true total cost using the same person count logic as during conversion
+                            const activityPersonCount = (Number(item.adult || 0) + Number(item.child || 0));
+                            const globalAdultCount = Number(values.adult || 0);
+                            const globalTotalCount = (Number(values.adult || 0) + Number(values.child || 0));
 
-  let person = 1;
-  if (item.insertType === "activity") {
-    person = activityPersonCount > 0 ? activityPersonCount : (globalTotalCount || 1);
-  } else if (item.insertType === "transfer" || item.insertType === "car") {
-    // Synchronize with the divisor logic: if children aren't ticked, the per-person rate was divided by adults only
-    person = includeChildTransfer ? (globalTotalCount || 1) : (globalAdultCount || 1);
-  } else {
-    person = globalTotalCount || 1;
-  }
+                            let person = 1;
+                            if (item.insertType === "activity") {
+                              person = activityPersonCount > 0 ? activityPersonCount : (globalTotalCount || 1);
+                            } else if (item.insertType === "transfer" || item.insertType === "car") {
+                              // Synchronize with the divisor logic: if children aren't ticked, the per-person rate was divided by adults only
+                              person = includeChildTransfer ? (globalTotalCount || 1) : (globalAdultCount || 1);
+                            } else {
+                              person = globalTotalCount || 1;
+                            }
 
-  const totalAmount = item.baseAmount !== undefined
-    ? Number(item.baseAmount)
-    : Number(item.amount) * (person || 1);
-  const totalMarkup = item.baseMarkup !== undefined
-    ? Number(item.baseMarkup)
-    : Number(item.markup || 0) * (person || 1);
+                            const totalAmount = item.baseAmount !== undefined
+                              ? Number(item.baseAmount)
+                              : Number(item.amount) * (person || 1);
+                            const totalMarkup = item.baseMarkup !== undefined
+                              ? Number(item.baseMarkup)
+                              : Number(item.markup || 0) * (person || 1);
 
-  const hasExplicitCosts = item.insertType === "activity" && item.adultCost && item.childCost && (Number(item.adultCost) + Number(item.childCost)) > 0 && (adultCount + childCount) > 0;
+                            const hasExplicitCosts = item.insertType === "activity" && item.adultCost && item.childCost && (Number(item.adultCost) + Number(item.childCost)) > 0 && (adultCount + childCount) > 0;
 
-  if (hasExplicitCosts) {
-    const adultTotalCost = Number(item.adultCost) || 0;
-    const childTotalCost = Number(item.childCost) || 0;
-    const totalExplicitCost = adultTotalCost + childTotalCost;
-    const adultMarkup = totalExplicitCost > 0 ? (totalMarkup * adultTotalCost / totalExplicitCost) : 0;
-    const childMarkup = totalExplicitCost > 0 ? (totalMarkup * childTotalCost / totalExplicitCost) : 0;
+                            if (hasExplicitCosts) {
+                              const adultTotalCost = Number(item.adultCost) || 0;
+                              const childTotalCost = Number(item.childCost) || 0;
+                              const totalExplicitCost = adultTotalCost + childTotalCost;
+                              const adultMarkup = totalExplicitCost > 0 ? (totalMarkup * adultTotalCost / totalExplicitCost) : 0;
+                              const childMarkup = totalExplicitCost > 0 ? (totalMarkup * childTotalCost / totalExplicitCost) : 0;
 
-    if (adultCount > 0) {
-      breakdownData.push({
-        key: 'adult',
-        label: 'Adult rate',
-        net: getRoundOfValue(adultTotalCost / adultCount),
-        gross: getRoundOfValue((adultTotalCost + adultMarkup) / adultCount)
-      });
-    }
-    if (childCount > 0) {
-      breakdownData.push({
-        key: 'child',
-        label: 'Child rate',
-        net: getRoundOfValue(childTotalCost / childCount),
-        gross: getRoundOfValue((childTotalCost + childMarkup) / childCount)
-      });
-    }
-  } else {
-    // Transfers and general fallback
-    const effectiveDivisor = isTransferType
-      ? (includeChildTransfer ? (adultCount + childCount) : adultCount)
-      : (adultCount + childCount);
+                              if (adultCount > 0) {
+                                breakdownData.push({
+                                  key: 'adult',
+                                  label: 'Adult rate',
+                                  net: getRoundOfValue(adultTotalCost / adultCount),
+                                  gross: getRoundOfValue((adultTotalCost + adultMarkup) / adultCount)
+                                });
+                              }
+                              if (childCount > 0) {
+                                breakdownData.push({
+                                  key: 'child',
+                                  label: 'Child rate',
+                                  net: getRoundOfValue(childTotalCost / childCount),
+                                  gross: getRoundOfValue((childTotalCost + childMarkup) / childCount)
+                                });
+                              }
+                            } else {
+                              // Transfers and general fallback
+                              const effectiveDivisor = isTransferType
+                                ? (includeChildTransfer ? (adultCount + childCount) : adultCount)
+                                : (adultCount + childCount);
 
-    const safeDivisor = effectiveDivisor > 0 ? effectiveDivisor : 1;
-    const perPersonNet = getRoundOfValue(totalAmount / safeDivisor);
-    const perPersonGross = getRoundOfValue((totalAmount + totalMarkup) / safeDivisor);
+                              const safeDivisor = effectiveDivisor > 0 ? effectiveDivisor : 1;
+                              const perPersonNet = getRoundOfValue(totalAmount / safeDivisor);
+                              const perPersonGross = getRoundOfValue((totalAmount + totalMarkup) / safeDivisor);
 
-    if (adultCount > 0) {
-      breakdownData.push({ key: 'adult', label: 'Adult rate', net: perPersonNet, gross: perPersonGross });
-    }
+                              if (adultCount > 0) {
+                                breakdownData.push({ key: 'adult', label: 'Adult rate', net: perPersonNet, gross: perPersonGross });
+                              }
 
-    if (childCount > 0 && (!isTransferType || includeChildTransfer)) {
-      breakdownData.push({ key: 'child', label: 'Child rate', net: perPersonNet, gross: perPersonGross });
-    }
-  }
+                              if (childCount > 0 && (!isTransferType || includeChildTransfer)) {
+                                breakdownData.push({ key: 'child', label: 'Child rate', net: perPersonNet, gross: perPersonGross });
+                              }
+                            }
                           }
 
 
@@ -1333,7 +1331,7 @@ console.log('TRANSFER:', item.name, {
                       {categoryTotals.hotelsByOption && (() => {
                         const hotelOptions = Object.entries(categoryTotals.hotelsByOption);
                         const hasMultipleOptions = hotelOptions.length > 1;
-                        
+
                         return hotelOptions.map(([optionName, optionTotals]) => {
                           const hotelRows = [
                             { label: 'Main Room Rate', value: optionTotals.hotelRoom },
@@ -1341,11 +1339,11 @@ console.log('TRANSFER:', item.name, {
                             { label: 'Child With Bed', value: optionTotals.hotelChildW },
                             { label: 'Child Without Bed', value: optionTotals.hotelChildN },
                           ].filter(row => row.value > 0);
-                          
+
                           if (hotelRows.length === 0) return null;
-                          
+
                           const categoryLabel = hasMultipleOptions ? `Hotels - ${optionName}` : `Hotels`;
-                          
+
                           return (
                             <React.Fragment key={`hotel-${optionName}`}>
                               {hotelRows.map((row, idx) => (
@@ -1616,17 +1614,11 @@ console.log('TRANSFER:', item.name, {
                       const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
-                      // Grand total = sum of person row totals × occupancy factors
-                      // (single/extra/child ×1, double ×2, triple ×3)
+                      // Grand total = sum of person row totals
                       const occupancyFactors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
                       const isPERModeGT = values.priceOption?.value === "PER";
                       const grandTotal = getRoundOfValue(personRows.reduce((sum, pt) => {
-                        const convertedTotal = convert(pt.total);
-                        if (isPERModeGT) {
-                          const factor = occupancyFactors[pt.key] || 1;
-                          return sum + (convertedTotal * pt.count * factor);
-                        }
-                        return sum + convertedTotal;
+                        return sum + convert(pt.total);
                       }, 0));
                       return (
                         <React.Fragment key={optIdx}>
@@ -1660,17 +1652,21 @@ console.log('TRANSFER:', item.name, {
 
                               {/* Person type label */}
                               <td style={{ paddingLeft: "16px", color: "#333", borderRight: '0.5px solid #e2e8f0', fontWeight: 500 }}>
-                                <span>{pt.label}</span>
+                                <span>{isPERModeGT ? `${pt.count * (occupancyFactors[pt.key] || 1)} Pax ` : ''}({pt.label})</span>
                               </td>
 
                               {/* Markup */}
-                              <td style={{ borderRight: '0.5px solid #e2e8f0' }}>{currSymbol} {convert(pt.markup)}</td>
+                              <td style={{ borderRight: '0.5px solid #e2e8f0' }}>
+                                {currSymbol} {getRoundOfValue(isPERModeGT ? convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)) : convert(pt.markup))}
+                              </td>
 
                               {/* VAT */}
                               <td style={{ borderRight: '0.5px solid #e2e8f0' }}>{pt.vat} %</td>
 
-                              {/* Total (aggregate for all pax of this type) */}
-                              <td className="text-dark" style={{ fontWeight: 600 }}>{currSymbol} {convert(pt.total)}</td>
+                              {/* Total */}
+                              <td className="text-dark" style={{ fontWeight: 600 }}>
+                                {currSymbol} {getRoundOfValue(isPERModeGT ? convert(pt.total) / (pt.count * (occupancyFactors[pt.key] || 1)) : convert(pt.total))}
+                              </td>
                             </tr>
                           ))}
 
@@ -1764,7 +1760,7 @@ console.log('TRANSFER:', item.name, {
                             const personRows = getPersonTypeRows(item);
                             const occupancyFactors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
                             const isPERModeCO = values.priceOption?.value === "PER";
-                            
+
                             const rate = parseFloat(values.priceIn.exchange_rate) || 1;
                             const convertLocal = (val) => getRoundOfValue(val / rate);
 
