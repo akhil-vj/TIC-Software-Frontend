@@ -665,8 +665,8 @@ console.log('TRANSFER:', item.name, {
       const hotelLineMarkup = Number(item.markup || 0);
 
       let rowHotelGross = hotelRowCostAll + (hotelLineMarkup * hotelFraction);
-      if (isPerMode && (pt.key === 'double' || pt.key === 'triple' || pt.key === 'quad' || pt.key === 'twoB' || pt.key === 'threeB')) {
-        rowHotelGross = rowHotelGross / sharingFactor;
+      if (isPerMode) {
+        rowHotelGross = rowHotelGross / (Math.max(1, displayCount) * sharingFactor);
       }
 
       const isChildType = pt.key === 'childW' || pt.key === 'childN';
@@ -691,7 +691,7 @@ console.log('TRANSFER:', item.name, {
         const totalOptionMarkupShare = totalPackageGross > 0
           ? (extraMarkupValue * rowTotalPackageShare / totalPackageGross)
           : (extraMarkupValue / activeTypes.length);
-        inputMarkupShare = isPerMode ? (totalOptionMarkupShare / sharingFactor) : totalOptionMarkupShare;
+        inputMarkupShare = isPerMode ? (totalOptionMarkupShare / (Math.max(1, displayCount) * sharingFactor)) : totalOptionMarkupShare;
       }
 
       const finalRowTotal = rowGrossBeforeFinalMarkup + inputMarkupShare;
