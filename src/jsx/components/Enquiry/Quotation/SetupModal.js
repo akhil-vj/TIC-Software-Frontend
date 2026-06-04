@@ -144,6 +144,9 @@ function SetupModal() {
           double:entry.double_count,
           triple:entry.triple_count,
           quad:entry.quad_count,
+          two_bedroom:entry.two_bedroom_count,
+          three_bedroom:entry.three_bedroom_count,
+          four_bedroom:entry.four_bedroom_count,
           extra:entry.extra_count,
           childW:entry.child_w_count,
           childN:entry.child_n_count,
@@ -275,6 +278,9 @@ function SetupModal() {
           formData.append(`entries[${index}][child_w_count]`,checkFormValue(data.childW,'number'))
           formData.append(`entries[${index}][child_n_count]`,checkFormValue(data.childN,'number'))
           formData.append(`entries[${index}][quad_count]`,checkFormValue(data.quad,'number'))
+          formData.append(`entries[${index}][two_bedroom_count]`,checkFormValue(data.two_bedroom,'number'))
+          formData.append(`entries[${index}][three_bedroom_count]`,checkFormValue(data.three_bedroom,'number'))
+          formData.append(`entries[${index}][four_bedroom_count]`,checkFormValue(data.four_bedroom,'number'))
         }
       
         if(data.insertType === 'activity'){

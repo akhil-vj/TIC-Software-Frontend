@@ -74,7 +74,11 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
     endDate: defaultEndDate,
     endTime: '11:00',
     option: hotelOptions[0],
-    insertType: 'hotel'
+    insertType: 'hotel',
+    roomRows: [],
+    hasChildren: false,
+    childWithBed: 0,
+    childNoBed: 0
   };
   const {
     values,
@@ -102,31 +106,89 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
   }, []);
 
   const handleSetup = () => {
-    // Calculate hotel amount from room counts × room rates so the pricing page
-    // can display correct values immediately (before saving to backend).
     const roomData = values.roomOption?.find((r) => r.id == values.roomType?.value);
+    
+    let single = 0, double = 0, triple = 0, quad = 0, extra = 0;
+    let twoBedroom = 0, threeBedroom = 0, fourBedroom = 0;
+    let totalRoomCost = 0;
+
     const safeNum = (v) => {
       const n = parseInt(v, 10);
       return Number.isFinite(n) && n > 0 ? n : 0;
     };
-    const singleCount = safeNum(values.single);
-    const doubleCount = safeNum(values.double);
-    const tripleCount = safeNum(values.triple);
-    const quadCount = safeNum(values.quad);
-    const extraCount = safeNum(values.extra);
-    const childWCount = safeNum(values.childW);
-    const childNCount = safeNum(values.childN);
-    const totalAmount =
-      singleCount * 1 * Number(roomData?.single_bed_amount || 0) +
-      doubleCount * 2 * Number(roomData?.double_bed_amount || 0) +
-      tripleCount * 3 * Number(roomData?.triple_bed_amount || 0) +
-      quadCount * 4 * Number(roomData?.quad_bed_amount || 0) +
-      extraCount * 1 * Number(roomData?.extra_bed_amount || 0) +
-      childWCount * 1 * Number(roomData?.child_w_bed_amount || 0) +
-      childNCount * 1 * Number(roomData?.child_n_bed_amount || 0);
-    draftEngine.clearDraft(); // Clear draft successfully
-    onClick({ ...values, amount: totalAmount, markup: values.markup || 0 }, setShowModal);
+
+    let totalExtraAdults = 0;
+
+    (values.roomRows || []).forEach(row => {
+      const numRooms = safeNum(row.numRooms) || 1;
+      const pax = safeNum(row.paxStaying) || 1;
+      let baseOcc = 2;
+      let physicalBedrooms = 1;
+      let baseRate = 0;
+
+      if (row.bedType === 'single') {
+        single += numRooms;
+        baseOcc = 1; physicalBedrooms = 1;
+        baseRate = Number(roomData?.single_bed_amount || 0);
+      } else if (row.bedType === 'double') {
+        double += numRooms;
+        baseOcc = 2; physicalBedrooms = 1;
+        baseRate = Number(roomData?.double_bed_amount || 0);
+      } else if (row.bedType === 'triple') {
+        triple += numRooms;
+        baseOcc = 3; physicalBedrooms = 1;
+        baseRate = Number(roomData?.triple_bed_amount || 0);
+      } else if (row.bedType === 'quad') {
+        quad += numRooms;
+        baseOcc = 4; physicalBedrooms = 1;
+        baseRate = Number(roomData?.quad_bed_amount || 0);
+      } else if (row.bedType === 'two_bedroom') {
+        twoBedroom += numRooms;
+        baseOcc = 4; physicalBedrooms = 2;
+        baseRate = Number(roomData?.two_bedroom_amount || 0);
+      } else if (row.bedType === 'three_bedroom') {
+        threeBedroom += numRooms;
+        baseOcc = 6; physicalBedrooms = 3;
+        baseRate = Number(roomData?.three_bedroom_amount || 0);
+      } else if (row.bedType === 'four_bedroom') {
+        fourBedroom += numRooms;
+        baseOcc = 8; physicalBedrooms = 4;
+        baseRate = Number(roomData?.four_bedroom_amount || 0);
+      }
+
+      const extraRate = Number(roomData?.extra_bed_amount || 0);
+      const extraBedsAllowed = extraRate > 0 ? physicalBedrooms : 0;
+      
+      const extraPax = Math.max(0, pax - (numRooms * baseOcc));
+      totalExtraAdults += extraPax;
+
+      totalRoomCost += (numRooms * baseRate) + (extraPax * extraRate);
+    });
+
+    const childW = values.hasChildren ? safeNum(values.childWithBed) : 0;
+    const childN = values.hasChildren ? safeNum(values.childNoBed) : 0;
+    
+    extra = totalExtraAdults + childW; // A Child With Bed consumes an extra bed slot
+
+    const childTotal = 
+      (childW * Number(roomData?.child_w_bed_amount || 0)) +
+      (childN * Number(roomData?.child_n_bed_amount || 0));
+
+    const totalAmount = totalRoomCost + childTotal;
+
+    draftEngine.clearDraft();
+    
+    // Pass flat format back to SetupModal.js
+    onClick({
+      ...values,
+      amount: totalAmount,
+      markup: values.markup || 0,
+      single, double, triple, quad, extra,
+      two_bedroom: twoBedroom, three_bedroom: threeBedroom, four_bedroom: fourBedroom,
+      childW, childN
+    }, setShowModal);
   };
+
   useEffect(() => {
     const showScheduleDate = data?.showScheduleDate ? new Date(data.showScheduleDate) : null;
     setFieldValue('startDate', showScheduleDate || defaultStartDate)
@@ -135,6 +197,46 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
       const parsedData = { ...data };
       if (parsedData.startDate) parsedData.startDate = new Date(parsedData.startDate);
       if (parsedData.endDate) parsedData.endDate = new Date(parsedData.endDate);
+      
+      // Hydrate roomRows
+      let newRoomRows = [];
+      let rowId = 1;
+      let remainingExtra = parseInt(data.extra) || 0;
+
+      const addRows = (bedType, count, baseOcc) => {
+        if (count > 0) {
+          // Put all remaining extra beds in the first row we create
+          let extraToAssign = newRoomRows.length === 0 ? remainingExtra : 0;
+          newRoomRows.push({
+            _id: rowId++,
+            numRooms: count,
+            paxStaying: (count * baseOcc) + extraToAssign,
+            bedType: bedType
+          });
+          if (extraToAssign > 0) remainingExtra = 0;
+        }
+      };
+
+      addRows('double', parseInt(data.double) || 0, 2);
+      addRows('single', parseInt(data.single) || 0, 1);
+      addRows('triple', parseInt(data.triple) || 0, 3);
+      addRows('quad', parseInt(data.quad) || 0, 4);
+      addRows('two_bedroom', parseInt(data.two_bedroom_count) || 0, 4);
+      addRows('three_bedroom', parseInt(data.three_bedroom_count) || 0, 6);
+      addRows('four_bedroom', parseInt(data.four_bedroom_count) || 0, 8);
+
+      if (newRoomRows.length === 0) {
+        newRoomRows.push({ _id: 1, numRooms: 1, paxStaying: 2, bedType: 'double' });
+      }
+
+      parsedData.roomRows = newRoomRows;
+      
+      const childW = parseInt(data.childW) || 0;
+      const childN = parseInt(data.childN) || 0;
+      parsedData.hasChildren = (childW > 0 || childN > 0);
+      parsedData.childWithBed = childW;
+      parsedData.childNoBed = childN;
+
       setValues(parsedData)
     } else {
       if (hotelDetailData) {
@@ -297,78 +399,378 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                       optionLabel="label"
                     />
                   </div>
-                  <div style={{
-                    background: '#fffbea',
-                    borderRadius: '12px',
-                    border: '0.5px solid #e8e2b0',
-                    padding: '1.25rem 1.5rem',
-                    marginBottom: '1rem',
-                    width: '100%'
-                  }}>
-                    <p style={{
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      color: '#a08c30',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      margin: '0 0 1rem'
-                    }}>
-                      Room Allotment
-                    </p>
+{/* ── Room Allotment ── */}
+                  {(() => {
+                    const currencyCode = getDefaultCurrency(itineraryDestination || values.destination?.label);
+                    const fmt = (n) => `${currencyCode} ${(n || 0).toLocaleString()}`;
 
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
-                      gap: '12px'
-                    }}>
-                      {roomAllotement?.map((room) => {
-                        const hasAmount = room.allowed !== undefined && room.allowed !== null && room.allowed !== 0;
-                        const currencyCode = getDefaultCurrency(itineraryDestination || values.destination?.label);
-                        return (
-                          <div key={room.name} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{
-                              fontSize: '12px',
-                              color: '#6b7280',
-                              fontWeight: 500,
-                              textTransform: 'capitalize'
+                    const roomRows     = values.roomRows     || [{ _id: 1, numRooms: 1, paxStaying: 2, bedType: 'double' }];
+                    const hasChildren  = values.hasChildren  || false;
+                    const childWithBed = values.childWithBed || 0;
+                    const childNoBed   = values.childNoBed   || 0;
+
+                    // ── per-row calc ──
+                    const calcRow = (row) => {
+                      const d = selectedRoom; // currently selected room data from formik
+                      const bedType = row.bedType || 'double';
+                      
+                      let base = 0, baseOcc = 2, physicalBedrooms = 1;
+                      if (bedType === 'single') {
+                         base = Number(d?.single_bed_amount || 0);
+                         baseOcc = 1; physicalBedrooms = 1;
+                      } else if (bedType === 'double') {
+                         base = Number(d?.double_bed_amount || 0);
+                         baseOcc = 2; physicalBedrooms = 1;
+                      } else if (bedType === 'triple') {
+                         base = Number(d?.triple_bed_amount || 0);
+                         baseOcc = 3; physicalBedrooms = 1;
+                      } else if (bedType === 'quad') {
+                         base = Number(d?.quad_bed_amount || 0);
+                         baseOcc = 4; physicalBedrooms = 1;
+                      } else if (bedType === 'two_bedroom') {
+                         base = Number(d?.two_bedroom_amount || 0);
+                         baseOcc = 4; physicalBedrooms = 2;
+                      } else if (bedType === 'three_bedroom') {
+                         base = Number(d?.three_bedroom_amount || 0);
+                         baseOcc = 6; physicalBedrooms = 3;
+                      } else if (bedType === 'four_bedroom') {
+                         base = Number(d?.four_bedroom_amount || 0);
+                         baseOcc = 8; physicalBedrooms = 4;
+                      }
+                      
+                      const extraRate = Number(d?.extra_bed_amount || 0);
+                      const maxExtraBeds = extraRate > 0 ? physicalBedrooms : 0;
+                      const maxOcc = baseOcc + maxExtraBeds;
+
+                      const numRooms  = parseInt(row.numRooms)  || 1;
+                      const pax       = parseInt(row.paxStaying) || 1;
+                      const roomCost  = numRooms * base;
+                      const extraPax  = Math.max(0, pax - numRooms * baseOcc);
+                      const extraCost = extraPax * extraRate;
+                      const total     = roomCost + extraCost;
+                      const perPax    = pax > 0 ? Math.round(total / pax) : 0;
+                      
+                      // Calculate if total pax exceeds the absolute limit
+                      const overCap   = pax > (numRooms * maxOcc);
+                      
+                      return { roomCost, extraCost, total, perPax, overCap, base, extraRate, maxOcc, baseOcc };
+                    };
+
+                    // ── grand totals ──
+                    let grandRoomCost = 0, grandPax = 0;
+                    roomRows.forEach((row) => {
+                      const { total } = calcRow(row);
+                      grandRoomCost += total;
+                      grandPax      += parseInt(row.paxStaying) || 1;
+                    });
+                    
+                    const childWBedRate = Number(selectedRoom?.child_w_bed_amount || 0);
+                    const childNBedRate = Number(selectedRoom?.child_n_bed_amount || 0);
+                    const childTotal = hasChildren ? (childWithBed * childWBedRate + childNoBed * childNBedRate) : 0;
+                    
+                    const grandTotal = grandRoomCost + childTotal;
+                    const allPax     = grandPax + (hasChildren ? childWithBed + childNoBed : 0);
+                    const avgPerPax  = allPax > 0 ? Math.round(grandTotal / allPax) : 0;
+
+                    // ── row helpers ──
+                    const updateRow = (id, field, val) => {
+                      setFieldValue('roomRows', roomRows.map((r) =>
+                        r._id === id ? { ...r, [field]: val } : r
+                      ));
+                    };
+                    const addRow = () => {
+                      const nextId = (roomRows[roomRows.length - 1]?._id || 0) + 1;
+                      setFieldValue('roomRows', [...roomRows, { _id: nextId, numRooms: 1, paxStaying: 2, bedType: 'double' }]);
+                    };
+                    const removeRow = (id) => {
+                      setFieldValue('roomRows', roomRows.filter((r) => r._id !== id));
+                    };
+
+                    return (
+                      <div style={{
+                        background: '#fffbea',
+                        borderRadius: '12px',
+                        border: '0.5px solid #e8e2b0',
+                        padding: '1.25rem 1.5rem',
+                        marginBottom: '1rem',
+                        width: '100%'
+                      }}>
+                        <p style={{
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          color: '#a08c30',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          margin: '0 0 1rem'
+                        }}>
+                          Room Allotment
+                        </p>
+
+                        {/* ── Room rows ── */}
+                        {roomRows.map((row) => {
+                          const { roomCost, extraCost, total, perPax, overCap, base, extraRate, maxOcc } = calcRow(row);
+                          return (
+                            <div key={row._id} style={{
+                              background: '#ffffff',
+                              border: '0.5px solid #e5e7eb',
+                              borderRadius: '10px',
+                              padding: '12px 14px',
+                              marginBottom: '10px',
+                              position: 'relative'
                             }}>
-                              {room.label}
-                            </label>
+                              {/* remove button */}
+                              {roomRows.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeRow(row._id)}
+                                  style={{
+                                    position: 'absolute', top: 10, right: 12,
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    fontSize: '13px', color: '#9ca3af', padding: 0, lineHeight: 1, zIndex: 10
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              )}
 
-                            <input
-                              type="number"
-                              name={room.name}
-                              value={values[room.name] || ''}
-                              onChange={handleChange}
-                              onBlur={handleBlur}
-                              placeholder="0"
-                              style={{
-                                width: '100%',
-                                background: '#ffffff',
-                                border: '0.5px solid #d1d5db',
-                                borderRadius: '8px',
-                                padding: '6px 8px',
-                                fontSize: '14px',
-                                textAlign: 'center',
-                                outline: 'none'
-                              }}
-                            />
+                              {/* Top Bar: Selector on left, Badge on right */}
+                              {selectedRoom && (
+                                <div style={{ 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between', 
+                                  alignItems: 'center',
+                                  marginBottom: 10,
+                                  paddingRight: roomRows.length > 1 ? '20px' : '0px'
+                                }}>
+                                  {/* Bed Type Selector */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Bed Type:</label>
+                                    <select
+                                      value={row.bedType}
+                                      onChange={(e) => updateRow(row._id, 'bedType', e.target.value)}
+                                      style={{
+                                        height: '26px', borderRadius: '5px', border: '0.5px solid #d1d5db',
+                                        background: '#f9fafb', fontSize: '12px', padding: '0 6px', outline: 'none',
+                                        color: '#374151', cursor: 'pointer'
+                                      }}
+                                    >
+                                      <option value="single">Single</option>
+                                      <option value="double">Double</option>
+                                      <option value="triple">Triple</option>
+                                      <option value="quad">Quad</option>
+                                      <option value="two_bedroom">2 Bedroom</option>
+                                      <option value="three_bedroom">3 Bedroom</option>
+                                      <option value="four_bedroom">4 Bedroom</option>
+                                    </select>
+                                  </div>
 
-                            <span style={{
-                              fontSize: '11px',
-                              borderRadius: '4px',
-                              padding: '2px 6px',
-                              textAlign: 'center',
-                              background: hasAmount ? '#fdf3c0' : '#f3f4f6',
-                              color: hasAmount ? '#a08c30' : '#9ca3af'
-                            }}>
-                              {hasAmount ? `${currencyCode} ${room.allowed}` : '—'}
-                            </span>
+                                  {/* Badge */}
+                                  <span style={{
+                                    fontSize: '11px', background: '#fef7dc', color: '#b08d2a',
+                                    borderRadius: '6px', padding: '3px 10px', border: '0.5px solid #e8d98a'
+                                  }}>
+                                    Base: {fmt(base)} · Max {maxOcc} pax
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* inputs */}
+                              <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+                                gap: '10px'
+                              }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>No. of rooms</label>
+                                  <input
+                                    type="number" min="1"
+                                    value={row.numRooms}
+                                    onChange={(e) => updateRow(row._id, 'numRooms', e.target.value)}
+                                    style={{
+                                      height: '34px', borderRadius: '7px', border: '0.5px solid #d1d5db',
+                                      background: '#f9fafb', fontSize: '13px', textAlign: 'center',
+                                      padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
+                                    }}
+                                  />
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Pax staying</label>
+                                  <input
+                                    type="number" min="1"
+                                    value={row.paxStaying}
+                                    onChange={(e) => updateRow(row._id, 'paxStaying', e.target.value)}
+                                    style={{
+                                      height: '34px', borderRadius: '7px',
+                                      border: `0.5px solid ${overCap ? '#f87171' : '#d1d5db'}`,
+                                      background: '#f9fafb', fontSize: '13px', textAlign: 'center',
+                                      padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
+                                    }}
+                                  />
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Extra bed rate</label>
+                                  <span style={{
+                                    fontSize: '11px', background: '#fef7dc', color: '#b08d2a',
+                                    borderRadius: '5px', padding: '3px 8px', textAlign: 'center',
+                                    border: '0.5px solid #e8d98a', marginTop: '2px'
+                                  }}>
+                                    {selectedRoom ? `${fmt(extraRate)} / pax` : '—'}
+                                  </span>
+                                </div>
+
+                              </div>
+
+                              {overCap && (
+                                <p style={{ fontSize: '11px', color: '#dc2626', margin: '6px 0 0' }}>
+                                  ⚠ Pax exceeds max occupancy ({maxOcc} pax per room) for selected configuration.
+                                </p>
+                              )}
+
+                              {/* calc bar */}
+                              {selectedRoom && (
+                                <div style={{
+                                  marginTop: '10px', paddingTop: '10px',
+                                  borderTop: '0.5px solid #e5e7eb',
+                                  display: 'flex', gap: '16px', flexWrap: 'wrap',
+                                  fontSize: '12px', color: '#6b7280', alignItems: 'center'
+                                }}>
+                                  <span>Room cost: <strong>{fmt(roomCost)}</strong></span>
+                                  <span>Extra: <strong>{fmt(extraCost)}</strong></span>
+                                  <span>Total: <strong>{fmt(total)}</strong></span>
+                                  <span style={{ marginLeft: 'auto', color: '#b08d2a' }}>
+                                    Avg/pax: <strong>{fmt(perPax)}</strong>
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* add row button */}
+                        <button
+                          type="button"
+                          onClick={addRow}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            fontSize: '13px', color: '#b08d2a',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: '6px 0 2px'
+                          }}
+                        >
+                          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add room type
+                        </button>
+
+                        {/* ── Children toggle ── */}
+                        <div style={{ borderTop: '0.5px solid #e8e2b0', marginTop: '12px', paddingTop: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '13px', color: '#374151' }}>Any children travelling?</span>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => setFieldValue('hasChildren', true)}
+                                style={{
+                                  fontSize: '12px', padding: '4px 14px', borderRadius: '6px', cursor: 'pointer',
+                                  border: '0.5px solid #e8d98a',
+                                  background: hasChildren ? '#fef7dc' : '#f3f4f6',
+                                  color: hasChildren ? '#b08d2a' : '#6b7280',
+                                  fontWeight: hasChildren ? 500 : 400
+                                }}
+                              >
+                                Yes
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFieldValue('hasChildren', false);
+                                  setFieldValue('childWithBed', 0);
+                                  setFieldValue('childNoBed', 0);
+                                }}
+                                style={{
+                                  fontSize: '12px', padding: '4px 14px', borderRadius: '6px', cursor: 'pointer',
+                                  border: '0.5px solid #d1d5db',
+                                  background: !hasChildren ? '#f3f4f6' : '#ffffff',
+                                  color: !hasChildren ? '#374151' : '#6b7280',
+                                  fontWeight: !hasChildren ? 500 : 400
+                                }}
+                              >
+                                No
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+
+                          {hasChildren && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Children with bed</label>
+                                <input
+                                  type="number" min="0"
+                                  value={childWithBed}
+                                  onChange={(e) => setFieldValue('childWithBed', parseInt(e.target.value) || 0)}
+                                  style={{
+                                    height: '34px', borderRadius: '7px', border: '0.5px solid #d1d5db',
+                                    background: '#f9fafb', fontSize: '13px', textAlign: 'center',
+                                    padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
+                                  }}
+                                />
+                                <span style={{
+                                  fontSize: '11px', background: '#fef7dc', color: '#b08d2a',
+                                  borderRadius: '5px', padding: '3px 8px', textAlign: 'center',
+                                  border: '0.5px solid #e8d98a'
+                                }}>
+                                  {fmt(childWBedRate)} / child
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Children no bed</label>
+                                <input
+                                  type="number" min="0"
+                                  value={childNoBed}
+                                  onChange={(e) => setFieldValue('childNoBed', parseInt(e.target.value) || 0)}
+                                  style={{
+                                    height: '34px', borderRadius: '7px', border: '0.5px solid #d1d5db',
+                                    background: '#f9fafb', fontSize: '13px', textAlign: 'center',
+                                    padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
+                                  }}
+                                />
+                                <span style={{
+                                  fontSize: '11px', background: '#fef7dc', color: '#b08d2a',
+                                  borderRadius: '5px', padding: '3px 8px', textAlign: 'center',
+                                  border: '0.5px solid #e8d98a'
+                                }}>
+                                  {fmt(childNBedRate)} / child
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ── Grand total bar ── */}
+                        <div style={{
+                          marginTop: '14px', padding: '10px 14px',
+                          background: '#fef9e7', borderRadius: '8px',
+                          border: '0.5px solid #e8d98a',
+                          display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px'
+                        }}>
+                          <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                            Rooms: <strong>{fmt(grandRoomCost)}</strong>
+                          </span>
+                          {hasChildren && (
+                            <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                              Children: <strong>{fmt(childTotal)}</strong>
+                            </span>
+                          )}
+                          <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                            Grand total: <strong>{fmt(grandTotal)}</strong>
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#b08d2a', marginLeft: 'auto' }}>
+                            Pax: <strong>{allPax}</strong> &nbsp;·&nbsp; Avg/pax: <strong>{fmt(avgPerPax)}</strong>
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <FormSection>
                     <div className="col-sm-5">
                       <label>Check In</label>

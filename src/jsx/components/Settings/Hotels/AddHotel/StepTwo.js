@@ -80,14 +80,20 @@ const StepTwo = ({ formik: parentFormik }) => {
     doubleBed: 0,
     tripleBedSelect: false,
     tripleBed: 0,
+    quadBedSelect: false,
+    quadBed: 0,
+    twoBedSelect: false,
+    twoBed: 0,
+    threeBedSelect: false,
+    threeBed: 0,
+    fourBedSelect: false,
+    fourBed: 0,
     extraBedSelect: false,
     extraBed: 0,
     childWBedSelect: false,
     childWBed: 0,
     childNBedSelect: false,
     childNBed: 0,
-    quadBedSelect: false,
-    quadBed: 0,
     occupancy: 0,
     mealType: [],
     mealAmount: 0,
@@ -262,6 +268,30 @@ const StepTwo = ({ formik: parentFormik }) => {
               <SelectInputComponent
                 label={"Quad Bed"}
                 name="quadBed"
+                values={values}
+                handleChange={handleChange}
+                handleBlur={handleBlur}
+                setFieldValue={setFieldValue}
+              />
+              <SelectInputComponent
+                label={"2 Bedroom"}
+                name="twoBed"
+                values={values}
+                handleChange={handleChange}
+                handleBlur={handleBlur}
+                setFieldValue={setFieldValue}
+              />
+              <SelectInputComponent
+                label={"3 Bedroom"}
+                name="threeBed"
+                values={values}
+                handleChange={handleChange}
+                handleBlur={handleBlur}
+                setFieldValue={setFieldValue}
+              />
+              <SelectInputComponent
+                label={"4 Bedroom"}
+                name="fourBed"
                 values={values}
                 handleChange={handleChange}
                 handleBlur={handleBlur}
@@ -577,6 +607,9 @@ const StepTwo = ({ formik: parentFormik }) => {
                           <th>Single Bed</th>
                           <th>Double Bed</th>
                           <th>Triple Bed</th>
+                          <th>2 Bedroom</th>
+                          <th>3 Bedroom</th>
+                          <th>4 Bedroom</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
@@ -593,6 +626,9 @@ const StepTwo = ({ formik: parentFormik }) => {
                               <td>{data.singleBed}</td>
                               <td>{data.doubleBed}</td>
                               <td>{data.tripleBed}</td>
+                              <td>{data.twoBed}</td>
+                              <td>{data.threeBed}</td>
+                              <td>{data.fourBed}</td>
                               <td>
                                 <div className="d-flex">
                                   <button
