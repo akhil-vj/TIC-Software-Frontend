@@ -1652,7 +1652,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                               {/* Person type label */}
                               <td style={{ paddingLeft: "16px", color: "#333", borderRight: '0.5px solid #e2e8f0', fontWeight: 500 }}>
-                                <span>{isPERModeGT ? `${pt.count * (occupancyFactors[pt.key] || 1)} Pax ` : ''}({pt.label})</span>
+                                <span>{pt.label}</span>
                               </td>
 
                               {/* Markup */}
