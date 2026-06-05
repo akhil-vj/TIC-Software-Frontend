@@ -357,6 +357,27 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     });
     setFieldValue("planArr", insertSchedule);
   };
+  const moveItem = (index, direction) => {
+    const currentSchedule = [...showScheduleValue.schedule];
+    if (direction === "up" && index > 0) {
+      const temp = currentSchedule[index - 1];
+      currentSchedule[index - 1] = currentSchedule[index];
+      currentSchedule[index] = temp;
+    } else if (direction === "down" && index < currentSchedule.length - 1) {
+      const temp = currentSchedule[index + 1];
+      currentSchedule[index + 1] = currentSchedule[index];
+      currentSchedule[index] = temp;
+    }
+
+    const insertSchedule = values.planArr.map((data, key) => {
+      if (key === values.planIndex) {
+        return { ...data, schedule: currentSchedule };
+      }
+      return data;
+    });
+    setFieldValue("planArr", insertSchedule);
+  };
+
   // console.log('show',values.planArr,'ind',values.planIndex,'val',showScheduleValue)
   const handleBack = () => {
     setShowModal(true);
@@ -435,7 +456,9 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                   </div>
                 </div>
                 <div className="col-md-9">
-                  <p className="text-center mb-1">{formatDate(item?.date)}</p>
+                  <p className="text-center mb-1">
+                    {formatDate(item?.date)} ({item?.date ? new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }) : ''})
+                  </p>
                   <ReactSelect
                     options={allowedSubDestinationData}
                     value={item.dayDestination}
@@ -499,31 +522,57 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                                     </span>
                                   </>
                                 )}
-                                <div className="d-flex justify-content-between mt-1">
-                                  <div className="me-1">
-                                    <span className="mail">
-                                      Check in Date & Time
-                                    </span>
-                                    <span className="mail">{`${formatDate(
-                                      item.startDate
-                                    )} ${parseTime(item.startTime)}`}</span>
+                                {item.insertType === "hotel" && (
+                                  <div className="d-flex justify-content-between mt-1">
+                                    <div className="me-1">
+                                      <span className="mail">
+                                        Check in Date & Time
+                                      </span>
+                                      <span className="mail">{`${formatDate(
+                                        item.startDate
+                                      )} ${parseTime(item.startTime)}`}</span>
+                                    </div>
+                                    <div>
+                                      <span className="mail">
+                                        Check out Date & Time
+                                      </span>
+                                      <span className="mail">{`${formatDate(
+                                        item.endDate
+                                      )} ${parseTime(item.endTime)}`}</span>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <span className="mail">
-                                      Check out Date & Time
-                                    </span>
-                                    <span className="mail">{`${formatDate(
-                                      item.endDate
-                                    )} ${parseTime(item.endTime)}`}</span>
-                                  </div>
-                                </div>
+                                )}
                                 {/* <span className="mail">jordan@mail.com</span>  */}
                               </div>
                             </div>
-                            {!readOnly && <ActionDropdown
-                              onEdit={() => onEdit(ind, item)}
-                              onDelete={() => onDelete(ind)}
-                            />}
+                            {!readOnly && (
+                              <div className="d-flex align-items-center">
+                                <div className="d-flex flex-column me-2">
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary p-1 mb-1"
+                                    onClick={() => moveItem(ind, "up")}
+                                    disabled={ind === 0}
+                                    style={{ lineHeight: 1 }}
+                                  >
+                                    <i className="fa fa-arrow-up"></i>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary p-1"
+                                    onClick={() => moveItem(ind, "down")}
+                                    disabled={ind === showScheduleValue.schedule.length - 1}
+                                    style={{ lineHeight: 1 }}
+                                  >
+                                    <i className="fa fa-arrow-down"></i>
+                                  </button>
+                                </div>
+                                <ActionDropdown
+                                  onEdit={() => onEdit(ind, item)}
+                                  onDelete={() => onDelete(ind)}
+                                />
+                              </div>
+                            )}
                           </div>
                           {/* <div className="contact-icon">
                                                     <div className="icon">
