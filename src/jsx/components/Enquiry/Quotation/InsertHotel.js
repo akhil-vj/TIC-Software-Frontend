@@ -159,7 +159,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
       const extraRate = Number(roomData?.extra_bed_amount || 0);
       const extraBedsAllowed = extraRate > 0 ? physicalBedrooms : 0;
       
-      const extraPax = Math.max(0, pax - (numRooms * baseOcc));
+      const extraPax = parseInt(row.extraBeds) || 0;
       totalExtraAdults += extraPax;
 
       totalRoomCost += (numRooms * baseRate) + (extraPax * extraRate);
@@ -210,7 +210,8 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
           newRoomRows.push({
             _id: rowId++,
             numRooms: count,
-            paxStaying: (count * baseOcc) + extraToAssign,
+            paxStaying: (count * baseOcc),
+            extraBeds: extraToAssign,
             bedType: bedType
           });
           if (extraToAssign > 0) remainingExtra = 0;
@@ -226,7 +227,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
       addRows('four_bedroom', parseInt(data.four_bedroom_count) || 0, 8);
 
       if (newRoomRows.length === 0) {
-        newRoomRows.push({ _id: 1, numRooms: 1, paxStaying: 2, bedType: 'double' });
+        newRoomRows.push({ _id: 1, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double' });
       }
 
       parsedData.roomRows = newRoomRows;
@@ -445,13 +446,14 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                       const numRooms  = parseInt(row.numRooms)  || 1;
                       const pax       = parseInt(row.paxStaying) || 1;
                       const roomCost  = numRooms * base;
-                      const extraPax  = Math.max(0, pax - numRooms * baseOcc);
+                      const extraPax  = parseInt(row.extraBeds) || 0;
                       const extraCost = extraPax * extraRate;
                       const total     = roomCost + extraCost;
-                      const perPax    = pax > 0 ? Math.round(total / pax) : 0;
+                      const totalAdultsInRow = pax + extraPax;
+                      const perPax    = totalAdultsInRow > 0 ? Math.round(total / totalAdultsInRow) : 0;
                       
                       // Calculate if total pax exceeds the absolute limit
-                      const overCap   = pax > (numRooms * maxOcc);
+                      const overCap   = pax > (numRooms * baseOcc) || extraPax > (numRooms * maxExtraBeds);
                       
                       return { roomCost, extraCost, total, perPax, overCap, base, extraRate, maxOcc, baseOcc };
                     };
@@ -461,7 +463,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                     roomRows.forEach((row) => {
                       const { total } = calcRow(row);
                       grandRoomCost += total;
-                      grandPax      += parseInt(row.paxStaying) || 1;
+                      grandPax      += (parseInt(row.paxStaying) || 1) + (parseInt(row.extraBeds) || 0);
                     });
                     
                     const childWBedRate = Number(selectedRoom?.child_w_bed_amount || 0);
@@ -480,7 +482,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                     };
                     const addRow = () => {
                       const nextId = (roomRows[roomRows.length - 1]?._id || 0) + 1;
-                      setFieldValue('roomRows', [...roomRows, { _id: nextId, numRooms: 1, paxStaying: 2, bedType: 'double' }]);
+                      setFieldValue('roomRows', [...roomRows, { _id: nextId, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double' }]);
                     };
                     const removeRow = (id) => {
                       setFieldValue('roomRows', roomRows.filter((r) => r._id !== id));
@@ -508,7 +510,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
 
                         {/* ── Room rows ── */}
                         {roomRows.map((row) => {
-                          const { roomCost, extraCost, total, perPax, overCap, base, extraRate, maxOcc } = calcRow(row);
+                          const { roomCost, extraCost, total, perPax, overCap, base, extraRate, maxOcc, baseOcc } = calcRow(row);
                           return (
                             <div key={row._id} style={{
                               background: '#ffffff',
@@ -569,7 +571,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                     fontSize: '11px', background: '#fef7dc', color: '#b08d2a',
                                     borderRadius: '6px', padding: '3px 10px', border: '0.5px solid #e8d98a'
                                   }}>
-                                    Base: {fmt(base)} · Max {maxOcc} pax
+                                    Base: {fmt(base)} · Max {baseOcc} adults{(maxOcc - baseOcc) > 0 ? ` + ${maxOcc - baseOcc} extra bed(s)` : ''}
                                   </span>
                                 </div>
                               )}
@@ -595,7 +597,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Pax staying</label>
+                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Adults staying</label>
                                   <input
                                     type="number" min="1"
                                     value={row.paxStaying}
@@ -603,6 +605,21 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                     style={{
                                       height: '34px', borderRadius: '7px',
                                       border: `0.5px solid ${overCap ? '#f87171' : '#d1d5db'}`,
+                                      background: '#f9fafb', fontSize: '13px', textAlign: 'center',
+                                      padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
+                                    }}
+                                  />
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Extra adult beds</label>
+                                  <input
+                                    type="number" min="0"
+                                    value={row.extraBeds || 0}
+                                    onChange={(e) => updateRow(row._id, 'extraBeds', e.target.value)}
+                                    style={{
+                                      height: '34px', borderRadius: '7px',
+                                      border: `0.5px solid #d1d5db`,
                                       background: '#f9fafb', fontSize: '13px', textAlign: 'center',
                                       padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
                                     }}
@@ -624,7 +641,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
 
                               {overCap && (
                                 <p style={{ fontSize: '11px', color: '#dc2626', margin: '6px 0 0' }}>
-                                  ⚠ Pax exceeds max occupancy ({maxOcc} pax per room) for selected configuration.
+                                  ⚠ Occupancy error: Adults cannot exceed {baseOcc} per room, and extra beds cannot exceed {maxOcc - baseOcc} per room.
                                 </p>
                               )}
 
