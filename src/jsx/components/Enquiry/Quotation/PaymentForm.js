@@ -1017,7 +1017,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                     <table className="table mb-0 text-dark" style={{ borderCollapse: "collapse" }}>
                       <thead style={{ backgroundColor: "#f8faff", borderBottom: "2px solid #e2e8f0" }}>
                         <tr>
-                          <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b" }}>Tours / Hotels</th>
+                          <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "55%" }}>Tours / Hotels</th>
                           <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "15%" }}>Type</th>
                           <th className="py-3 px-4 text-dark text-end" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "15%" }}>Net Price ({activeSymbol})</th>
                           <th className="py-3 px-4 text-dark text-end" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "15%" }}>Gross Price ({activeSymbol})</th>
@@ -1186,13 +1186,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                           return (
                             <React.Fragment key={ind}>
                               <tr className={showMainBorder ? "" : ""} style={{ transition: "background-color 0.2s", backgroundColor: groupBg, borderBottom: isBreakdown ? "none" : "1px solid #f1f5f9" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.hover} onMouseOut={(e) => { e.currentTarget.style.backgroundColor = groupBg }}>
-                                <td className={`px-4 align-middle ${isBreakdown ? "pt-1 pb-1" : "py-3"}`} style={{ border: "none" }}>
+                                <td className={`px-4 align-middle ${isBreakdown ? "pt-1 pb-1" : "py-3"}`} style={{ border: "none", whiteSpace: "normal", wordBreak: "break-word" }}>
                                   <div className="d-flex align-items-center">
-                                    <div className="rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: "36px", height: "36px", backgroundColor: item.insertType === 'hotel' ? '#EEF4FF' : item.insertType === 'activity' ? '#FFF9E6' : '#E6FCF5' }}>
+                                    <div className="rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: "36px", height: "36px", backgroundColor: item.insertType === 'hotel' ? '#EEF4FF' : item.insertType === 'activity' ? '#FFF9E6' : '#E6FCF5', minWidth: "36px" }}>
                                       <i className={`fa fa-lg ${item.insertType === 'hotel' ? 'fa-building text-primary' : item.insertType === 'activity' ? 'fa-ticket' : 'fa-car text-success'}`} style={{ color: item.insertType === 'hotel' ? '#185FA5' : item.insertType === 'activity' ? '#D97706' : '#16A34A' }}></i>
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                      <h6 className="text-dark mb-1" style={{ fontSize: "14px", fontWeight: 600 }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <h6 className="text-dark mb-1" style={{ fontSize: "14px", fontWeight: 600, whiteSpace: "normal", wordBreak: "break-word" }}>
                                         {item.name}
                                         {isHotel && item.option?.label && (
                                           <span className="badge ms-2" style={{ fontSize: "11px", letterSpacing: "0.5px", backgroundColor: "#EEF4FF", color: "#185FA5", padding: "4px 12px", borderRadius: "999px", fontWeight: 500 }}>{item.option.label}</span>
