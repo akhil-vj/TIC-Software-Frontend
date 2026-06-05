@@ -400,7 +400,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
         allDays.forEach(({ dayIndex, dayDate, schedule }) => {
           const dayNum = dayIndex + 1;
           const dayItems = [];
-          const activityDescriptions = [];
+          const dayDescriptions = [];
           const dateStr = dayDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
           schedule.forEach(item => {
@@ -410,22 +410,31 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
             if (type === "transfer") {
               const name = item.name || item.vehicle_name || item.description || "Transfer";
               dayItems.push(name);
+              // Collect transfer's own description from Transfer settings
+              const transferDesc = item.transfer_description || item.description || "";
+              if (transferDesc && transferDesc.trim()) {
+                dayDescriptions.push(transferDesc.trim());
+              }
             } else if (type === "activity") {
               const name = item.name || item.activity_name || "Activity";
               dayItems.push(name);
               // Collect the activity's own description (from Activity settings) to display below the day line
               const actDesc = item.activity_description || item.description || "";
               if (actDesc && actDesc.trim()) {
-                activityDescriptions.push(actDesc.trim());
+                dayDescriptions.push(actDesc.trim());
               }
             }
           });
 
           if (dayItems.length > 0) {
-            // Day header: all items joined with → arrow
-            text += `📌 *Day ${dayNum} (${dateStr}):* ${dayItems.join(" → ")}\n`;
-            // Print each activity description on its own line below the header
-            activityDescriptions.forEach(desc => {
+            // Day header
+            text += `\uD83D\uDCCC *Day ${dayNum} (${dateStr}):*\n`;
+            // Each item on its own tick line
+            dayItems.forEach(item => {
+              text += `\u2713 ${item}\n`;
+            });
+            // Print each description below the items
+            dayDescriptions.forEach(desc => {
               text += `_${desc}_\n`;
             });
             text += `\n`;

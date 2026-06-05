@@ -156,6 +156,7 @@ function SetupModal() {
           child:entry.child_count,
           description:entry.description,
           activity_description: insertType === 'activity' ? (entry.subject?.description || '') : '',
+          transfer_description: insertType === 'transfer' ? (entry.subject?.description || '') : '',
           type:transferType,
           vehicleType: entry.vehicle_type ? {label: entry.vehicle_type, value: entry.vehicle_type} : undefined,
           cost:entry.cost,
