@@ -542,9 +542,9 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                   marginBottom: 10,
                                   paddingRight: roomRows.length > 1 ? '20px' : '0px'
                                 }}>
-                                  {/* Bed Type Selector */}
+                                  {/* Room Configuration Selector */}
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Bed Type:</label>
+                                    <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Room Configuration:</label>
                                     <select
                                       value={row.bedType}
                                       onChange={(e) => updateRow(row._id, 'bedType', e.target.value)}
