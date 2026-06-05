@@ -46,6 +46,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
   const isEdit = !!values.itineraryId;
   const [editId, setEditId] = useState("");
   const [editData, setEditData] = useState({});
+  const [isReordering, setIsReordering] = useState(false);
   const [datesArray, setDatesArray] = useState([]);
   const [readOnly, setReadOnly] = useState(isEdit);
   const [searchTerm, setSearchTerm] = useState("");
@@ -242,6 +243,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
   };
   const onDayPackage = (date, ind) => {
     setFieldValue("planIndex", ind);
+    setIsReordering(false);
   };
   const onDayDestination = (ind, data) => {
     const result = values.planArr.map((item, arrInd) => ind === arrInd ? { ...item, dayDestination: data }
@@ -485,10 +487,19 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
           </div>
           <div className="col-5 px-1">
             <div className="schedule-box">
-              <div className="p-3">
-                <h6>{`Day ${values.planIndex + 1} - ${formatDate(
+              <div className="p-3 d-flex justify-content-between align-items-center">
+                <h6 className="m-0">{`Day ${values.planIndex + 1} - ${formatDate(
                   showScheduleValue?.date
                 )}`}</h6>
+                {!readOnly && !!showScheduleValue?.schedule?.length && (
+                  <button 
+                    type="button" 
+                    className={`btn btn-sm ${isReordering ? "btn-primary" : "btn-outline-primary"}`}
+                    onClick={() => setIsReordering(!isReordering)}
+                  >
+                    {isReordering ? "Confirm" : "Reorder"}
+                  </button>
+                )}
               </div>
               <div className="">
                 {!!showScheduleValue?.schedule?.length ? (
@@ -551,26 +562,28 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                             </div>
                             {!readOnly && (
                               <div className="d-flex align-items-center">
-                                <div className="d-flex flex-column me-2">
-                                  <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary p-1 mb-1"
-                                    onClick={() => moveItem(ind, "up")}
-                                    disabled={ind === 0}
-                                    style={{ lineHeight: 1 }}
-                                  >
-                                    <i className="fa fa-arrow-up"></i>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary p-1"
-                                    onClick={() => moveItem(ind, "down")}
-                                    disabled={ind === showScheduleValue.schedule.length - 1}
-                                    style={{ lineHeight: 1 }}
-                                  >
-                                    <i className="fa fa-arrow-down"></i>
-                                  </button>
-                                </div>
+                                {isReordering && (
+                                  <div className="d-flex flex-column me-2">
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-outline-primary p-1 mb-1"
+                                      onClick={() => moveItem(ind, "up")}
+                                      disabled={ind === 0}
+                                      style={{ lineHeight: 1 }}
+                                    >
+                                      <i className="fa fa-arrow-up"></i>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-outline-primary p-1"
+                                      onClick={() => moveItem(ind, "down")}
+                                      disabled={ind === showScheduleValue.schedule.length - 1}
+                                      style={{ lineHeight: 1 }}
+                                    >
+                                      <i className="fa fa-arrow-down"></i>
+                                    </button>
+                                  </div>
+                                )}
                                 <ActionDropdown
                                   onEdit={() => onEdit(ind, item)}
                                   onDelete={() => onDelete(ind)}
