@@ -515,11 +515,15 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                                       item.startTime
                                     )} - ${parseTime(item.endTime)}`}</span>
                                     <span className="mail">
-                                      Room type : Deluxe
+                                      Room type : {item.roomType?.label || item.roomType?.room_type_name || "N/A"}
                                     </span>
-                                    <span className="mail">
-                                      No of guest : 02
-                                    </span>
+                                    {/* <span className="mail">
+                                      No of guest : {
+                                        item.roomRows 
+                                          ? item.roomRows.reduce((sum, r) => sum + (parseInt(r.paxStaying) || 0), 0) + (item.hasChildren ? (parseInt(item.childWithBed) || 0) + (parseInt(item.childNoBed) || 0) : 0)
+                                          : (item.adultCount ? Number(item.adultCount) + Number(item.childCount || 0) : "-")
+                                      }
+                                    </span> */}
                                   </>
                                 )}
                                 {item.insertType === "hotel" && (
