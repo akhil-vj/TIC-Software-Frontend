@@ -435,7 +435,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
             });
             // Print each description below the items
             dayDescriptions.forEach(desc => {
-              text += `_${desc}_\n`;
+              text += `› ${desc}\n`;
             });
             text += `\n`;
           }
