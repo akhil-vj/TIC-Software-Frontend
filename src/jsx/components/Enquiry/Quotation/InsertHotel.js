@@ -168,7 +168,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
     const childW = values.hasChildren ? safeNum(values.childWithBed) : 0;
     const childN = values.hasChildren ? safeNum(values.childNoBed) : 0;
     
-    extra = totalExtraAdults + childW; // A Child With Bed consumes an extra bed slot
+    extra = totalExtraAdults; // Just extra adults, childW is accounted for separately in childTotal and pricing payload
 
     const childTotal = 
       (childW * Number(roomData?.child_w_bed_amount || 0)) +
