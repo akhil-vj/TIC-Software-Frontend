@@ -197,6 +197,25 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     return symbols[code] || code;
   };
 
+  // Converts HTML (from rich text editor) to WhatsApp-friendly plain text
+  const htmlToPlainText = (html) => {
+    if (!html) return '';
+    return html
+      .replace(/<br\s*\/?>/gi, '\n')          // <br> → newline
+      .replace(/<\/p>/gi, '\n')               // </p> → newline
+      .replace(/<\/li>/gi, '\n')              // </li> → newline
+      .replace(/<li[^>]*>/gi, '• ')           // <li> → bullet
+      .replace(/<[^>]+>/g, '')                // strip remaining tags
+      .replace(/&nbsp;/gi, ' ')              // &nbsp; → space
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\n{3,}/g, '\n\n')            // collapse excess blank lines
+      .trim();
+  };
+
   const computePriceBreakdown = (info) => {
     // quoted_options is null before API resolves, or [] if empty — both return no options
     if (!packageData?.quoted_options) return [];
@@ -399,8 +418,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
         allDays.forEach(({ dayIndex, dayDate, schedule }) => {
           const dayNum = dayIndex + 1;
-          const dayItems = [];
-          const dayDescriptions = [];
+          const dayItems = []; // each: { name, desc }
           const dateStr = dayDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
           schedule.forEach(item => {
@@ -409,33 +427,25 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
             // Hotels are skipped in travel plan
             if (type === "transfer") {
               const name = item.name || item.vehicle_name || item.description || "Transfer";
-              dayItems.push(name);
-              // Collect transfer's own description from Transfer settings
-              const transferDesc = item.transfer_description || item.description || "";
-              if (transferDesc && transferDesc.trim()) {
-                dayDescriptions.push(transferDesc.trim());
-              }
+              const desc = item.transfer_description || item.description || "";
+              dayItems.push({ name, desc });
             } else if (type === "activity") {
               const name = item.name || item.activity_name || "Activity";
-              dayItems.push(name);
-              // Collect the activity's own description (from Activity settings) to display below the day line
-              const actDesc = item.activity_description || item.description || "";
-              if (actDesc && actDesc.trim()) {
-                dayDescriptions.push(actDesc.trim());
-              }
+              const desc = item.activity_description || item.description || "";
+              dayItems.push({ name, desc });
             }
           });
 
           if (dayItems.length > 0) {
             // Day header
             text += `\uD83D\uDCCC *Day ${dayNum} (${dateStr}):*\n`;
-            // Each item on its own tick line
-            dayItems.forEach(item => {
-              text += `\u2713 ${item}\n`;
-            });
-            // Print each description below the items
-            dayDescriptions.forEach(desc => {
-              text += `› ${desc}\n`;
+            // Each item with its own description immediately below
+            dayItems.forEach(({ name, desc }) => {
+              text += `\u2713 ${name}\n`;
+              if (desc && desc.trim()) {
+                const plainDesc = htmlToPlainText(desc);
+                if (plainDesc) text += `\u203a ${plainDesc}\n`;
+              }
             });
             text += `\n`;
           }
