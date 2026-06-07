@@ -295,7 +295,7 @@ TIC-Software-Frontend/
 
 ### Prerequisites
 
-- **Node.js** ≥ 18.x
+- **Node.js** ^20.19.0 || >=22.12.0
 - **npm** ≥ 9.x (or **yarn**)
 - A running instance of the [TIC Backend API](http://tic-backend.plantriponline.com)
 
