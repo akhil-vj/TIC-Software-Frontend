@@ -107,10 +107,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     }
   }, [currencyOptions.length, values.priceIn?.value, values.priceIn?.label]);
 
-  // ─── Fix: convert amounts on first load when PER mode is active ──────────
-  const priceModeInitialized = useRef(false);
+  // ─── Fix: convert amounts when PER mode is active and baseAmount is missing ──────────
   useEffect(() => {
-    if (priceModeInitialized.current) return;
     const hasScheduleItems = values.planArr?.some(p => p.schedule?.length > 0);
     if (!hasScheduleItems) return;
 
@@ -120,7 +118,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         p.schedule.some(s => s.baseAmount === undefined)
       );
       if (needsConversion) {
-        priceModeInitialized.current = true;
         const newData = values.planArr.map(item => ({
           ...item,
           schedule: item.schedule.map(scheduleItem => {
@@ -137,17 +134,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             return {
               ...scheduleItem,
               baseAmount: scheduleItem.amount,
+              baseMarkup: scheduleItem.markup || 0,
               amount: shouldDivide ? getRoundOfValue(scheduleItem.amount / person) : scheduleItem.amount,
+              markup: shouldDivide ? getRoundOfValue((scheduleItem.markup || 0) / person) : (scheduleItem.markup || 0),
             };
           }),
         }));
         setFieldValue('planArr', newData);
-      } else {
-        priceModeInitialized.current = true;
       }
     } else {
       // TOTAL mode — just stamp baseAmount so toggles work correctly
-      priceModeInitialized.current = true;
       const needsBase = values.planArr.some(p =>
         p.schedule.some(s => s.baseAmount === undefined)
       );
@@ -157,12 +153,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           schedule: item.schedule.map(scheduleItem => ({
             ...scheduleItem,
             baseAmount: scheduleItem.baseAmount ?? scheduleItem.amount,
+            baseMarkup: scheduleItem.baseMarkup ?? (scheduleItem.markup || 0),
           })),
         }));
         setFieldValue('planArr', newData);
       }
     }
-  }, [values.planArr?.length, values.priceOption?.value]);
+  }, [values.planArr, values.priceOption?.value]);
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
   const getRoundOfValue = (value, round = 2) => {
@@ -296,6 +293,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
           if (scheduleItem.insertType === "activity") {
             person = (Number(scheduleItem.adult || 0) + Number(scheduleItem.child || 0)) || person;
+          } else if (scheduleItem.insertType === "transfer" || scheduleItem.insertType === "car") {
+            person = includeChildTransfer ? ((values.adult || 0) + (values.child || 0)) || 1 : (values.adult || 0) || 1;
           }
 
           const currentBaseAmount =
