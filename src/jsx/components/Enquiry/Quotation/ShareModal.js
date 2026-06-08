@@ -341,8 +341,11 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
                 perPerson = count > 0 ? rowTotal / count : 0;
               }
 
-              // Use pre-calculated room count from pax distribution
-              const roomCount = roomCountMap[row.key] ?? (OCCUPANCY_PER_ROOM[row.key] > 1 ? Math.round(count / (OCCUPANCY_PER_ROOM[row.key] || 1)) : count);
+              // rooms = how many rooms of this type; personsInType = rooms × occupancy
+              // e.g. 3 double rooms × 2 = 6 persons  →  * 6
+              const occupancy = OCCUPANCY_PER_ROOM[row.key] || 1;
+              const roomCount = roomCountMap[row.key] ?? Math.floor(count / occupancy);
+              const personsInType = roomCount * occupancy;   // total persons covered by this room type
 
               let line = `${displayCurrency} ${Math.round(perPerson).toLocaleString()}`;
               if (label.toLowerCase().includes("child") || label.toLowerCase().includes("person")) {
@@ -350,8 +353,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
               } else {
                 line += ` per Person (${label})`;
               }
-              // Show room count — customer can verify: e.g. 3*2 + 1*1 = 7 pax
-              if (roomCount > 0) line += ` * ${roomCount}`;
+              // Show persons in this room type (e.g. * 6 for 3 double rooms with 2 pax each)
+              if (personsInType > 0) line += ` * ${personsInType}`;
               text += `${line}\n`;
             });
             
