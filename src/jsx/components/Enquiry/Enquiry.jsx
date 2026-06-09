@@ -355,6 +355,7 @@ const Enquiry = () => {
     const [showKpiCards, setShowKpiCards] = useState(true);
     const [hoveredRow, setHoveredRow] = useState(null);
     const [page, setPage] = useState(0);
+    const [sortDateDir, setSortDateDir] = useState(null); // null | 'asc' | 'desc'
 
     // Delete confirmation modal state
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -363,7 +364,7 @@ const Enquiry = () => {
 
     // Filter states
     const [filterType, setFilterType] = useState(null);
-    const [filterSource, setFilterSource] = useState(null);
+    const [filterAgent, setFilterAgent] = useState(null);
     const [filterAssigned, setFilterAssigned] = useState(null);
 
     const url = URLS.ENQUIRY_URL;
@@ -427,9 +428,9 @@ const Enquiry = () => {
         return types.map(t => ({ label: t, value: t }));
     }, [tableData]);
 
-    const sourceOptions = useMemo(() => {
-        const sources = [...new Set(tableData.map(i => i?.lead_source?.name).filter(Boolean))];
-        return sources.map(s => ({ label: s, value: s }));
+    const agentOptions = useMemo(() => {
+        const agents = [...new Set(tableData.map(i => i?.agent?.name).filter(Boolean))];
+        return agents.map(a => ({ label: a, value: a }));
     }, [tableData]);
 
     const assignedOptions = useMemo(() => {
@@ -437,11 +438,11 @@ const Enquiry = () => {
         return names.map(n => ({ label: n, value: n }));
     }, [tableData]);
 
-    const hasActiveFilters = () => !!(filterType || filterSource || filterAssigned || search);
+    const hasActiveFilters = () => !!(filterType || filterAgent || filterAssigned || search);
 
     const handleClearFilters = () => {
         setFilterType(null);
-        setFilterSource(null);
+        setFilterAgent(null);
         setFilterAssigned(null);
         setSearch("");
         setPage(0);
@@ -456,10 +457,17 @@ const Enquiry = () => {
                 if (typeof val === "object") return Object.values(val).some((v) => matchValue(v));
                 return String(val).toLowerCase().includes(term);
             };
+
+            // Resolve package name from packageNameMap for this enquiry
+            const packageName = packageNameMap[item?.id] || "";
+
             const matchesSearch = !term || [
+                item?.ref_no,
+                item?.reference_no,
+                packageName,
+                item?.agent?.name,
                 item?.type,
                 item?.customer?.name,
-                item?.agent?.name,
                 item?.lead_source?.name,
                 item?.assigned_to_user?.first_name,
                 item?.requirements,
@@ -467,26 +475,34 @@ const Enquiry = () => {
             ].some((field) => matchValue(field));
 
             const matchesType = !filterType || item?.type === filterType.value;
-            const matchesSource = !filterSource || item?.lead_source?.name === filterSource.value;
+            const matchesAgent = !filterAgent || item?.agent?.name === filterAgent.value;
             const matchesAssigned = !filterAssigned || item?.assigned_to_user?.first_name === filterAssigned.value;
 
-            return matchesSearch && matchesType && matchesSource && matchesAssigned;
+            return matchesSearch && matchesType && matchesAgent && matchesAssigned;
         });
-    }, [tableData, search, filterType, filterSource, filterAssigned]);
+    }, [tableData, packageNameMap, search, filterType, filterAgent, filterAssigned]);
 
     // ── Pagination ──
     const pageSize = 8;
     const pageCount = Math.max(1, Math.ceil(filteredData.length / pageSize));
     const paginatedData = useMemo(() => {
+        let sorted = filteredData;
+        if (sortDateDir) {
+            sorted = [...filteredData].sort((a, b) => {
+                const da = a?.start_date ? new Date(a.start_date).getTime() : 0;
+                const db = b?.start_date ? new Date(b.start_date).getTime() : 0;
+                return sortDateDir === 'asc' ? da - db : db - da;
+            });
+        }
         const start = page * pageSize;
-        return filteredData.slice(start, start + pageSize);
-    }, [filteredData, page]);
+        return sorted.slice(start, start + pageSize);
+    }, [filteredData, page, sortDateDir]);
 
     const totalEntries = filteredData.length;
     const startEntry = totalEntries === 0 ? 0 : page * pageSize + 1;
     const endEntry = totalEntries === 0 ? 0 : Math.min((page + 1) * pageSize, totalEntries);
 
-    useEffect(() => { setPage(0); }, [search, filterType, filterSource, filterAssigned]);
+    useEffect(() => { setPage(0); }, [search, filterType, filterAgent, filterAssigned]);
 
     const permissionType = usePermissionType('enquiry');
 
@@ -568,7 +584,7 @@ const Enquiry = () => {
                                 <input
                                     type="text"
                                     className="form-control"
-                                    placeholder="Search enquiries..."
+                                    placeholder="Search Enquiries..."
                                     value={search}
                                     onChange={(e) => { setSearch(e.target.value); setPage(0); }}
                                 />
@@ -652,7 +668,7 @@ const Enquiry = () => {
                     {showFilters && (
                         <div className="enquiry-filter-bar">
                             <FilterDropdown label="Type" value={filterType} options={typeOptions} onChange={(opt) => { setFilterType(opt); setPage(0); }} onClear={() => { setFilterType(null); setPage(0); }} />
-                            <FilterDropdown label="Lead Source" value={filterSource} options={sourceOptions} onChange={(opt) => { setFilterSource(opt); setPage(0); }} onClear={() => { setFilterSource(null); setPage(0); }} />
+                            <FilterDropdown label="Agent Name" value={filterAgent} options={agentOptions} onChange={(opt) => { setFilterAgent(opt); setPage(0); }} onClear={() => { setFilterAgent(null); setPage(0); }} />
                             <FilterDropdown label="Assigned To" value={filterAssigned} options={assignedOptions} onChange={(opt) => { setFilterAssigned(opt); setPage(0); }} onClear={() => { setFilterAssigned(null); setPage(0); }} />
                             <div style={{ width: "1px", height: "24px", background: "#e0e0e0", margin: "0 4px" }} />
                             {hasActiveFilters() && (
@@ -703,7 +719,16 @@ const Enquiry = () => {
                                             <th>Package Name</th>
                                             <th style={{ textAlign: "center" }}>No of Pax</th>
                                             <th style={{ textAlign: "center" }}>Type</th>
-                                            <th style={{ textAlign: "center" }}>Starting Date</th>
+                                            <th
+                                                style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+                                                onClick={() => setSortDateDir(d => d === null ? 'asc' : d === 'asc' ? 'desc' : null)}
+                                                title="Sort by Starting Date"
+                                            >
+                                                Starting Date
+                                                <span style={{ marginLeft: 5, opacity: sortDateDir ? 1 : 0.35, fontSize: 11 }}>
+                                                    {sortDateDir === 'asc' ? '▲' : sortDateDir === 'desc' ? '▼' : '⇅'}
+                                                </span>
+                                            </th>
                                             <th style={{ textAlign: "center" }}>Assigned to</th>
                                             <th>Agent Name</th>
                                             <th style={{ textAlign: "center" }}>Action</th>
