@@ -64,8 +64,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     const nightsCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 0;
     const daysCount = nightsCount + 1;
 
-    const adultCount = packageData.adult || 0;
-    const childCount = packageData.child || 0;
+    const adultCount = parseInt(packageData.adult, 10) || 0;
+    const childCount = parseInt(packageData.child, 10) || 0;
     const refId = packageData.enquiry_ref_no || packageData.enquiry?.ref_no || "";
     const clientName = values.name || "Customer";
 
@@ -274,6 +274,61 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       const allOptions = computePriceBreakdown(info);   // quoted_options array
       const hotelsGrouped = getGroupedHotels();         // from planArr
 
+      const calculateDynamicOptionGrandTotal = (optionLabel) => {
+        if (!packageData?.planArr) return 0;
+
+        let optionBaseAmount = 0;
+
+        packageData.planArr.forEach((day) => {
+          day.schedule?.forEach((item) => {
+            const rawType = (item.insertType || '').toLowerCase();
+            if (rawType === 'hotel') {
+              const optLabel = item.option?.label || item.option?.value || (typeof item.option === 'string' ? item.option : '');
+              const normalizedOptLabel = optLabel || 'Option 1';
+              if (normalizedOptLabel === optionLabel) {
+                optionBaseAmount += (parseFloat(item.amount) || 0) + (parseFloat(item.markup) || 0);
+              }
+            } else {
+              optionBaseAmount += (parseFloat(item.amount) || 0) + (parseFloat(item.markup) || 0);
+            }
+          });
+        });
+
+        // Apply Itinerary-level Markup
+        let extraMarkup = 0;
+        const baseMarkupPercent = parseFloat(packageData.baseMarkup || packageData.baseMarkupInput || 0);
+        const extraMarkupAmt = parseFloat(packageData.extraMarkup || packageData.extraMarkupInput || 0);
+
+        if (baseMarkupPercent > 0) {
+          extraMarkup = optionBaseAmount * (baseMarkupPercent / 100);
+        } else {
+          extraMarkup = extraMarkupAmt;
+        }
+        const optionTotalWithMarkup = optionBaseAmount + extraMarkup;
+
+        // Apply Discount
+        const discountAmt = parseFloat(packageData.discount_amount || packageData.discount || 0);
+        const optionTotalWithDiscount = optionTotalWithMarkup - discountAmt;
+
+        // Apply Taxes
+        const taxPercent = (parseFloat(packageData.cgst) || 0) + (parseFloat(packageData.sgst) || 0) + (parseFloat(packageData.igst) || 0);
+        const taxAmount = optionTotalWithDiscount * (taxPercent / 100);
+        const optionGrandTotal = optionTotalWithDiscount + taxAmount;
+
+        // Apply exchange rate if applicable
+        const exchangeRate = parseFloat(packageData.priceIn?.exchange_rate) || parseFloat(packageData.exchange_rate) || 1;
+        const priceInVal = packageData.priceIn?.value;
+        const priceInLabel = packageData.priceIn?.label;
+        const isBase = priceInVal === "base" || String(priceInLabel).toLowerCase() === "base";
+
+        let convertedGrandTotal = optionGrandTotal;
+        if (!isBase && exchangeRate > 0) {
+          convertedGrandTotal = optionGrandTotal / exchangeRate;
+        }
+
+        return convertedGrandTotal;
+      };
+
       // Distinct option labels in order
       const distinctOptions = [...new Map(hotelsGrouped.map(h => [h.optionLabel, h])).keys()];
       const optCount = Math.max(distinctOptions.length, allOptions.length);
@@ -304,13 +359,15 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           // Pricing (mirrors blade rate-section logic)
           text += `\n💵 *Package Price:*\n`;
 
+          const dynamicTotal = calculateDynamicOptionGrandTotal(optionLabel);
+
           if (values.priceBreakup && rows.length > 0) {
             // Occupancy per room type — persons per room
             const OCCUPANCY_PER_ROOM = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1 };
 
             // Distribute total pax across room types (greedy: highest occupancy first)
             // e.g. 7 pax, [double(2), extra(1)] → double: floor(7/2)=3 rooms, extra: 7%2=1 room
-            const totalPaxForDist = (adultCount || 0) + (childCount || 0);
+            const totalPaxForDist = Number(adultCount || 0) + Number(childCount || 0);
             let remainingPax = totalPaxForDist;
 
             // Sort rows by occupancy descending so larger rooms are filled first
@@ -358,13 +415,13 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
               text += `${line}\n`;
             });
             
-            const totalPax = (adultCount || 0) + (childCount || 0);
-            const displayTotal = quotedOpt?.grandTotal || grandTotal;
+            const totalPax = Number(adultCount || 0) + Number(childCount || 0);
+            const displayTotal = quotedOpt?.grandTotal || dynamicTotal || grandTotal;
             text += `💰 *Total Package Cost for ${totalPax} pax: ${displayCurrency} ${Math.round(displayTotal).toLocaleString()}*\n`;
           } else {
             // No breakup rows — compute from grandTotal
-            const displayTotal = quotedOpt?.grandTotal || grandTotal;
-            const totalPax = (adultCount || 0) + (childCount || 0);
+            const displayTotal = quotedOpt?.grandTotal || dynamicTotal || grandTotal;
+            const totalPax = Number(adultCount || 0) + Number(childCount || 0);
             if (isPERMode && adultCount > 0) {
               text += `${displayCurrency} ${Math.round(displayTotal / adultCount).toLocaleString()} per Person\n`;
             }
