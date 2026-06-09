@@ -159,6 +159,7 @@ function SetupModal() {
           transfer_description: insertType === 'transfer' ? (entry.subject?.description || '') : '',
           type:transferType,
           vehicleType: entry.vehicle_type ? {label: entry.vehicle_type, value: entry.vehicle_type} : undefined,
+          vehicle_count: entry.vehicle_count,
           cost:entry.cost,
           amount:entry.amount,
           markup:entry.markup,

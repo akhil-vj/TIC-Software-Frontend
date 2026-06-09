@@ -127,6 +127,7 @@ const InsertTransfer = ({
     const finalValues = {
       ...values,
       vehicle_count: values.vehicle_count?.value ?? 1,
+      vehicle_type: values.vehicleType?.value || null,
     };
     onClick(finalValues, setShowModal);
     resetForm();
@@ -138,13 +139,34 @@ const InsertTransfer = ({
     if (isEdit) {
       // --- EDIT MODE ---
       const editType = data?.type?.value?.toUpperCase() || data?.type?.label?.toUpperCase() || "PRIVATE";
-      const countVal = data?.vehicle_count ?? 1;
+      
+      let countVal = 1;
+      if (data?.vehicle_count) {
+        if (typeof data.vehicle_count === "object") {
+          countVal = data.vehicle_count.value ?? 1;
+        } else {
+          countVal = Number(data.vehicle_count);
+        }
+      }
+
+      let vType = undefined;
+      if (data?.vehicleType) {
+        if (typeof data.vehicleType === "object") {
+          vType = data.vehicleType;
+        } else {
+          vType = { label: data.vehicleType, value: data.vehicleType };
+        }
+      } else if (data?.vehicle_type) {
+        vType = { label: data.vehicle_type, value: data.vehicle_type };
+      }
+
       setValues({
         ...initialValues,
         ...data,
         startDate: data?.startDate ? new Date(data.startDate) : (data?.showScheduleDate ? new Date(data.showScheduleDate) : initialValues.startDate),
         endDate: data?.endDate ? new Date(data.endDate) : (data?.showScheduleDate ? new Date(data.showScheduleDate) : initialValues.endDate),
         type: { label: editType, value: editType },
+        vehicleType: vType,
         vehicle_count: { label: String(countVal), value: Number(countVal) },
         cost: data?.cost ?? 0,
         adultCost: data?.adultCost ?? 0,
