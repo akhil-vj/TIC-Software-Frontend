@@ -66,6 +66,7 @@ const InsertTransfer = ({
     endTime: SETUP.END_TIME,
     insertType: "transfer",
     type: { label: "PRIVATE", value: "PRIVATE" },
+    vehicle_count: { label: "1", value: 1 },
   };
   const {
     values,
@@ -106,9 +107,28 @@ const InsertTransfer = ({
     return [];
   };
 
+  const getBaseVehiclePrice = (vehicleTypeName, typeVal = values.type?.value) => {
+    const estimations = getEstimations();
+    if (estimations.length > 0 && typeVal?.toUpperCase() === "PRIVATE") {
+      const vType = vehicleTypeName || values.vehicleType?.value;
+      if (vType) {
+        const matchedEstimation = estimations.find(est =>
+          est.type?.toUpperCase() === "PRIVATE" &&
+          est.vehicletype === vType
+        );
+        return matchedEstimation ? (matchedEstimation.cost ?? 0) : 0;
+      }
+    }
+    return 0;
+  };
+
   const handleSetup = () => {
     draftEngine.clearDraft();
-    onClick(values, setShowModal);
+    const finalValues = {
+      ...values,
+      vehicle_count: values.vehicle_count?.value ?? 1,
+    };
+    onClick(finalValues, setShowModal);
     resetForm();
   };
 
@@ -118,12 +138,14 @@ const InsertTransfer = ({
     if (isEdit) {
       // --- EDIT MODE ---
       const editType = data?.type?.value?.toUpperCase() || data?.type?.label?.toUpperCase() || "PRIVATE";
+      const countVal = data?.vehicle_count ?? 1;
       setValues({
         ...initialValues,
         ...data,
         startDate: data?.startDate ? new Date(data.startDate) : (data?.showScheduleDate ? new Date(data.showScheduleDate) : initialValues.startDate),
         endDate: data?.endDate ? new Date(data.endDate) : (data?.showScheduleDate ? new Date(data.showScheduleDate) : initialValues.endDate),
         type: { label: editType, value: editType },
+        vehicle_count: { label: String(countVal), value: Number(countVal) },
         cost: data?.cost ?? 0,
         adultCost: data?.adultCost ?? 0,
         childCost: data?.childCost ?? 0,
@@ -162,6 +184,7 @@ const InsertTransfer = ({
         image: data?.image,
         type: newType,
         vehicleType: vehicleType,
+        vehicle_count: { label: "1", value: 1 },
         cost: cost,
         adultCost: adultCost,
         childCost: childCost,
@@ -281,19 +304,9 @@ const InsertTransfer = ({
                             }
                           } else if (selected?.value?.toUpperCase() === "PRIVATE") {
                             if (values.vehicleType) {
-                              const matchedEstimation = estimations.find(est =>
-                                est.type?.toUpperCase() === "PRIVATE" &&
-                                est.vehicletype === values.vehicleType.value
-                              );
-                              if (matchedEstimation) {
-                                setFieldValue("cost", matchedEstimation.cost ?? 0);
-                                setFieldValue("adultCost", matchedEstimation.adult_cost ?? 0);
-                                setFieldValue("childCost", matchedEstimation.child_cost ?? 0);
-                              } else {
-                                setFieldValue("cost", 0);
-                                setFieldValue("adultCost", 0);
-                                setFieldValue("childCost", 0);
-                              }
+                              const basePrice = getBaseVehiclePrice(values.vehicleType.value, "PRIVATE");
+                              const vCount = values.vehicle_count?.value ?? 1;
+                              setFieldValue("cost", basePrice * vCount);
                             }
                           }
                         }
@@ -314,25 +327,35 @@ const InsertTransfer = ({
                           value={values.vehicleType}
                           onChange={(selected) => {
                             setFieldValue("vehicleType", selected);
-                            const estimations = getEstimations();
-                            if (estimations.length > 0) {
-                              const matchedEstimation = estimations.find(est =>
-                                est.type?.toUpperCase() === "PRIVATE" &&
-                                est.vehicletype === selected.value
-                              );
-                              if (matchedEstimation) {
-                                setFieldValue("cost", matchedEstimation.cost ?? 0);
-                                setFieldValue("adultCost", matchedEstimation.adult_cost ?? 0);
-                                setFieldValue("childCost", matchedEstimation.child_cost ?? 0);
-                              } else {
-                                setFieldValue("cost", 0);
-                                setFieldValue("adultCost", 0);
-                                setFieldValue("childCost", 0);
-                              }
-                            }
+                            const basePrice = getBaseVehiclePrice(selected.value);
+                            const vCount = values.vehicle_count?.value ?? 1;
+                            setFieldValue("cost", basePrice * vCount);
                           }}
                           onBlur={handleBlur}
                           options={vehicleTypeOptions}
+                          optionValue="value"
+                          optionLabel="label"
+                          isSearchable={false}
+                        />
+                      </div>
+                      <div className="col-sm-4">
+                        <ReactSelect
+                          label="Number of Vehicles"
+                          value={values.vehicle_count}
+                          onChange={(selected) => {
+                            setFieldValue("vehicle_count", selected);
+                            const basePrice = getBaseVehiclePrice(values.vehicleType?.value);
+                            const vCount = selected?.value ?? 1;
+                            setFieldValue("cost", basePrice * vCount);
+                          }}
+                          onBlur={handleBlur}
+                          options={[
+                            { label: "1", value: 1 },
+                            { label: "2", value: 2 },
+                            { label: "3", value: 3 },
+                            { label: "4", value: 4 },
+                            { label: "5", value: 5 },
+                          ]}
                           optionValue="value"
                           optionLabel="label"
                           isSearchable={false}

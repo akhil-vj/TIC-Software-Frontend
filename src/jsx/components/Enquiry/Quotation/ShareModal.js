@@ -470,7 +470,10 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
         schedule.forEach(item => {
           const type = item.insertType?.toLowerCase();
           if (type === "transfer") {
-            const name = item.name || item.vehicle_name || item.description || "Transfer";
+            let name = item.name || item.vehicle_name || item.description || "Transfer";
+            if (item.vehicle_count > 1) {
+              name += ` * ${item.vehicle_count}`;
+            }
             dayItems.push(name);
           } else if (type === "activity") {
             const name = item.name || item.activity_name || "Activity";
@@ -514,7 +517,10 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
             // Hotels are skipped in travel plan
             if (type === "transfer") {
-              const name = item.name || item.vehicle_name || item.description || "Transfer";
+              let name = item.name || item.vehicle_name || item.description || "Transfer";
+              if (item.vehicle_count > 1) {
+                name += ` * ${item.vehicle_count}`;
+              }
               const desc = item.transfer_description || item.description || "";
               dayItems.push({ name, desc });
             } else if (type === "activity") {
@@ -603,7 +609,11 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           const dayStr = dayDate.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
           text += `  Day ${dayIndex + 1} — ${dayStr}\n`;
           items.forEach((item) => {
-            text += `    • ${item.name} (${item.insertType})\n`;
+            let itemName = item.name || item.vehicle_name || "Transfer";
+            if (item.insertType?.toLowerCase() === "transfer" && item.vehicle_count > 1) {
+              itemName += ` * ${item.vehicle_count}`;
+            }
+            text += `    • ${itemName} (${item.insertType})\n`;
           });
           text += `\n`;
         });

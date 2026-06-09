@@ -519,7 +519,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                                   } : ${item.insertType === "activity"
                                     ? item.name
                                     : item.name
-                                  }`}</h6>
+                                  }${item.insertType === "transfer" && item.vehicle_count > 1 ? ` * ${item.vehicle_count}` : ""}`}</h6>
                                 {item.insertType === "hotel" && (
                                   <>
                                     <span className="number">{`${parseTime(
