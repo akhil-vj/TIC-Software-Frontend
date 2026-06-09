@@ -724,7 +724,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       // Email: copy HTML so it pastes with formatting in Gmail/Outlook
       // Safari requires ClipboardItem values to be Promises (not raw Blobs).
       // Chrome accepts both, but Safari only accepts the Promise form.
-      const htmlBlob = new Blob([generatedHtml], { type: 'text/html' });
+      const cleanHtml = (generatedHtml || "").replace(/<title>[^]*?<\/title>/gi, "");
+      const htmlBlob = new Blob([cleanHtml], { type: 'text/html' });
       const plainBlob = new Blob([generatedText], { type: 'text/plain' });
 
       if (navigator.clipboard && window.ClipboardItem) {
@@ -751,7 +752,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       } else {
         // execCommand fallback for browsers without Clipboard API support
         const el = document.createElement('div');
-        el.innerHTML = generatedHtml;
+        el.innerHTML = cleanHtml;
         el.style.position = 'fixed';
         el.style.pointerEvents = 'none';
         el.style.opacity = '0';
