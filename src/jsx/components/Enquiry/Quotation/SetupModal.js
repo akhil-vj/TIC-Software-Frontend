@@ -293,6 +293,7 @@ function SetupModal() {
           if (data.type?.value === 'PRIVATE') {
              formData.append(`entries[${index}][vehicle_type]`,checkFormValue(data.vehicleType?.value))
           }
+          formData.append(`entries[${index}][vehicle_count]`,checkFormValue(data.vehicle_count,'number'))
           formData.append(`entries[${index}][cost]`,checkFormValue(data.cost,'number'))
           formData.append(`entries[${index}][adult_cost]`,checkFormValue(data.adultCost,'number'))
           formData.append(`entries[${index}][child_cost]`,checkFormValue(data.childCost,'number'))
