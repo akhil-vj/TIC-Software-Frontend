@@ -557,7 +557,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
    * Adjust the distribution keys here once real per-type data is available.
    */
   const getPersonTypeRows = (item, shouldIncludeChildTransfer = false) => {
-    const activeTypes = PERSON_TYPES.map((pt) => {
+    let activeTypes = PERSON_TYPES.map((pt) => {
       const count = safeCount(item[pt.key]);
       const displayCount = safeCount(item[`${pt.key}Display`]);
       if (count <= 0) return null;
@@ -565,9 +565,31 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       return { pt, count, displayCount, hotelRowCostAll };
     }).filter(Boolean);
 
-    const adultCount = values.adult || 1;
-    const childCount = values.child || 0;
+    let baseAdultCount = Number(values.adult) || 1;
+    let baseChildCount = Number(values.child) || 0;
+
+    // Discover true maximum participant counts across any activity/transfer if global is 0 or less
+    scheduleArr.forEach(({ item: schedItem }) => {
+      if (schedItem.insertType !== "hotel") {
+        const rawType = (schedItem.insertType || "other").toLowerCase();
+        if (rawType === "activity") {
+          const actAdult = Number(schedItem.adult) || 0;
+          const actChild = Number(schedItem.child) || 0;
+          if (actAdult > baseAdultCount) baseAdultCount = actAdult;
+          if (actChild > baseChildCount) baseChildCount = actChild;
+        }
+      }
+    });
+
+    const adultCount = baseAdultCount;
+    const childCount = baseChildCount;
     const totalTripPersons = adultCount + childCount;
+
+    const hasHotel = scheduleArr.some(s => s.item.insertType === "hotel");
+    if (!hasHotel && item.name === "Option 1") {
+      if (adultCount > 0) activeTypes.push({ pt: { key: "adult", label: "Adult" }, count: adultCount, displayCount: adultCount, hotelRowCostAll: 0 });
+      if (childCount > 0) activeTypes.push({ pt: { key: "child", label: "Child" }, count: childCount, displayCount: childCount, hotelRowCostAll: 0 });
+    }
 
     // ── Always split proportionally (same as old code) ──────────────────────
     let adultActivityTransferBase = 0;
@@ -657,7 +679,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     const hotelRows = activeTypes.map(({ pt, count, displayCount, hotelRowCostAll }) => {
       const isPerMode = values.priceOption?.value === "PER";
-      const personShareDivisors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1 };
+      const personShareDivisors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1, adult: 1, child: 1 };
       const sharingFactor = personShareDivisors[pt.key] || 1;
 
       const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
@@ -665,7 +687,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
       let rowHotelGross = hotelRowCostAll + (hotelLineMarkup * hotelFraction);
 
-      const isChildType = pt.key === 'childW' || pt.key === 'childN';
+      const isChildType = pt.key === 'childW' || pt.key === 'childN' || pt.key === 'child';
       const actTransferPerPersonType = isChildType
         ? (actTransferBasePerChild + actTransferMarkupPerChild)
         : (actTransferBasePerAdult + actTransferMarkupPerAdult);
@@ -756,7 +778,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         const hasConversion = rate > 0;
         const convert = (val) => hasConversion ? getRoundOfValue(val / rate) : val;
 
-        const occupancyFactors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1 };
+        const occupancyFactors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1, adult: 1, child: 1 };
         const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
 
         const mappedRows = pRows.map(pt => {
@@ -1614,7 +1636,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
                       // Grand total = sum of person row totals
-                      const occupancyFactors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
+                      const occupancyFactors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1, adult: 1, child: 1 };
                       const isPERModeGT = values.priceOption?.value === "PER";
                       const grandTotal = getRoundOfValue(personRows.reduce((sum, pt) => {
                         return sum + convert(pt.total);
