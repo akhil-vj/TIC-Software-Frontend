@@ -492,12 +492,19 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                   showScheduleValue?.date
                 )}`}</h6>
                 {!readOnly && !!showScheduleValue?.schedule?.length && (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className={`btn btn-sm ${isReordering ? "btn-primary" : "btn-outline-primary"}`}
-                    onClick={() => setIsReordering(!isReordering)}
+                    onClick={() => {
+                      if (isReordering) {
+                        setIsReordering(false);
+                        handleSubmit();
+                      } else {
+                        setIsReordering(true);
+                      }
+                    }}
                   >
-                    {isReordering ? "Confirm" : "Reorder"}
+                    {isReordering ? "Confirm & Save" : "Reorder"}
                   </button>
                 )}
               </div>

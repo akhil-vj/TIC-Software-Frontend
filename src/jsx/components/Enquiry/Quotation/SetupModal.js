@@ -17,23 +17,23 @@ import { useFormDraft } from "../../../utilis/useFormDraft";
 
 function SetupModal() {
   const navigate = useNavigate()
-  const {id,itineraryId} = useParams()
+  const { id, itineraryId } = useParams()
   const itineraryByIdUrl = `${URLS.ITINERARY_URL}/${itineraryId}`
   const isEdit = !!itineraryId
-  const fetchItinerary= useAsync(itineraryByIdUrl,isEdit)
+  const fetchItinerary = useAsync(itineraryByIdUrl, isEdit)
   const editItineraryData = fetchItinerary?.data?.data
 
   const isEquiryId = id && id !== 'add'
   const url = URLS.ENQUIRY_URL
   const equiryIdUrl = `${url}/${id}`
-  const fetchEnquiry = useAsync(equiryIdUrl,!!isEquiryId)
+  const fetchEnquiry = useAsync(equiryIdUrl, !!isEquiryId)
   const equiryIdData = fetchEnquiry?.data?.data
 
   const [showModal, setShowModal] = useState(true);
   const [refresh, setRefresh] = useState(false);
   const [formStartDate, setFormStartDate] = useState(new Date());
   const [formComponent, setFormComponent] = useState("setupForm");
-  
+
   const draftEngine = useFormDraft(`itineraryBuilder_${id || 'new'}`);
 
   const date = new Date();
@@ -44,13 +44,13 @@ function SetupModal() {
     formStartDate: date,
     formEndDate: date,
     formValidityDate: validityDateDefault,
-    planArr:[],
-    planIndex:0,
-    priceOption:{value:'PER',label:'Price Per Traveller'},
-    gstOption:{value:1,label:'GST on Total'},
-    priceIn:{value:'INR',label:'INR'},
+    planArr: [],
+    planIndex: 0,
+    priceOption: { value: 'PER', label: 'Price Per Traveller' },
+    gstOption: { value: 1, label: 'GST on Total' },
+    priceIn: { value: 'INR', label: 'INR' },
     baseCurrency: 'INR',
-    selectedSubDestinations:[],
+    selectedSubDestinations: [],
     discount: 0,
     discount_amount: 0,
     packageName: '',           // Never undefined — prevents "null" display in ShareModal
@@ -66,33 +66,33 @@ function SetupModal() {
       .filter((item) => item.id && item.name);
 
   const handleFormValue = (data, setFieldValue) => {
-    if(data && data?.id){
+    if (data && data?.id) {
       setFieldValue('seq', data.seq)
       setFieldValue('enquiry_ref_no', data.enquiry_ref_no || data.enquiry?.ref_no || '')
-      setFieldValue('packageName',checkFormValue(data.package_name))
-      setFieldValue('formStartDate',parseDate(data.start_date))
-      setFieldValue('formEndDate',parseDate(data.end_date))
+      setFieldValue('packageName', checkFormValue(data.package_name))
+      setFieldValue('formStartDate', parseDate(data.start_date))
+      setFieldValue('formEndDate', parseDate(data.end_date))
       if (data.valid_until) {
         setFieldValue('formValidityDate', parseDate(data.valid_until))
       }
-      setFieldValue('adult',checkFormValue(data.adult_count))
-      setFieldValue('child',checkFormValue(data.child_count))
-      setFieldValue('baseMarkupInput',checkFormValue(data.extra_markup_percentage))
-      setFieldValue('extraMarkupInput',checkFormValue(data.extra_markup_amount))
-      setFieldValue('baseMarkup',checkFormValue(data.extra_markup_percentage))
-      setFieldValue('extraMarkup',checkFormValue(data.extra_markup_amount))
-      setFieldValue('cgst',checkFormValue(data.cgst_percentage))
-      setFieldValue('sgst',checkFormValue(data.sgst_percentage))
-      setFieldValue('igst',checkFormValue(data.igst_percentage))
-      setFieldValue('tcs',checkFormValue(data.tcs_percentage))
-      setFieldValue('discount',checkFormValue(data.discount_amount))
-      setFieldValue('paymentDescription',checkFormValue(data.description))
-      setFieldValue('priceOption',data.price_mode === 'PER_PERSON'?{value:'PER',label:'Price Per Traveller'}:{value:'TOTAL',label:'Total Price'})
-      setFieldValue('perPersonAmount',data.per_person_amounts)
-      setFieldValue('grand_total',checkFormValue(data.grand_total))
-      setFieldValue('converted_total',checkFormValue(data.converted_total))
-      setFieldValue('total_amount',checkFormValue(data.total_amount))
-      setFieldValue('exchange_rate',checkFormValue(data.exchange_rate))
+      setFieldValue('adult', checkFormValue(data.adult_count))
+      setFieldValue('child', checkFormValue(data.child_count))
+      setFieldValue('baseMarkupInput', checkFormValue(data.extra_markup_percentage))
+      setFieldValue('extraMarkupInput', checkFormValue(data.extra_markup_amount))
+      setFieldValue('baseMarkup', checkFormValue(data.extra_markup_percentage))
+      setFieldValue('extraMarkup', checkFormValue(data.extra_markup_amount))
+      setFieldValue('cgst', checkFormValue(data.cgst_percentage))
+      setFieldValue('sgst', checkFormValue(data.sgst_percentage))
+      setFieldValue('igst', checkFormValue(data.igst_percentage))
+      setFieldValue('tcs', checkFormValue(data.tcs_percentage))
+      setFieldValue('discount', checkFormValue(data.discount_amount))
+      setFieldValue('paymentDescription', checkFormValue(data.description))
+      setFieldValue('priceOption', data.price_mode === 'PER_PERSON' ? { value: 'PER', label: 'Price Per Traveller' } : { value: 'TOTAL', label: 'Total Price' })
+      setFieldValue('perPersonAmount', data.per_person_amounts)
+      setFieldValue('grand_total', checkFormValue(data.grand_total))
+      setFieldValue('converted_total', checkFormValue(data.converted_total))
+      setFieldValue('total_amount', checkFormValue(data.total_amount))
+      setFieldValue('exchange_rate', checkFormValue(data.exchange_rate))
       // Restore quoted_options from API if available (for WhatsApp pricing display)
       if (data.quoted_options) {
         try {
@@ -107,10 +107,10 @@ function SetupModal() {
       }
       const baseCurr = getDefaultCurrency(data.destination?.name);
       setFieldValue('baseCurrency', baseCurr);
-      const priceInObj = {label:data.currency,value:data.currency};
-      setFieldValue('priceIn',priceInObj);
+      const priceInObj = { label: data.currency, value: data.currency };
+      setFieldValue('priceIn', priceInObj);
       const destinationObj = data.destination
-        ? {label:data.destination.name, value:data.destination.id}
+        ? { label: data.destination.name, value: data.destination.id }
         : null;
       setFieldValue('destination', checkFormValue(destinationObj))
       const getSubDestinationOption = (entry) => {
@@ -121,69 +121,70 @@ function SetupModal() {
           entry.subject?.sub_destination_id && { id: entry.subject?.sub_destination_id, name: entry.subject?.sub_destination_name };
         return sub ? { value: sub.id, label: sub.name } : undefined;
       };
-      const sortedArray = data.entries?.reduce((acc, entry) => {
+      const sortedEntries = [...(data.entries || [])].sort((a, b) => (a.seq || 0) - (b.seq || 0));
+      const sortedArray = sortedEntries.reduce((acc, entry) => {
         const existingEntry = acc.find((item) => item.date === entry.date);
         const insertType = (entry.entry_type || '').toLowerCase()
-        const transferType = {label:entry.transfer_type,value:entry.transfer_type}
-        const hotelOption = {label:entry.option,value:entry.option}
+        const transferType = { label: entry.transfer_type, value: entry.transfer_type }
+        const hotelOption = { label: entry.option, value: entry.option }
         const image = insertType === 'hotel'
           ? entry.subject?.document_2?.[0]?.file_url
           : entry.subject?.image
         const dayDestination = getSubDestinationOption(entry)
         const obj = {
-          insertType:insertType,
-          entryId:entry.id,
-          id:entry.subject_id,
-          name:entry.subject?.name || entry.subject?.activity_name || entry.subject?.vehicle_name || '',
-          image:image,
-          option:hotelOption,
-          roomType:{value:entry.room?.id,label:entry.room?.room_type_name},
-          destination:{value:entry.subject?.destination?.id || entry.subject?.destination_id, label:entry.subject?.destination?.name || entry.subject?.destination_name},
-          roomOption:entry.subject?.rooms,
-          single:entry.single_count,
-          double:entry.double_count,
-          triple:entry.triple_count,
-          quad:entry.quad_count,
-          two_bedroom:entry.two_bedroom_count,
-          three_bedroom:entry.three_bedroom_count,
-          four_bedroom:entry.four_bedroom_count,
-          extra:entry.extra_count,
-          childW:entry.child_w_count,
-          childN:entry.child_n_count,
-          date:entry.date,
-          person:entry.no_of_person,
-          adult:entry.adult_count,
-          child:entry.child_count,
-          description:entry.description,
+          insertType: insertType,
+          entryId: entry.id,
+          id: entry.subject_id,
+          name: entry.subject?.name || entry.subject?.activity_name || entry.subject?.vehicle_name || '',
+          image: image,
+          option: hotelOption,
+          roomType: { value: entry.room?.id, label: entry.room?.room_type_name },
+          destination: { value: entry.subject?.destination?.id || entry.subject?.destination_id, label: entry.subject?.destination?.name || entry.subject?.destination_name },
+          roomOption: entry.subject?.rooms,
+          single: entry.single_count,
+          double: entry.double_count,
+          triple: entry.triple_count,
+          quad: entry.quad_count,
+          two_bedroom: entry.two_bedroom_count,
+          three_bedroom: entry.three_bedroom_count,
+          four_bedroom: entry.four_bedroom_count,
+          extra: entry.extra_count,
+          childW: entry.child_w_count,
+          childN: entry.child_n_count,
+          date: entry.date,
+          person: entry.no_of_person,
+          adult: entry.adult_count,
+          child: entry.child_count,
+          description: entry.description,
           activity_description: insertType === 'activity' ? (entry.subject?.description || '') : '',
           transfer_description: insertType === 'transfer' ? (entry.subject?.description || '') : '',
-          type:transferType,
-          vehicleType: entry.vehicle_type ? {label: entry.vehicle_type, value: entry.vehicle_type} : undefined,
-          cost:entry.cost,
-          amount:entry.amount,
-          markup:entry.markup,
-          adultCost:entry.adult_cost,
-          childCost:entry.child_cost,
-          startDate:parseDate(entry.start_date),
-          startTime:parseTime(entry.start_time),
-          endDate:parseDate(entry.end_date),
-          endTime:parseTime(entry.end_time),
+          type: transferType,
+          vehicleType: entry.vehicle_type ? { label: entry.vehicle_type, value: entry.vehicle_type } : undefined,
+          cost: entry.cost,
+          amount: entry.amount,
+          markup: entry.markup,
+          adultCost: entry.adult_cost,
+          childCost: entry.child_cost,
+          startDate: parseDate(entry.start_date),
+          startTime: parseTime(entry.start_time),
+          endDate: parseDate(entry.end_date),
+          endTime: parseTime(entry.end_time),
           subDestination: dayDestination,
           mealPlan: entry.room?.meal_plans?.map(mp => ({ label: mp.meal_plan_name || mp.name, value: mp.meal_plan_id || mp.id })) || [],
         }
         if (existingEntry) {
           existingEntry.schedule.push(obj);
-          if(!existingEntry.dayDestination && dayDestination){
+          if (!existingEntry.dayDestination && dayDestination) {
             existingEntry.dayDestination = dayDestination;
           }
         } else {
           acc.push({ date: entry.date, schedule: [obj], dayDestination });
         }
-    
+
         return acc;
       }, []);
-      setFieldValue('planArr',checkFormValue(sortedArray))
-      
+      setFieldValue('planArr', checkFormValue(sortedArray))
+
       const uniqueSubDests = Array.from(
         new Map(
           data.entries
@@ -198,134 +199,135 @@ function SetupModal() {
     }
   }
 
-  const handleFormClick = async(values) => {
+  const handleFormClick = async (values) => {
     try {
       const getDateStr = (dateVal) => {
         const d = new Date(dateVal);
         return isNaN(d) ? null : d.toLocaleDateString("en-CA");
       }
       const getTimeStr = (timeVal) => {
-        if(!timeVal){return null}
+        if (!timeVal) { return null }
         return formatTimeToHis(timeVal)
       }
       const headerDateStart = getDateStr(values.formStartDate)
       const headerDateEnd = getDateStr(values.formEndDate)
       const validityDate = getDateStr(values.formValidityDate)
-      if(!values.packageName){
+      if (!values.packageName) {
         notifyError('Package name is required')
         return
       }
-      if(!values.destination?.value){
+      if (!values.destination?.value) {
         notifyError('Destination is required')
         return
       }
-      if(!headerDateStart || !headerDateEnd){
+      if (!headerDateStart || !headerDateEnd) {
         notifyError('Start and End dates are required')
         return
       }
       const formData = new FormData()
       // formData.append('currency',values.priceIn)
-      formData.append('package_name',values.packageName)
-      formData.append('enquiry_id',id)
-      formData.append('start_date',checkFormValue(headerDateStart))
-      formData.append('end_date',checkFormValue(headerDateEnd))
-      formData.append('adult_count',checkFormValue(values.adult))
-      formData.append('child_count',checkFormValue(values.child))
-      formData.append('destination_id',checkFormValue(values.destination?.value))
-      formData.append('valid_until',checkFormValue(validityDate))
+      formData.append('package_name', values.packageName)
+      formData.append('enquiry_id', id)
+      formData.append('start_date', checkFormValue(headerDateStart))
+      formData.append('end_date', checkFormValue(headerDateEnd))
+      formData.append('adult_count', checkFormValue(values.adult))
+      formData.append('child_count', checkFormValue(values.child))
+      formData.append('destination_id', checkFormValue(values.destination?.value))
+      formData.append('valid_until', checkFormValue(validityDate))
       const priceMode = values?.priceOption?.value === 'PER' ? 'PER_PERSON' : 'TOTAL_PRICE'
-      formData.append('price_mode',priceMode)
+      formData.append('price_mode', priceMode)
       const currencyValue = values?.priceIn?.value ?? values?.priceIn?.id
       formData.append('currency', checkFormValue(currencyValue))
       // Backend update endpoint uses URL param; no itinerary_id field required
-      const totalEntries = values.planArr?.reduce((acc,{schedule})=>acc + (schedule?.length || 0),0) || 0
-    let entryIndex = 0;
-    values.planArr?.forEach(({ date, schedule, dayDestination }, arrInd) => {
-      schedule.forEach((data, ind) => {
-        const index = entryIndex++;
-        const entryDate = getDateStr(date)
-        const startDateVal = getDateStr(data.startDate || date)
-        const endDateVal = getDateStr(data.endDate || date)
-        const startTimeVal = getTimeStr(data.startTime) || '00:00:00'
-        const endTimeVal = getTimeStr(data.endTime) || '00:00:00'
-        
-        if(!entryDate || !startDateVal || !endDateVal){
-          throw new Error('Invalid or missing dates in itinerary entries')
-        }
-        if(data.entryId){
-          formData.append(`entries[${index}][id]`,checkFormValue(data.entryId))
-        }
-        const entryAdult = Number(data.adult || 0);
-        const entryChild = Number(data.child || 0);
-        const personCount = (data.insertType === 'activity' || (entryAdult + entryChild > 0)) 
-          ? (entryAdult + entryChild) 
-          : (data.person ?? (Number(values.adult || 0) + Number(values.child || 0)));
-        formData.append(`entries[${index}][subject_id]`,checkFormValue(data.id))
-        formData.append(`entries[${index}][entry_type]`,checkFormValue(data.insertType?.toUpperCase()))
-        formData.append(`entries[${index}][date]`,checkFormValue(entryDate))
-        const subDestValue = dayDestination?.value || data.subDestination?.value;
-        formData.append(`entries[${index}][sub_destination_id]`,checkFormValue(subDestValue))
-        formData.append(`entries[${index}][no_of_person]`,checkFormValue(personCount,'number'))
-        formData.append(`entries[${index}][adult_count]`,checkFormValue(data.adult,'number'))
-        formData.append(`entries[${index}][child_count]`,checkFormValue(data.child,'number'))
-        
-        if(data.insertType === 'hotel'){
-          formData.append(`entries[${index}][option]`,checkFormValue(data.option?.value))
-          formData.append(`entries[${index}][room_id]`,checkFormValue(data.roomType?.value))
-          formData.append(`entries[${index}][single_count]`,checkFormValue(data.single,'number'))
-          formData.append(`entries[${index}][double_count]`,checkFormValue(data.double,'number'))
-          formData.append(`entries[${index}][triple_count]`,checkFormValue(data.triple,'number'))
-          formData.append(`entries[${index}][extra_count]`,checkFormValue(data.extra,'number'))
-          formData.append(`entries[${index}][child_w_count]`,checkFormValue(data.childW,'number'))
-          formData.append(`entries[${index}][child_n_count]`,checkFormValue(data.childN,'number'))
-          formData.append(`entries[${index}][quad_count]`,checkFormValue(data.quad,'number'))
-          formData.append(`entries[${index}][two_bedroom_count]`,checkFormValue(data.two_bedroom,'number'))
-          formData.append(`entries[${index}][three_bedroom_count]`,checkFormValue(data.three_bedroom,'number'))
-          formData.append(`entries[${index}][four_bedroom_count]`,checkFormValue(data.four_bedroom,'number'))
-        }
-      
-        if(data.insertType === 'activity'){
-          formData.append(`entries[${index}][description]`,checkFormValue(data.description))
-        }
-        if(data.insertType === 'transfer'){
-          formData.append(`entries[${index}][transfer_type]`,checkFormValue(data.type?.value))
-          if (data.type?.value === 'PRIVATE') {
-             formData.append(`entries[${index}][vehicle_type]`,checkFormValue(data.vehicleType?.value))
-          }
-          formData.append(`entries[${index}][cost]`,checkFormValue(data.cost,'number'))
-          formData.append(`entries[${index}][adult_cost]`,checkFormValue(data.adultCost,'number'))
-          formData.append(`entries[${index}][child_cost]`,checkFormValue(data.childCost,'number'))
-        }
+      const totalEntries = values.planArr?.reduce((acc, { schedule }) => acc + (schedule?.length || 0), 0) || 0
+      let entryIndex = 0;
+      values.planArr?.forEach(({ date, schedule, dayDestination }, arrInd) => {
+        schedule.forEach((data, ind) => {
+          const index = entryIndex++;
+          const entryDate = getDateStr(date)
+          const startDateVal = getDateStr(data.startDate || date)
+          const endDateVal = getDateStr(data.endDate || date)
+          const startTimeVal = getTimeStr(data.startTime) || '00:00:00'
+          const endTimeVal = getTimeStr(data.endTime) || '00:00:00'
 
-        formData.append(`entries[${index}][start_date]`,checkFormValue(startDateVal))
-        formData.append(`entries[${index}][start_time]`,checkFormValue(startTimeVal))
-        formData.append(`entries[${index}][end_date]`,checkFormValue(endDateVal))
-        formData.append(`entries[${index}][end_time]`,checkFormValue(endTimeVal))
+          if (!entryDate || !startDateVal || !endDateVal) {
+            throw new Error('Invalid or missing dates in itinerary entries')
+          }
+          if (data.entryId) {
+            formData.append(`entries[${index}][id]`, checkFormValue(data.entryId))
+          }
+          const entryAdult = Number(data.adult || 0);
+          const entryChild = Number(data.child || 0);
+          const personCount = (data.insertType === 'activity' || (entryAdult + entryChild > 0))
+            ? (entryAdult + entryChild)
+            : (data.person ?? (Number(values.adult || 0) + Number(values.child || 0)));
+          formData.append(`entries[${index}][subject_id]`, checkFormValue(data.id))
+          formData.append(`entries[${index}][entry_type]`, checkFormValue(data.insertType?.toUpperCase()))
+          formData.append(`entries[${index}][date]`, checkFormValue(entryDate))
+          const subDestValue = dayDestination?.value || data.subDestination?.value;
+          formData.append(`entries[${index}][sub_destination_id]`, checkFormValue(subDestValue))
+          formData.append(`entries[${index}][no_of_person]`, checkFormValue(personCount, 'number'))
+          formData.append(`entries[${index}][adult_count]`, checkFormValue(data.adult, 'number'))
+          formData.append(`entries[${index}][child_count]`, checkFormValue(data.child, 'number'))
+
+          if (data.insertType === 'hotel') {
+            formData.append(`entries[${index}][option]`, checkFormValue(data.option?.value))
+            formData.append(`entries[${index}][room_id]`, checkFormValue(data.roomType?.value))
+            formData.append(`entries[${index}][single_count]`, checkFormValue(data.single, 'number'))
+            formData.append(`entries[${index}][double_count]`, checkFormValue(data.double, 'number'))
+            formData.append(`entries[${index}][triple_count]`, checkFormValue(data.triple, 'number'))
+            formData.append(`entries[${index}][extra_count]`, checkFormValue(data.extra, 'number'))
+            formData.append(`entries[${index}][child_w_count]`, checkFormValue(data.childW, 'number'))
+            formData.append(`entries[${index}][child_n_count]`, checkFormValue(data.childN, 'number'))
+            formData.append(`entries[${index}][quad_count]`, checkFormValue(data.quad, 'number'))
+            formData.append(`entries[${index}][two_bedroom_count]`, checkFormValue(data.two_bedroom, 'number'))
+            formData.append(`entries[${index}][three_bedroom_count]`, checkFormValue(data.three_bedroom, 'number'))
+            formData.append(`entries[${index}][four_bedroom_count]`, checkFormValue(data.four_bedroom, 'number'))
+          }
+
+          if (data.insertType === 'activity') {
+            formData.append(`entries[${index}][description]`, checkFormValue(data.description))
+          }
+          if (data.insertType === 'transfer') {
+            formData.append(`entries[${index}][transfer_type]`, checkFormValue(data.type?.value))
+            if (data.type?.value === 'PRIVATE') {
+              formData.append(`entries[${index}][vehicle_type]`, checkFormValue(data.vehicleType?.value))
+            }
+            formData.append(`entries[${index}][cost]`, checkFormValue(data.cost, 'number'))
+            formData.append(`entries[${index}][adult_cost]`, checkFormValue(data.adultCost, 'number'))
+            formData.append(`entries[${index}][child_cost]`, checkFormValue(data.childCost, 'number'))
+          }
+
+          formData.append(`entries[${index}][start_date]`, checkFormValue(startDateVal))
+          formData.append(`entries[${index}][start_time]`, checkFormValue(startTimeVal))
+          formData.append(`entries[${index}][end_date]`, checkFormValue(endDateVal))
+          formData.append(`entries[${index}][end_time]`, checkFormValue(endTimeVal))
+          formData.append(`entries[${index}][seq]`, index + 1)
+        });
       });
-    });
       // formData.append('assigned_to',checkFormValue(values.assigned?.value))
       let response
       const url = URLS.ITINERARY_URL
       const editUrl = `${URLS.ITINERARY_UPDATE_URL}${itineraryId}`
-      if(isEdit){
-        response = await filePost(editUrl,formData)
-      }else{
-        response = await filePost(url,formData)
+      if (isEdit) {
+        response = await filePost(editUrl, formData)
+      } else {
+        response = await filePost(url, formData)
       }
 
-      if(setShowModal){
-      setShowModal(false)
-      // navigate('add/profile')
-    }
-    if(response?.success){
-      draftEngine.clearDraft(); // Successful save, clear draft
-      if(!isEdit){
-        formik.setFieldValue('itineraryId',response?.data?.id)
-        navigate(response?.data?.id)
+      if (setShowModal) {
+        setShowModal(false)
+        // navigate('add/profile')
       }
-      handleFormValue(response?.data, setFieldValue)
-      notifyCreate('Quotation',isEdit)
-    }
+      if (response?.success) {
+        draftEngine.clearDraft(); // Successful save, clear draft
+        if (!isEdit) {
+          formik.setFieldValue('itineraryId', response?.data?.id)
+          navigate(response?.data?.id)
+        }
+        handleFormValue(response?.data, setFieldValue)
+        notifyCreate('Quotation', isEdit)
+      }
     } catch (error) {
       // Helpful debugging to surface backend validation errors
       console.error('itinerary save error', error?.response?.data || error);
@@ -334,22 +336,22 @@ function SetupModal() {
       // notifyError(errorMsg)
       draftEngine.promptSaveDraftOnError(values, errorMsg);
     }
-   
+
   }
   const formik = useFormik({
     initialValues,
-        // validationSchema={loginSchema}
-        onSubmit:(values, { setSubmitting }) => {
-          console.log('submit',values)
-          handleFormClick(values)
-          //   setTimeout(() => {
-          //     alert(JSON.stringify(values, null, 2));
-          //     setSubmitting(false);
-          //   }, 400);
-        }
+    // validationSchema={loginSchema}
+    onSubmit: (values, { setSubmitting }) => {
+      console.log('submit', values)
+      handleFormClick(values)
+      //   setTimeout(() => {
+      //     alert(JSON.stringify(values, null, 2));
+      //     setSubmitting(false);
+      //   }, 400);
+    }
   })
-  const {setFieldValue} = formik
-  
+  const { setFieldValue } = formik
+
   useEffect(() => {
     const draftData = draftEngine.getDraft();
     if (draftData) {
@@ -357,7 +359,7 @@ function SetupModal() {
       if (draftData.formStartDate) draftData.formStartDate = new Date(draftData.formStartDate);
       if (draftData.formEndDate) draftData.formEndDate = new Date(draftData.formEndDate);
       if (draftData.formValidityDate) draftData.formValidityDate = new Date(draftData.formValidityDate);
-      
+
       // Re-hydrate dates in planArr
       if (draftData.planArr) {
         draftData.planArr.forEach(plan => {
@@ -368,9 +370,9 @@ function SetupModal() {
           });
         });
       }
-      
+
       formik.setValues(draftData);
-      
+
       // Seamlessly restore the exact page component they were on
       if (draftData.__formComponent) {
         setFormComponent(draftData.__formComponent);
@@ -378,23 +380,23 @@ function SetupModal() {
     }
   }, []);
 
-  useEffect(()=>{
-    if(equiryIdData && !isEdit){
-      setFieldValue('formStartDate',parseDate(equiryIdData.start_date))
-      setFieldValue('formEndDate',parseDate(equiryIdData.end_date))
-      setFieldValue('adult',checkFormValue(equiryIdData.adult_count))
-      setFieldValue('child',checkFormValue(equiryIdData.child_count))
+  useEffect(() => {
+    if (equiryIdData && !isEdit) {
+      setFieldValue('formStartDate', parseDate(equiryIdData.start_date))
+      setFieldValue('formEndDate', parseDate(equiryIdData.end_date))
+      setFieldValue('adult', checkFormValue(equiryIdData.adult_count))
+      setFieldValue('child', checkFormValue(equiryIdData.child_count))
       setFieldValue('enquiry_ref_no', equiryIdData.ref_no || '')
       if (equiryIdData.destination) {
-        const destinationObj = {label:equiryIdData.destination.name,value:equiryIdData.destination.id}
-        setFieldValue('destination',checkFormValue(destinationObj))
+        const destinationObj = { label: equiryIdData.destination.name, value: equiryIdData.destination.id }
+        setFieldValue('destination', checkFormValue(destinationObj))
         // Auto-set currency based on destination
         const currencyCode = getDefaultCurrency(equiryIdData.destination?.name);
         setFieldValue('baseCurrency', currencyCode);
         setFieldValue('priceIn', { value: currencyCode, label: currencyCode });
       }
     }
-  },[equiryIdData?.id,isEdit])
+  }, [equiryIdData?.id, isEdit])
   useEffect(() => {
     if (equiryIdData?.sub_destinations?.length) {
       const subDestOptions = mapSubDestinations(equiryIdData.sub_destinations);
@@ -403,7 +405,7 @@ function SetupModal() {
       }
     }
   }, [equiryIdData?.sub_destinations?.length]);
-  
+
 
   const formSubmit = (e) => {
     e.preventDefault();
@@ -411,14 +413,14 @@ function SetupModal() {
     notify({ message: "Added Successfully" });
   };
 
-  useEffect(()=>{
-    formik.setFieldValue('itineraryId',itineraryId)
-  },[itineraryId])
-  useEffect(()=>{
+  useEffect(() => {
+    formik.setFieldValue('itineraryId', itineraryId)
+  }, [itineraryId])
+  useEffect(() => {
     // console.log('test',data)
     handleFormValue(editItineraryData, setFieldValue)
 
-  },[itineraryId,editItineraryData?.id])
+  }, [itineraryId, editItineraryData?.id])
   draftEngine.useDraftAutoSave({ ...formik.values, __formComponent: formComponent }, formik.dirty || formComponent !== 'setupForm');
 
   return (
@@ -427,33 +429,33 @@ function SetupModal() {
         
       >
         {(formik) => ( */}
-          {/* <> */}
-            {formComponent === "setupForm" ? (
-              <SetupForm
-                formik={formik}
-                setFormComponent={setFormComponent}
-                showModal={showModal}
-                setShowModal={setShowModal}
-                isEdit={isEdit}
-              />
-            ) : (
-              <div className="bg-white px-4 pb-4 pt-2 rounded">
-                {formComponent === "packageForm" ? (
-                  <PackageForm
-                    formik={formik}
-                    setFormComponent={setFormComponent}
-                    setShowModal={setShowModal}
-                  />
-                ) : (
-                  <PaymentForm
-                    formik={formik}
-                    setFormComponent={setFormComponent}
-                    setShowModal={setShowModal}
-                  />
-                )}
-              </div>
-            )}
-       {/* </>   
+      {/* <> */}
+      {formComponent === "setupForm" ? (
+        <SetupForm
+          formik={formik}
+          setFormComponent={setFormComponent}
+          showModal={showModal}
+          setShowModal={setShowModal}
+          isEdit={isEdit}
+        />
+      ) : (
+        <div className="bg-white px-4 pb-4 pt-2 rounded">
+          {formComponent === "packageForm" ? (
+            <PackageForm
+              formik={formik}
+              setFormComponent={setFormComponent}
+              setShowModal={setShowModal}
+            />
+          ) : (
+            <PaymentForm
+              formik={formik}
+              setFormComponent={setFormComponent}
+              setShowModal={setShowModal}
+            />
+          )}
+        </div>
+      )}
+      {/* </>   
          )}
        </Formik> */}
     </>
