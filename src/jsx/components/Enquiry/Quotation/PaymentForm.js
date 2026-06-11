@@ -1639,14 +1639,57 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
-                      // Grand total = sum of person row totals
                       const occupancyFactors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1, adult: 1, child: 1 };
                       const isPERModeGT = values.priceOption?.value === "PER";
-                      const grandTotal = getRoundOfValue(personRows.reduce((sum, pt) => {
-                        return sum + convert(pt.total);
-                      }, 0));
+                      const grandTotal = getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.total), 0));
+                      const grandMarkup = getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.markup), 0));
+                      const vatDisplay = personRows[0]?.vat ?? 0;
                       // Number of columns: 5 with Options, 4 without
                       const totalCols = hasHotelInSchedule ? 5 : 4;
+
+                      // ── TOTAL mode: single consolidated row ──────────────────
+                      if (!isPERModeGT) {
+                        return (
+                          <React.Fragment key={optIdx}>
+                            <tr style={{ backgroundColor: "#fff", borderBottom: "1px solid #f1f5f9" }}>
+                              {hasHotelInSchedule && (
+                                <td
+                                  className="align-middle text-center"
+                                  style={{ verticalAlign: "middle", borderRight: "0.5px solid #e2e8f0", backgroundColor: "#f8faff" }}
+                                >
+                                  <span className="badge px-3 py-2" style={{ fontSize: "12px", backgroundColor: "#EEF4FF", color: "#185FA5", padding: "4px 12px", borderRadius: "999px", fontWeight: 500 }}>
+                                    {item.name}
+                                  </span>
+                                </td>
+                              )}
+                              <td style={{ paddingLeft: "16px", color: "#333", borderRight: "0.5px solid #e2e8f0", fontWeight: 500 }}>
+                                Package Total
+                              </td>
+                              <td className="text-end pe-3" style={{ borderRight: "0.5px solid #e2e8f0", color: "#374151" }}>
+                                {currSymbol} {grandMarkup}
+                              </td>
+                              <td className="text-end pe-3" style={{ borderRight: "0.5px solid #e2e8f0", color: "#374151" }}>
+                                {vatDisplay} %
+                              </td>
+                              <td className="text-end pe-3 text-dark" style={{ fontWeight: 700, fontSize: "15px", color: "#185FA5" }}>
+                                {currSymbol} {grandTotal}
+                              </td>
+                            </tr>
+                            {/* Grand Total row */}
+                            <tr style={{ backgroundColor: "#f0f7ff", borderBottom: "1px solid #e2e8f0" }}>
+                              <td
+                                colSpan={totalCols}
+                                className="text-end pe-4"
+                                style={{ color: "#185FA5", fontSize: "14px", fontWeight: 600, padding: "10px 16px" }}
+                              >
+                                Grand Total:&nbsp;&nbsp;{currSymbol} {grandTotal}
+                              </td>
+                            </tr>
+                          </React.Fragment>
+                        );
+                      }
+
+                      // ── PER mode: per-person-type rows + grand total footer ──
                       return (
                         <React.Fragment key={optIdx}>
                           {personRows.map((pt, ptIdx) => (
@@ -1679,35 +1722,32 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                               {/* Person type label */}
                               <td style={{ paddingLeft: "16px", color: "#333", borderRight: '0.5px solid #e2e8f0', fontWeight: 500 }}>
-                                {isPERModeGT ? (
-                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                                    <span>{pt.label}</span>
-                                    {pt.count > 0 && (
-                                      <span style={{
-                                        fontSize: "11px", color: "#fff", fontWeight: 500,
-                                        background: "#185FA5", borderRadius: "999px",
-                                        padding: "1px 8px", letterSpacing: "0.02em"
-                                      }}>
-                                        × {pt.count}
-                                      </span>
-                                    )}
-                                  </span>
-                                ) : (
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                                   <span>{pt.label}</span>
-                                )}
+                                  {/* Only show count badge for generic adult/child rows, not for hotel room types */}
+                                  {(pt.key === "adult" || pt.key === "child") && pt.count > 0 && (
+                                    <span style={{
+                                      fontSize: "11px", color: "#fff", fontWeight: 500,
+                                      background: "#185FA5", borderRadius: "999px",
+                                      padding: "1px 8px", letterSpacing: "0.02em"
+                                    }}>
+                                      × {pt.count}
+                                    </span>
+                                  )}
+                                </span>
                               </td>
 
                               {/* Markup */}
                               <td className="text-end pe-3" style={{ borderRight: '0.5px solid #e2e8f0', color: "#374151" }}>
-                                {currSymbol} {getRoundOfValue(isPERModeGT ? convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)) : convert(pt.markup))}
+                                {currSymbol} {getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)))}
                               </td>
 
                               {/* VAT */}
                               <td className="text-end pe-3" style={{ borderRight: '0.5px solid #e2e8f0', color: "#374151" }}>{pt.vat} %</td>
 
-                              {/* Total */}
+                              {/* Total per person */}
                               <td className="text-end pe-3 text-dark" style={{ fontWeight: 600 }}>
-                                {currSymbol} {getRoundOfValue(isPERModeGT ? convert(pt.total) / (pt.count * (occupancyFactors[pt.key] || 1)) : convert(pt.total))}
+                                {currSymbol} {getRoundOfValue(convert(pt.total) / (pt.count * (occupancyFactors[pt.key] || 1)))}
                               </td>
                             </tr>
                           ))}
