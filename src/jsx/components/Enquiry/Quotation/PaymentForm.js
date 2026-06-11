@@ -1645,8 +1645,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                       const occupancyFactors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1, adult: 1, child: 1 };
                       const isPERModeGT = values.priceOption?.value === "PER";
-                      const grandTotal = getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.total), 0));
-                      const grandMarkup = getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.markup), 0));
+                      const grandTotal = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.total), 0)));
+                      const grandMarkup = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.markup), 0)));
                       const vatDisplay = personRows[0]?.vat ?? 0;
                       // Number of columns: 5 with Options, 4 without
                       const totalCols = hasHotelInSchedule ? 5 : 4;
@@ -1743,7 +1743,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                               {/* Markup */}
                               <td className="text-end pe-3" style={{ borderRight: '0.5px solid #e2e8f0', color: "#374151" }}>
-                                {currSymbol} {getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)))}
+                                {currSymbol} {Math.round(getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1))))}
                               </td>
 
                               {/* VAT */}
@@ -1751,7 +1751,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                               {/* Total per person */}
                               <td className="text-end pe-3 text-dark" style={{ fontWeight: 600 }}>
-                                {currSymbol} {getRoundOfValue(convert(pt.total) / (pt.count * (occupancyFactors[pt.key] || 1)))}
+                                {currSymbol} {Math.round(getRoundOfValue(convert(pt.total) / (pt.count * (occupancyFactors[pt.key] || 1))))}
                               </td>
                             </tr>
                           ))}
