@@ -382,8 +382,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
 
   // console.log('show',values.planArr,'ind',values.planIndex,'val',showScheduleValue)
   const handleBack = () => {
-    setShowModal(true);
-    setFormComponent("setupForm");
+    navigation('/enquiry');
   };
   const handleCloseViewer = () => {
     if (pdfPreview) {
