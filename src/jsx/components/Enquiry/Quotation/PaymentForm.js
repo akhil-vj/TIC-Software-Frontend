@@ -336,6 +336,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       schedule.map((item, scheduleInd) => ({ date, item, planArrInd, scheduleInd }))
     ) || [];
 
+  const hasHotelInSchedule = scheduleArr.some(s => s.item.insertType === "hotel");
+
   const totals = scheduleArr.reduce(
     (acc, { item }) => {
       if (item.insertType !== "hotel") {
@@ -585,9 +587,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     const childCount = baseChildCount;
     const totalTripPersons = adultCount + childCount;
 
-    const hasHotel = scheduleArr.some(s => s.item.insertType === "hotel");
-    if (!hasHotel && item.name === "Option 1") {
-      if (adultCount > 0) activeTypes.push({ pt: { key: "adult", label: "Adult" }, count: adultCount, displayCount: adultCount, hotelRowCostAll: 0 });
+    if (activeTypes.length === 0 && item.name === "Option 1") {
+      const hotelAmount = item.amount || 0;
+      if (adultCount > 0) activeTypes.push({ pt: { key: "adult", label: "Adult" }, count: adultCount, displayCount: adultCount, hotelRowCostAll: hotelAmount });
       if (childCount > 0) activeTypes.push({ pt: { key: "child", label: "Child" }, count: childCount, displayCount: childCount, hotelRowCostAll: 0 });
     }
 
@@ -1611,7 +1613,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               <table className="table mb-0 text-dark" style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
                 <thead style={{ backgroundColor: "#f8faff", borderBottom: "2px solid #e2e8f0" }}>
                   <tr>
-                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "120px" }}>Options</th>
+                    {hasHotelInSchedule && (
+                      <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "120px" }}>Options</th>
+                    )}
                     <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "30%" }}>Person</th>
                     <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "20%" }}>Markup</th>
                     <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "15%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{values.taxType?.name || "Tax"} (%)</th>
@@ -1622,7 +1626,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 <tbody>
                   {visibleOptions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center text-muted py-5">
+                      <td colSpan={hasHotelInSchedule ? 5 : 4} className="text-center text-muted py-5">
                         <div className="mb-2"><i className="fa fa-info-circle fa-2x"></i></div>
                         <div>No valid hotel options or room counts found. Please check your itinerary setup.</div>
                       </td>
@@ -1641,6 +1645,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       const grandTotal = getRoundOfValue(personRows.reduce((sum, pt) => {
                         return sum + convert(pt.total);
                       }, 0));
+                      // Number of columns: 5 with Options, 4 without
+                      const totalCols = hasHotelInSchedule ? 5 : 4;
                       return (
                         <React.Fragment key={optIdx}>
                           {personRows.map((pt, ptIdx) => (
@@ -1651,8 +1657,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 borderBottom: "1px solid #f1f5f9",
                               }}
                             >
-                              {/* Option label — merged cell spanning person rows + grand total row */}
-                              {ptIdx === 0 && (
+                              {/* Option label — merged cell spanning person rows + grand total row — only shown when hotel exists */}
+                              {hasHotelInSchedule && ptIdx === 0 && (
                                 <td
                                   rowSpan={personRows.length + 1}
                                   className="align-middle text-center"
@@ -1673,19 +1679,34 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                               {/* Person type label */}
                               <td style={{ paddingLeft: "16px", color: "#333", borderRight: '0.5px solid #e2e8f0', fontWeight: 500 }}>
-                                <span>{pt.label}</span>
+                                {isPERModeGT ? (
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                    <span>{pt.label}</span>
+                                    {pt.count > 0 && (
+                                      <span style={{
+                                        fontSize: "11px", color: "#fff", fontWeight: 500,
+                                        background: "#185FA5", borderRadius: "999px",
+                                        padding: "1px 8px", letterSpacing: "0.02em"
+                                      }}>
+                                        × {pt.count}
+                                      </span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span>{pt.label}</span>
+                                )}
                               </td>
 
                               {/* Markup */}
-                              <td style={{ borderRight: '0.5px solid #e2e8f0' }}>
+                              <td className="text-end pe-3" style={{ borderRight: '0.5px solid #e2e8f0', color: "#374151" }}>
                                 {currSymbol} {getRoundOfValue(isPERModeGT ? convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)) : convert(pt.markup))}
                               </td>
 
                               {/* VAT */}
-                              <td style={{ borderRight: '0.5px solid #e2e8f0' }}>{pt.vat} %</td>
+                              <td className="text-end pe-3" style={{ borderRight: '0.5px solid #e2e8f0', color: "#374151" }}>{pt.vat} %</td>
 
                               {/* Total */}
-                              <td className="text-dark" style={{ fontWeight: 600 }}>
+                              <td className="text-end pe-3 text-dark" style={{ fontWeight: 600 }}>
                                 {currSymbol} {getRoundOfValue(isPERModeGT ? convert(pt.total) / (pt.count * (occupancyFactors[pt.key] || 1)) : convert(pt.total))}
                               </td>
                             </tr>
@@ -1699,14 +1720,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                             }}
                           >
                             <td
-                              colSpan={3}
-                              className="text-end pe-3"
-                              style={{ color: "#185FA5", fontSize: "14px", fontWeight: 600 }}
+                              colSpan={totalCols}
+                              className="text-end pe-4"
+                              style={{ color: "#185FA5", fontSize: "14px", fontWeight: 600, padding: "10px 16px" }}
                             >
-                              Grand Total:
-                            </td>
-                            <td style={{ color: "#185FA5", fontSize: "15px", fontWeight: 600 }}>
-                              {currSymbol} {grandTotal}
+                              Grand Total:&nbsp;&nbsp;{currSymbol} {grandTotal}
                             </td>
                           </tr>
                         </React.Fragment>
