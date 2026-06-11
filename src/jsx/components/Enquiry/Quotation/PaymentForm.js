@@ -1223,7 +1223,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                       </h6>
                                       <div className="d-flex flex-column">
                                         <span className="text-muted" style={{ fontSize: "12px" }}>
-                                          {`${item.roomType?.label || item.type?.label || "Service"} • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
+                                          {`${item.roomType?.label || item.type?.label || "Service"}${
+                                            (item.insertType === 'transfer' || item.insertType === 'car') && (item.vehicleType?.label || item.vehicle_type || item.vehicle_name)
+                                              ? ` • ${item.vehicleType?.label || item.vehicle_type || item.vehicle_name}`
+                                              : ''
+                                          } • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
                                         </span>
                                         {(isHotelPer || (isTransferPer && otherBreakdowns.length > 0)) && firstBreakdown && (
                                           <span style={{ fontSize: "11px", fontWeight: 500, marginTop: "8px", color: "#64748b", display: "block" }}>
