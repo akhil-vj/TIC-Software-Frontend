@@ -377,6 +377,10 @@ const EditProfile = ({ setShowModal }) => {
       const dd = String(nowParts.day).padStart(2, "0");
       const datePart = `${dd}${mm}`;
 
+      const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+      const startParts = getYearMonthDay(values.startDate);
+      const monthStr = startParts ? monthNames[startParts.month] : monthNames[nowParts.month];
+
       let highestNum = 0;
       const existingEnquiries = allEnquiriesData?.data?.data || [];
       const currentAssignedId = values.assigned?.value || values.assigned?.id;
@@ -386,7 +390,7 @@ const EditProfile = ({ setShowModal }) => {
         const parts = ref.split('/');
 
         // Legacy format: Agent/Assigned/Dest/Date/Seq (length >= 5)
-        // New format: Dest/Date/Assigned/Seq (length >= 4)
+        // New format: Dest/Date/Assigned/Seq or Dest/Date/Assigned/MonthSeq (length >= 4)
         if (parts.length >= 4) {
           const pNum = parts[parts.length - 1];
 
@@ -396,13 +400,14 @@ const EditProfile = ({ setShowModal }) => {
             ? (String(enqAssignedId) === String(currentAssignedId))
             : (parts.includes(assignedPart));
 
-          // Ensure it's the same month and year based on creation date
-          const enqParts = getYearMonthDay(enq.created_at || enq.start_date);
-          if (enqParts) {
-            const isSameMonthAndYear = (enqParts.month === nowParts.month && enqParts.year === nowParts.year);
+          // Ensure it's the same month and year based on start date
+          const enqParts = getYearMonthDay(enq.start_date);
+          if (enqParts && startParts) {
+            const isSameMonthAndYear = (enqParts.month === startParts.month && enqParts.year === startParts.year);
 
             if (isSameUser && isSameMonthAndYear) {
-              const num = parseInt(pNum, 10);
+              const numStr = pNum.replace(/[^0-9]/g, '');
+              const num = parseInt(numStr, 10);
               if (!isNaN(num) && num > highestNum) {
                 highestNum = num;
               }
@@ -412,7 +417,7 @@ const EditProfile = ({ setShowModal }) => {
       });
 
       const sequentialNum = String(highestNum + 1).padStart(3, "0");
-      const generatedRef = `${destinationPart}/${datePart}/${assignedPart}/${sequentialNum}`;
+      const generatedRef = `${destinationPart}/${datePart}/${assignedPart}/${monthStr}${sequentialNum}`;
 
       // Update the reference state only if it actually differs
       if (values.refNo !== generatedRef) {
