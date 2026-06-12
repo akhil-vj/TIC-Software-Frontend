@@ -48,6 +48,32 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
   const navigate = useNavigate();
   const [showMarkup, setShowMarkup] = useState(false);
+  const [customMarkups, setCustomMarkups] = useState({});
+  const [customMarkupsLoaded, setCustomMarkupsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (values.quoted_options && Array.isArray(values.quoted_options) && !customMarkupsLoaded) {
+      const loadedMarkups = {};
+      const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
+      
+      values.quoted_options.forEach((opt, optIdx) => {
+        if (isPERMode) {
+           opt.rows?.forEach(r => {
+             const pCount = r.count > 0 ? r.count : 1;
+             loadedMarkups[`${optIdx}_${r.key}`] = Math.round(r.markup / pCount);
+           });
+        } else {
+           const totalMarkup = opt.rows?.reduce((sum, r) => sum + r.markup, 0) || 0;
+           loadedMarkups[`${optIdx}_total`] = Math.round(totalMarkup);
+        }
+      });
+      
+      if (Object.keys(loadedMarkups).length > 0) {
+        setCustomMarkups(loadedMarkups);
+      }
+      setCustomMarkupsLoaded(true);
+    }
+  }, [values.quoted_options, customMarkupsLoaded, values.priceOption]);
   const itineraryId = values.itineraryId;
   const isEdit = !!itineraryId;
   const [readOnly, setReadOnly] = useState(isEdit);
@@ -558,7 +584,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
    * Adult types (0,1) share adultCost; child types (2,3) share childCost.
    * Adjust the distribution keys here once real per-type data is available.
    */
-  const getPersonTypeRows = (item, shouldIncludeChildTransfer = false) => {
+  const getPersonTypeRows = (item, shouldIncludeChildTransfer = false, optIdx = 0, markups = {}, exRate = 1) => {
     let activeTypes = PERSON_TYPES.map((pt) => {
       const count = safeCount(item[pt.key]);
       const displayCount = safeCount(item[`${pt.key}Display`]);
@@ -679,7 +705,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     const useExtraMarkup = !useBaseMarkup && Number(values.extraMarkup) > 0;
     const extraMarkupValue = useExtraMarkup ? Number(values.extraMarkup) : 0;
 
-    const hotelRows = activeTypes.map(({ pt, count, displayCount, hotelRowCostAll }) => {
+    const rowsWithNet = activeTypes.map(({ pt, count, displayCount, hotelRowCostAll }) => {
       const isPerMode = values.priceOption?.value === "PER";
       const personShareDivisors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1, adult: 1, child: 1 };
       const sharingFactor = personShareDivisors[pt.key] || 1;
@@ -687,38 +713,71 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
       const hotelLineMarkup = Number(item.markup || 0);
 
-      let rowHotelGross = hotelRowCostAll + (hotelLineMarkup * hotelFraction);
+      const rowHotelNet = hotelRowCostAll;
+      const rowHotelMarkup = hotelLineMarkup * hotelFraction;
 
       const isChildType = pt.key === 'childW' || pt.key === 'childN' || pt.key === 'child';
-      const actTransferPerPersonType = isChildType
-        ? (actTransferBasePerChild + actTransferMarkupPerChild)
-        : (actTransferBasePerAdult + actTransferMarkupPerAdult);
+      const actTransferBasePerPersonType = isChildType ? actTransferBasePerChild : actTransferBasePerAdult;
+      const actTransferMarkupPerPersonType = isChildType ? actTransferMarkupPerChild : actTransferMarkupPerAdult;
 
-      const actTotalToAdd = actTransferPerPersonType * sharingFactor * displayCount;
+      const actTotalBaseToAdd = actTransferBasePerPersonType * sharingFactor * displayCount;
+      const actTotalMarkupToAdd = actTransferMarkupPerPersonType * sharingFactor * displayCount;
 
-      const rowGrossBeforeFinalMarkup = rowHotelGross + actTotalToAdd;
+      const rowNetCost = rowHotelNet + actTotalBaseToAdd;
+      const rowOriginalMarkup = rowHotelMarkup + actTotalMarkupToAdd;
 
-      let inputMarkupShare = 0;
+      let legacyGlobalMarkupShare = 0;
+      const rowGrossBeforeFinalMarkup = rowNetCost + rowOriginalMarkup;
+      
       if (useBaseMarkup) {
-        inputMarkupShare = rowGrossBeforeFinalMarkup * Number(values.baseMarkup) * 0.01;
+        legacyGlobalMarkupShare = rowGrossBeforeFinalMarkup * Number(values.baseMarkup) * 0.01;
       } else if (useExtraMarkup) {
         const totalPackageGross = (item.amount || 0) + (item.markup || 0) + (totals.trueTotalAmount || 0) + (totals.totalMarkup || 0);
         const rowTotalPackageShare = rowGrossBeforeFinalMarkup;
         const totalOptionMarkupShare = totalPackageGross > 0
           ? (extraMarkupValue * rowTotalPackageShare / totalPackageGross)
           : (extraMarkupValue / activeTypes.length);
-        inputMarkupShare = totalOptionMarkupShare;
+        legacyGlobalMarkupShare = totalOptionMarkupShare;
       }
 
-      const finalRowTotal = rowGrossBeforeFinalMarkup + inputMarkupShare;
+      // If there was legacy global markup applied previously, it was added to original markup
+      const totalOriginalMarkup = rowOriginalMarkup + legacyGlobalMarkupShare;
+
+      return { pt, count, displayCount, netCost: rowNetCost, originalMarkup: totalOriginalMarkup };
+    });
+
+    const optionTotalNetCost = rowsWithNet.reduce((sum, r) => sum + r.netCost, 0);
+
+    const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
+    const occupancyFactors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1, adult: 1, child: 1 };
+
+    const hotelRows = rowsWithNet.map((r) => {
+      let finalMarkup = r.originalMarkup;
+
+      if (isPERMode) {
+        const custom = markups[`${optIdx}_${r.pt.key}`];
+        if (custom !== undefined && custom !== "") {
+          const perPersonInBase = Number(custom) * exRate;
+          const pCount = r.displayCount * (occupancyFactors[r.pt.key] || 1);
+          finalMarkup = perPersonInBase * pCount;
+        }
+      } else {
+        const custom = markups[`${optIdx}_total`];
+        if (custom !== undefined && custom !== "") {
+          const totalMarkupInBase = Number(custom) * exRate;
+          const ratio = optionTotalNetCost > 0 ? r.netCost / optionTotalNetCost : (1 / rowsWithNet.length);
+          finalMarkup = totalMarkupInBase * ratio;
+        }
+      }
 
       return {
-        key: pt.key,
-        label: pt.label,
-        count: displayCount,
-        markup: getRoundOfValue(inputMarkupShare),
+        key: r.pt.key,
+        label: r.pt.label,
+        count: r.displayCount,
+        markup: getRoundOfValue(finalMarkup),
         vat: getVatDisplay(),
-        total: getRoundOfValue(finalRowTotal)
+        total: getRoundOfValue(r.netCost + finalMarkup),
+        netCost: r.netCost
       };
     });
 
@@ -771,12 +830,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       if (!hotelOption || hotelOption.length === 0) { notifyError("Please add at least one hotel option."); return; }
 
       // --- Calculate Quoted Options Breakdown (needed for grand_total below) ---
-      const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
-      const visibleOptionsData = hotelOption.filter((item) => {
+      const baseVisibleOptions = hotelOption.filter((item) => {
         const personRows = getPersonTypeRows(item, includeChildTransfer);
         return personRows.length > 0;
-      }).map(item => {
-        const pRows = getPersonTypeRows(item, includeChildTransfer);
+      });
+
+      const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
+      const visibleOptionsData = baseVisibleOptions.map((item, optIdx) => {
+        const pRows = getPersonTypeRows(item, includeChildTransfer, optIdx, customMarkups, rate);
         const hasConversion = rate > 0;
         const convert = (val) => hasConversion ? getRoundOfValue(val / rate) : val;
 
@@ -1524,81 +1585,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               </div>
             </div>
 
-            {/* Markup Info & Edit */}
-            <div className="d-flex align-items-center gap-3 mt-3 mt-md-0">
-              {showMarkup ? (
-                <>
-                  <div style={{ backgroundColor: "#fff", border: "1.5px solid #0d6efd", borderRadius: "8px", padding: "4px 10px", minWidth: "80px" }}>
-                    <span className="text-muted d-block mb-1" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Base Markup %</span>
-                    <input
-                      type="number"
-                      className="form-control form-control-sm text-dark fw-bold p-0"
-                      name="baseMarkupInput"
-                      value={values.baseMarkupInput || ""}
-                      onChange={(e) => { handleChange(e); setFieldValue("extraMarkupInput", 0); }}
-                      onBlur={handleBlur}
-                      placeholder="0"
-                      style={{ border: "none", backgroundColor: "transparent", fontSize: "14px", height: "20px", boxShadow: "none" }}
-                      autoFocus
-                    />
-                  </div>
-                  <div style={{ backgroundColor: "#fff", border: "1.5px solid #0d6efd", borderRadius: "8px", padding: "4px 10px", minWidth: "90px" }}>
-                    <span className="text-muted d-block mb-1" style={{ fontSize: "10px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Extra Markup ({getSymbol(baseCode)})</span>
-                    <input
-                      type="number"
-                      className="form-control form-control-sm text-dark fw-bold p-0"
-                      name="extraMarkupInput"
-                      value={values.extraMarkupInput || ""}
-                      onChange={(e) => { handleChange(e); setFieldValue("baseMarkupInput", 0); }}
-                      onBlur={handleBlur}
-                      placeholder="0"
-                      style={{ border: "none", backgroundColor: "transparent", fontSize: "14px", height: "20px", boxShadow: "none" }}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm d-flex align-items-center"
-                    onClick={handleMarkup}
-                    style={{ borderRadius: "8px", padding: "8px 16px", fontSize: "13px", fontWeight: 500 }}
-                  >
-                    <i className="fa fa-check me-1"></i> Save
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary btn-sm d-flex align-items-center"
-                    onClick={() => setShowMarkup(false)}
-                    style={{ borderRadius: "8px", padding: "8px 12px", fontSize: "13px" }}
-                  >
-                    <i className="fa fa-times"></i>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="text-end" style={{ backgroundColor: "#fff", border: "0.5px solid #e2e8f0", borderRadius: "8px", padding: "8px 16px" }}>
-                    <span className="text-muted d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Base Markup</span>
-                    <span className="text-dark" style={{ fontWeight: 600, fontSize: "15px" }}>{values.baseMarkup}%</span>
-                  </div>
-                  <div className="text-end" style={{ backgroundColor: "#fff", border: "0.5px solid #e2e8f0", borderRadius: "8px", padding: "8px 16px" }}>
-                    <span className="text-muted d-block mb-1" style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", color: "#64748b" }}>Extra Markup</span>
-                    <span className="text-dark" style={{ fontWeight: 600, fontSize: "15px" }}>{getSymbol(baseCode)} {values.extraMarkup || 0}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn d-flex justify-content-center align-items-center"
-                    onClick={() => {
-                      setFieldValue("baseMarkupInput", values.baseMarkup || 0);
-                      setFieldValue("extraMarkupInput", values.extraMarkup || 0);
-                      setShowMarkup(true);
-                    }}
-                    disabled={readOnly}
-                    style={{ borderRadius: "8px", width: "40px", height: "40px", border: "0.5px solid #e2e8f0", backgroundColor: "#fff" }}
-                    title="Edit Markup"
-                  >
-                    <i className="fa fa-pencil fa-lg" style={{ color: "#64748b" }}></i>
-                  </button>
-                </>
-              )}
-            </div>
+            {/* Markup Info & Edit (Hidden) */}
+            {/* <div className="d-flex align-items-center gap-3 mt-3 mt-md-0">
+               ...legacy markup fields...
+            </div> */}
 
           </div>
         </div>
@@ -1637,9 +1627,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                     </tr>
                   ) : (
                     visibleOptions.map((item, optIdx) => {
-                      const personRows = getPersonTypeRows(item, includeChildTransfer);
                       const exchangeRate = parseFloat(values.priceIn?.exchange_rate) || 0;
                       const hasConversion = exchangeRate > 0;
+                      const rateToUse = hasConversion ? exchangeRate : 1;
+                      const personRows = getPersonTypeRows(item, includeChildTransfer, optIdx, customMarkups, rateToUse);
                       const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
@@ -1670,7 +1661,20 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 Package Total
                               </td>
                               <td className="text-end pe-3" style={{ borderRight: "0.5px solid #e2e8f0", color: "#374151" }}>
-                                {currSymbol} {grandMarkup}
+                                {!readOnly ? (
+                                  <div className="d-flex align-items-center justify-content-end">
+                                    <span className="me-1">{currSymbol}</span>
+                                    <input
+                                      type="number"
+                                      className="form-control form-control-sm text-end p-1"
+                                      style={{ width: "80px", display: "inline-block" }}
+                                      value={customMarkups[`${optIdx}_total`] !== undefined ? customMarkups[`${optIdx}_total`] : grandMarkup}
+                                      onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_total`]: e.target.value })}
+                                    />
+                                  </div>
+                                ) : (
+                                  <>{currSymbol} {grandMarkup}</>
+                                )}
                               </td>
                               <td className="text-end pe-3" style={{ borderRight: "0.5px solid #e2e8f0", color: "#374151" }}>
                                 {vatDisplay} %
@@ -1743,7 +1747,20 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                               {/* Markup */}
                               <td className="text-end pe-3" style={{ borderRight: '0.5px solid #e2e8f0', color: "#374151" }}>
-                                {currSymbol} {Math.round(getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1))))}
+                                {!readOnly ? (
+                                  <div className="d-flex align-items-center justify-content-end">
+                                    <span className="me-1">{currSymbol}</span>
+                                    <input
+                                      type="number"
+                                      className="form-control form-control-sm text-end p-1"
+                                      style={{ width: "80px", display: "inline-block" }}
+                                      value={customMarkups[`${optIdx}_${pt.key}`] !== undefined ? customMarkups[`${optIdx}_${pt.key}`] : Math.round(getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1))))}
+                                      onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_${pt.key}`]: e.target.value })}
+                                    />
+                                  </div>
+                                ) : (
+                                  <>{currSymbol} {Math.round(getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1))))}</>
+                                )}
                               </td>
 
                               {/* VAT */}
