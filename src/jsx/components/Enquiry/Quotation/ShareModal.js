@@ -362,30 +362,6 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
           const dynamicTotal = calculateDynamicOptionGrandTotal(optionLabel);
 
           if (values.priceBreakup && rows.length > 0) {
-            // Occupancy per room type — persons per room
-            const OCCUPANCY_PER_ROOM = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1 };
-
-            // Distribute total pax across room types (greedy: highest occupancy first)
-            // e.g. 7 pax, [double(2), extra(1)] → double: floor(7/2)=3 rooms, extra: 7%2=1 room
-            const totalPaxForDist = Number(adultCount || 0) + Number(childCount || 0);
-            let remainingPax = totalPaxForDist;
-
-            // Sort rows by occupancy descending so larger rooms are filled first
-            const sortedRows = [...rows].sort((a, b) => {
-              const occA = OCCUPANCY_PER_ROOM[a.key] || 1;
-              const occB = OCCUPANCY_PER_ROOM[b.key] || 1;
-              return occB - occA;
-            });
-
-            // Pre-calculate room counts for each row key
-            const roomCountMap = {};
-            sortedRows.forEach(row => {
-              const occupancy = OCCUPANCY_PER_ROOM[row.key] || 1;
-              const rooms = Math.floor(remainingPax / occupancy);
-              roomCountMap[row.key] = rooms;
-              remainingPax -= rooms * occupancy;
-            });
-
             // Use quoted_options rows — mirrors blade $matchedQOpt['rows']
             rows.forEach(row => {
               const count = parseInt(row.count) || 1;
@@ -398,20 +374,16 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
                 perPerson = count > 0 ? rowTotal / count : 0;
               }
 
-              // rooms = how many rooms of this type; personsInType = rooms × occupancy
-              // e.g. 3 double rooms × 2 = 6 persons  →  * 6
-              const occupancy = OCCUPANCY_PER_ROOM[row.key] || 1;
-              const roomCount = roomCountMap[row.key] ?? Math.floor(count / occupancy);
-              const personsInType = roomCount * occupancy;   // total persons covered by this room type
-
               let line = `${displayCurrency} ${Math.round(perPerson).toLocaleString()}`;
               if (label.toLowerCase().includes("child") || label.toLowerCase().includes("person")) {
                 line += ` per ${label}`;
               } else {
                 line += ` per Person (${label})`;
               }
-              // Show persons in this room type (e.g. * 6 for 3 double rooms with 2 pax each)
-              if (personsInType > 0) line += ` * ${personsInType}`;
+              
+              if (count > 0) {
+                 line += ` * ${count}`;
+              }
               text += `${line}\n`;
             });
             
