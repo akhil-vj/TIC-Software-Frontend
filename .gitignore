@@ -55,3 +55,6 @@ tic-laravel/
 .env
 .env.local
 .env.*.local
+
+# Generated reports/docs
+details.md
