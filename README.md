@@ -10,10 +10,11 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-18.2-61DAFB?logo=react&logoColor=white" alt="React" />
-  <img src="https://img.shields.io/badge/Vite-7.x-646CFF?logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Vite-7.3-646CFF?logo=vite&logoColor=white" alt="Vite" />
   <img src="https://img.shields.io/badge/Redux-4.2-764ABC?logo=redux&logoColor=white" alt="Redux" />
   <img src="https://img.shields.io/badge/Bootstrap-5-7952B3?logo=bootstrap&logoColor=white" alt="Bootstrap" />
   <img src="https://img.shields.io/badge/SCSS-Sass-CC6699?logo=sass&logoColor=white" alt="SCSS" />
+  <img src="https://img.shields.io/badge/Status-Active-brightgreen" alt="Status" />
   <img src="https://img.shields.io/badge/License-Private-red" alt="License" />
 </p>
 
@@ -155,7 +156,8 @@ The application is built with **React 18** and **Vite** for lightning-fast devel
 | **Yup** | Schema validation |
 | **React-Select** | Advanced dropdown/select inputs |
 | **React-Table** | Data table components |
-| **React-DatePicker** | Date selection |
+| **React-Form-Stepper** | Multi-step form wizards |
+| **React-DatePicker** & **DateRangePicker** | Date selection |
 | **React-Calendar** | Calendar component |
 | **React-TimePicker** | Time selection |
 | **React-Color** | Color picker |
@@ -166,11 +168,12 @@ The application is built with **React 18** and **Vite** for lightning-fast devel
 | **Recharts** | React-based chart library |
 | **React-ApexCharts** | Interactive charts |
 
-### Rich Text & Documents
+### Documents & Exports
 | Technology | Purpose |
 |------------|---------|
 | **CKEditor 5** | WYSIWYG rich text editor |
-| **React-PDF** | PDF rendering & generation |
+| **React-PDF** & **jsPDF** | PDF rendering & dynamic generation |
+| **xlsx** & **file-saver** | Excel/CSV data exports |
 
 ### Networking
 | Technology | Purpose |
@@ -311,8 +314,8 @@ cd TIC-Software-Frontend
 # 3. Install dependencies
 npm install
 
-# 4. Create your .env file (see Environment Variables section)
-cp .env.example .env
+# 4. Create your .env file
+# Create a .env file in the root based on the "Environment Variables" section below.
 
 # 5. Start the development server
 npm run dev
