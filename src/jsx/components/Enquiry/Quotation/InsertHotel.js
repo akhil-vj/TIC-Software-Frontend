@@ -106,7 +106,6 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
   }, []);
 
   const handleSetup = () => {
-    const roomData = values.roomOption?.find((r) => r.id == values.roomType?.value);
     
     let single = 0, double = 0, triple = 0, quad = 0, extra = 0;
     let twoBedroom = 0, threeBedroom = 0, fourBedroom = 0;
@@ -120,6 +119,8 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
     let totalExtraAdults = 0;
 
     (values.roomRows || []).forEach(row => {
+      const rowRoomTypeId = row.roomTypeId || values.roomType?.value;
+      const roomData = values.roomOption?.find((r) => r.id == rowRoomTypeId) || values.roomOption?.find((r) => r.id == values.roomType?.value);
       const numRooms = safeNum(row.numRooms) || 1;
       const pax = safeNum(row.paxStaying) || 1;
       let baseOcc = 2;
@@ -170,9 +171,10 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
     
     extra = totalExtraAdults; // Just extra adults, childW is accounted for separately in childTotal and pricing payload
 
+    const primaryRoomData = values.roomOption?.find((r) => r.id == (values.roomRows?.[0]?.roomTypeId || values.roomType?.value)) || values.roomOption?.find((r) => r.id == values.roomType?.value);
     const childTotal = 
-      (childW * Number(roomData?.child_w_bed_amount || 0)) +
-      (childN * Number(roomData?.child_n_bed_amount || 0));
+      (childW * Number(primaryRoomData?.child_w_bed_amount || 0)) +
+      (childN * Number(primaryRoomData?.child_n_bed_amount || 0));
 
     const totalAmount = totalRoomCost + childTotal;
 
@@ -200,34 +202,38 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
       
       // Hydrate roomRows
       let newRoomRows = [];
-      let rowId = 1;
-      let remainingExtra = parseInt(data.extra) || 0;
+      if (data.roomRows && data.roomRows.length > 0) {
+        newRoomRows = [...data.roomRows];
+      } else {
+        let rowId = 1;
+        let remainingExtra = parseInt(data.extra) || 0;
 
-      const addRows = (bedType, count, baseOcc) => {
-        if (count > 0) {
-          // Put all remaining extra beds in the first row we create
-          let extraToAssign = newRoomRows.length === 0 ? remainingExtra : 0;
-          newRoomRows.push({
-            _id: rowId++,
-            numRooms: count,
-            paxStaying: (count * baseOcc),
-            extraBeds: extraToAssign,
-            bedType: bedType
-          });
-          if (extraToAssign > 0) remainingExtra = 0;
+        const addRows = (bedType, count, baseOcc) => {
+          if (count > 0) {
+            // Put all remaining extra beds in the first row we create
+            let extraToAssign = newRoomRows.length === 0 ? remainingExtra : 0;
+            newRoomRows.push({
+              _id: rowId++,
+              numRooms: count,
+              paxStaying: (count * baseOcc),
+              extraBeds: extraToAssign,
+              bedType: bedType
+            });
+            if (extraToAssign > 0) remainingExtra = 0;
+          }
+        };
+
+        addRows('double', parseInt(data.double) || 0, 2);
+        addRows('single', parseInt(data.single) || 0, 1);
+        addRows('triple', parseInt(data.triple) || 0, 3);
+        addRows('quad', parseInt(data.quad) || 0, 4);
+        addRows('two_bedroom', parseInt(data.two_bedroom_count) || 0, 4);
+        addRows('three_bedroom', parseInt(data.three_bedroom_count) || 0, 6);
+        addRows('four_bedroom', parseInt(data.four_bedroom_count) || 0, 8);
+
+        if (newRoomRows.length === 0) {
+          newRoomRows.push({ _id: 1, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double' });
         }
-      };
-
-      addRows('double', parseInt(data.double) || 0, 2);
-      addRows('single', parseInt(data.single) || 0, 1);
-      addRows('triple', parseInt(data.triple) || 0, 3);
-      addRows('quad', parseInt(data.quad) || 0, 4);
-      addRows('two_bedroom', parseInt(data.two_bedroom_count) || 0, 4);
-      addRows('three_bedroom', parseInt(data.three_bedroom_count) || 0, 6);
-      addRows('four_bedroom', parseInt(data.four_bedroom_count) || 0, 8);
-
-      if (newRoomRows.length === 0) {
-        newRoomRows.push({ _id: 1, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double' });
       }
 
       parsedData.roomRows = newRoomRows;
@@ -355,22 +361,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                       optionLabel="name"
                     />
                   </div>
-                  <div className="col-sm-6">
-                    <ReactSelect
-                      label="Room Type"
-                      value={values.roomType}
-                      onChange={(selected) => {
-                        console.log('sele', selected)
-                        setFieldValue("roomType", selected)
-                      }
-                      }
-                      onBlur={handleBlur}
-                      // values={values}
-                      options={values.roomOption}
-                      optionValue="id"
-                      optionLabel="room_type_name"
-                    />
-                  </div>
+
                   <div className="col-sm-6">
                     <ReactSelect
                       label="Meal Plan"
@@ -412,7 +403,8 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
 
                     // ── per-row calc ──
                     const calcRow = (row) => {
-                      const d = selectedRoom; // currently selected room data from formik
+                      const rowRoomTypeId = row.roomTypeId || values.roomType?.value;
+                      const d = values.roomOption?.find(rt => rt.id == rowRoomTypeId) || selectedRoom;
                       const bedType = row.bedType || 'double';
                       
                       let base = 0, baseOcc = 2, physicalBedrooms = 1;
@@ -482,7 +474,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                     };
                     const addRow = () => {
                       const nextId = (roomRows[roomRows.length - 1]?._id || 0) + 1;
-                      setFieldValue('roomRows', [...roomRows, { _id: nextId, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double' }]);
+                      setFieldValue('roomRows', [...roomRows, { _id: nextId, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double', roomTypeId: values.roomType?.value }]);
                     };
                     const removeRow = (id) => {
                       setFieldValue('roomRows', roomRows.filter((r) => r._id !== id));
@@ -545,34 +537,55 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                   paddingRight: roomRows.length > 1 ? '20px' : '0px'
                                 }}>
                                   {/* Room Configuration Selector */}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Room Configuration:</label>
-                                    <select
-                                      value={row.bedType}
-                                      onChange={(e) => updateRow(row._id, 'bedType', e.target.value)}
-                                      style={{
-                                        height: '26px', borderRadius: '5px', border: '0.5px solid #d1d5db',
-                                        background: '#f9fafb', fontSize: '12px', padding: '0 6px', outline: 'none',
-                                        color: '#374151', cursor: 'pointer'
-                                      }}
-                                    >
-                                      <option value="single">Single</option>
-                                      <option value="double">Double</option>
-                                      <option value="triple">Triple</option>
-                                      <option value="quad">Quad</option>
-                                      <option value="two_bedroom">2 Bedroom</option>
-                                      <option value="three_bedroom">3 Bedroom</option>
-                                      <option value="four_bedroom">4 Bedroom</option>
-                                    </select>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500, margin: 0 }}>Room Type:</label>
+                                      <select
+                                        value={row.roomTypeId || values.roomType?.value || ''}
+                                        onChange={(e) => updateRow(row._id, 'roomTypeId', e.target.value)}
+                                        style={{
+                                          height: '26px', borderRadius: '5px', border: '0.5px solid #d1d5db',
+                                          background: '#f9fafb', fontSize: '12px', padding: '0 6px', outline: 'none',
+                                          color: '#374151', cursor: 'pointer', maxWidth: '150px'
+                                        }}
+                                      >
+                                        {values.roomOption?.map(rt => (
+                                          <option key={rt.id} value={rt.id}>{rt.room_type_name}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500, margin: 0 }}>Room Config:</label>
+                                      <select
+                                        value={row.bedType}
+                                        onChange={(e) => updateRow(row._id, 'bedType', e.target.value)}
+                                        style={{
+                                          height: '26px', borderRadius: '5px', border: '0.5px solid #d1d5db',
+                                          background: '#f9fafb', fontSize: '12px', padding: '0 6px', outline: 'none',
+                                          color: '#374151', cursor: 'pointer'
+                                        }}
+                                      >
+                                        <option value="single">Single</option>
+                                        <option value="double">Double</option>
+                                        <option value="triple">Triple</option>
+                                        <option value="quad">Quad</option>
+                                        <option value="two_bedroom">2 Bedroom</option>
+                                        <option value="three_bedroom">3 Bedroom</option>
+                                        <option value="four_bedroom">4 Bedroom</option>
+                                      </select>
+                                    </div>
                                   </div>
 
                                   {/* Badge */}
-                                  <span style={{
+                                  <div style={{
                                     fontSize: '11px', background: '#fef7dc', color: '#b08d2a',
-                                    borderRadius: '6px', padding: '3px 10px', border: '0.5px solid #e8d98a'
+                                    borderRadius: '6px', padding: '3px 10px', border: '0.5px solid #e8d98a',
+                                    textAlign: 'right', whiteSpace: 'nowrap'
                                   }}>
-                                    Base: {fmt(base)} · Max {baseOcc} adults{(maxOcc - baseOcc) > 0 ? ` + ${maxOcc - baseOcc} extra bed(s)` : ''}
-                                  </span>
+                                    <div style={{ fontWeight: 600 }}>Base: {fmt(base)}</div>
+                                    <div>Max {baseOcc} adults{(maxOcc - baseOcc) > 0 ? ` + ${maxOcc - baseOcc} extra bed(s)` : ''}</div>
+                                  </div>
                                 </div>
                               )}
 
