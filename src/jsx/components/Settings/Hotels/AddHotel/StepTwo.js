@@ -607,6 +607,7 @@ const StepTwo = ({ formik: parentFormik }) => {
                           <th>Single Bed</th>
                           <th>Double Bed</th>
                           <th>Triple Bed</th>
+                          <th>Quad Bed</th>
                           <th>2 Bedroom</th>
                           <th>3 Bedroom</th>
                           <th>4 Bedroom</th>
@@ -626,9 +627,10 @@ const StepTwo = ({ formik: parentFormik }) => {
                               <td>{data.singleBed}</td>
                               <td>{data.doubleBed}</td>
                               <td>{data.tripleBed}</td>
-                              <td>{data.twoBed}</td>
-                              <td>{data.threeBed}</td>
-                              <td>{data.fourBed}</td>
+                              <td>{data.quadBed !== undefined ? data.quadBed : '-'}</td>
+                              <td>{data.twoBed !== undefined && data.twoBed !== null ? data.twoBed : '-'}</td>
+                              <td>{data.threeBed !== undefined && data.threeBed !== null ? data.threeBed : '-'}</td>
+                              <td>{data.fourBed !== undefined && data.fourBed !== null ? data.fourBed : '-'}</td>
                               <td>
                                 <div className="d-flex">
                                   <button
