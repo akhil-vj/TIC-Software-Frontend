@@ -60,11 +60,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         if (isPERMode) {
            opt.rows?.forEach(r => {
              const pCount = r.count > 0 ? r.count : 1;
-             loadedMarkups[`${optIdx}_${r.key}`] = Math.round(r.markup / pCount);
+             loadedMarkups[`${optIdx}_${r.key}`] = { value: Math.round(r.markup / pCount), rate: parseFloat(values.exchange_rate) || 1 };
            });
         } else {
            const totalMarkup = opt.rows?.reduce((sum, r) => sum + r.markup, 0) || 0;
-           loadedMarkups[`${optIdx}_total`] = Math.round(totalMarkup);
+           loadedMarkups[`${optIdx}_total`] = { value: Math.round(totalMarkup), rate: parseFloat(values.exchange_rate) || 1 };
         }
       });
       
@@ -767,18 +767,26 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       let finalMarkup = r.originalMarkup;
 
       if (isPERMode) {
-        const custom = markups[`${optIdx}_${r.pt.key}`];
-        if (custom !== undefined && custom !== "") {
-          const perPersonInBase = Number(custom) * exRate;
-          const pCount = r.displayCount * (occupancyFactors[r.pt.key] || 1);
-          finalMarkup = perPersonInBase * pCount;
+        const customObj = markups[`${optIdx}_${r.pt.key}`];
+        if (customObj !== undefined && customObj !== "") {
+          const customVal = typeof customObj === 'object' ? customObj.value : customObj;
+          const customRate = typeof customObj === 'object' ? customObj.rate : exRate;
+          if (customVal !== "") {
+            const perPersonInBase = Number(customVal) * customRate;
+            const pCount = r.displayCount * (occupancyFactors[r.pt.key] || 1);
+            finalMarkup = perPersonInBase * pCount;
+          }
         }
       } else {
-        const custom = markups[`${optIdx}_total`];
-        if (custom !== undefined && custom !== "") {
-          const totalMarkupInBase = Number(custom) * exRate;
-          const ratio = optionTotalNetCost > 0 ? r.netCost / optionTotalNetCost : (1 / rowsWithNet.length);
-          finalMarkup = totalMarkupInBase * ratio;
+        const customObj = markups[`${optIdx}_total`];
+        if (customObj !== undefined && customObj !== "") {
+          const customVal = typeof customObj === 'object' ? customObj.value : customObj;
+          const customRate = typeof customObj === 'object' ? customObj.rate : exRate;
+          if (customVal !== "") {
+            const totalMarkupInBase = Number(customVal) * customRate;
+            const ratio = optionTotalNetCost > 0 ? r.netCost / optionTotalNetCost : (1 / rowsWithNet.length);
+            finalMarkup = totalMarkupInBase * ratio;
+          }
         }
       }
 
@@ -1680,8 +1688,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                       type="number"
                                       className="form-control form-control-sm text-end p-1"
                                       style={{ width: "80px", display: "inline-block" }}
-                                      value={customMarkups[`${optIdx}_total`] !== undefined ? customMarkups[`${optIdx}_total`] : grandMarkup}
-                                      onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_total`]: e.target.value })}
+                                      value={
+                                        customMarkups[`${optIdx}_total`] !== undefined
+                                          ? (typeof customMarkups[`${optIdx}_total`] === 'object'
+                                              ? (customMarkups[`${optIdx}_total`].value === "" ? "" : Math.round((Number(customMarkups[`${optIdx}_total`].value) * (customMarkups[`${optIdx}_total`].rate || rateToUse)) / rateToUse))
+                                              : customMarkups[`${optIdx}_total`])
+                                          : grandMarkup
+                                      }
+                                      onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_total`]: { value: e.target.value, rate: rateToUse } })}
                                     />
                                   </div>
                                 ) : (
@@ -1766,8 +1780,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                       type="number"
                                       className="form-control form-control-sm text-end p-1"
                                       style={{ width: "80px", display: "inline-block" }}
-                                      value={customMarkups[`${optIdx}_${pt.key}`] !== undefined ? customMarkups[`${optIdx}_${pt.key}`] : Math.round(getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1))))}
-                                      onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_${pt.key}`]: e.target.value })}
+                                      value={
+                                        customMarkups[`${optIdx}_${pt.key}`] !== undefined
+                                          ? (typeof customMarkups[`${optIdx}_${pt.key}`] === 'object'
+                                              ? (customMarkups[`${optIdx}_${pt.key}`].value === "" ? "" : Math.round((Number(customMarkups[`${optIdx}_${pt.key}`].value) * (customMarkups[`${optIdx}_${pt.key}`].rate || rateToUse)) / rateToUse))
+                                              : customMarkups[`${optIdx}_${pt.key}`])
+                                          : Math.round(getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1))))
+                                      }
+                                      onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_${pt.key}`]: { value: e.target.value, rate: rateToUse } })}
                                     />
                                   </div>
                                 ) : (
