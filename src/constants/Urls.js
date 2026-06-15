@@ -44,4 +44,5 @@ export const URLS = {
   TAX_SETTINGS_URL: "/api/tax-settings",
   ADDITIONAL_TAXES_URL: "/api/additional-taxes",
   ITINERARY_SET_CURRENT_URL: "/api/itineraries/",  // + {id}/set-current
+  PACKAGE_TERMS_URL: "/api/package-terms",
 };
