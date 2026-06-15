@@ -279,6 +279,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 double: Number(selectedRoom?.double_bed_amount || 0),
                 triple: Number(selectedRoom?.triple_bed_amount || 0),
                 quad: Number(selectedRoom?.quad_bed_amount || 0),
+                twoB: Number(selectedRoom?.two_bedroom_amount || 0),
+                threeB: Number(selectedRoom?.three_bedroom_amount || 0),
+                fourB: Number(selectedRoom?.four_bedroom_amount || 0),
                 extra: Number(selectedRoom?.extra_bed_amount || 0),
                 childW: Number(selectedRoom?.child_w_bed_amount || 0),
                 childN: Number(selectedRoom?.child_n_bed_amount || 0),
@@ -288,12 +291,15 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                 double: safeCount(scheduleItem.double),
                 triple: safeCount(scheduleItem.triple),
                 quad: safeCount(scheduleItem.quad),
+                twoB: safeCount(scheduleItem.two_bedroom),
+                threeB: safeCount(scheduleItem.three_bedroom),
+                fourB: safeCount(scheduleItem.four_bedroom),
                 extra: safeCount(scheduleItem.extra),
                 childW: safeCount(scheduleItem.childW),
                 childN: safeCount(scheduleItem.childN),
               };
 
-              const newTotalWeight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3) + (counts.quad * rates.quad * 4) + (counts.twoB * rates.twoB * 2) + (counts.threeB * rates.threeB * 3) + (counts.extra * rates.extra * 1) + (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
+              const newTotalWeight = (counts.single * rates.single * 1) + (counts.double * rates.double * 2) + (counts.triple * rates.triple * 3) + (counts.quad * rates.quad * 4) + (counts.twoB * rates.twoB * 4) + (counts.threeB * rates.threeB * 6) + (counts.fourB * rates.fourB * 8) + (counts.extra * rates.extra * 1) + (counts.childW * rates.childW * 1) + (counts.childN * rates.childN * 1);
 
               return {
                 ...scheduleItem,
@@ -457,6 +463,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           double: Number(selectedRoom?.double_bed_amount || 0),
           triple: Number(selectedRoom?.triple_bed_amount || 0),
           quad: Number(selectedRoom?.quad_bed_amount || 0),
+          twoB: Number(selectedRoom?.two_bedroom_amount || 0),
+          threeB: Number(selectedRoom?.three_bedroom_amount || 0),
+          fourB: Number(selectedRoom?.four_bedroom_amount || 0),
           extra: Number(selectedRoom?.extra_bed_amount || 0),
           childW: Number(selectedRoom?.child_w_bed_amount || 0),
           childN: Number(selectedRoom?.child_n_bed_amount || 0),
@@ -466,12 +475,15 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           double: safeCount(item.double),
           triple: safeCount(item.triple),
           quad: safeCount(item.quad),
+          twoB: safeCount(item.two_bedroom),
+          threeB: safeCount(item.three_bedroom),
+          fourB: safeCount(item.four_bedroom),
           extra: safeCount(item.extra),
           childW: safeCount(item.childW),
           childN: safeCount(item.childN),
         };
 
-        const itemTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.quad * rates.quad) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
+        const itemTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.quad * rates.quad) + (counts.twoB * rates.twoB) + (counts.threeB * rates.threeB) + (counts.fourB * rates.fourB) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
 
         let ratio = 1;
         if (itemTotalWeight > 0) {

@@ -175,6 +175,12 @@ const AddHotel = () => {
           formData.append(`rooms[${ind}][is_child_n_bed_available]`, item.childNBedSelect ? 1 : 0);
           formData.append(`rooms[${ind}][quad_bed_amount]`, item.quadBed);
           formData.append(`rooms[${ind}][is_quad_bed_available]`, item.quadBedSelect ? 1 : 0);
+          formData.append(`rooms[${ind}][two_bedroom_amount]`, item.twoBed);
+          formData.append(`rooms[${ind}][is_two_bedroom_available]`, item.twoBedSelect ? 1 : 0);
+          formData.append(`rooms[${ind}][three_bedroom_amount]`, item.threeBed);
+          formData.append(`rooms[${ind}][is_three_bedroom_available]`, item.threeBedSelect ? 1 : 0);
+          formData.append(`rooms[${ind}][four_bedroom_amount]`, item.fourBed);
+          formData.append(`rooms[${ind}][is_four_bedroom_available]`, item.fourBedSelect ? 1 : 0);
           formData.append(`rooms[${ind}][occupancy]`, item.occupancy);
           item.roomAmentity?.forEach((item,i)=>{
             formData.append(`rooms[${ind}][amenities][${i}]`, item);
@@ -298,6 +304,12 @@ const AddHotel = () => {
         childNBedSelect: item.is_child_n_bed_available == 1 ? true : false,
         quadBed: item.quad_bed_amount,
         quadBedSelect: item.is_quad_bed_available == 1 ? true : false,
+        twoBed: item.two_bedroom_amount,
+        twoBedSelect: item.is_two_bedroom_available == 1 ? true : false,
+        threeBed: item.three_bedroom_amount,
+        threeBedSelect: item.is_three_bedroom_available == 1 ? true : false,
+        fourBed: item.four_bedroom_amount,
+        fourBedSelect: item.is_four_bedroom_available == 1 ? true : false,
         occupancy: item.occupancy,
         // roomAmentity: item.amenities,
         roomImg:item.media,
