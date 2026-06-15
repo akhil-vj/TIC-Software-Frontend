@@ -1250,6 +1250,11 @@ const AddEditHotelView = ({ hotelId, onBack }) => {
             `rooms[${ind}][is_child_n_bed_available]`,
             item.childNBedSelect ? 1 : 0
           );
+          formData.append(`rooms[${ind}][quad_bed_amount]`, item.quadBed !== null && item.quadBed !== undefined ? item.quadBed : "");
+          formData.append(`rooms[${ind}][is_quad_bed_available]`, item.quadBedSelect ? 1 : 0);
+          formData.append(`rooms[${ind}][two_bedroom_amount]`, item.twoBedSelect ? (item.twoBed !== null && item.twoBed !== undefined ? item.twoBed : "") : "");
+          formData.append(`rooms[${ind}][three_bedroom_amount]`, item.threeBedSelect ? (item.threeBed !== null && item.threeBed !== undefined ? item.threeBed : "") : "");
+          formData.append(`rooms[${ind}][four_bedroom_amount]`, item.fourBedSelect ? (item.fourBed !== null && item.fourBed !== undefined ? item.fourBed : "") : "");
           formData.append(`rooms[${ind}][occupancy]`, item.occupancy);
           item.roomAmentity?.forEach((item, i) => {
             formData.append(`rooms[${ind}][amenities][${i}]`, item);
@@ -1372,6 +1377,14 @@ const AddEditHotelView = ({ hotelId, onBack }) => {
           childWBedSelect: item.is_child_w_bed_available == 1 ? true : false,
           childNBed: item.child_n_bed_amount,
           childNBedSelect: item.is_child_n_bed_available == 1 ? true : false,
+          quadBed: item.quad_bed_amount,
+          quadBedSelect: item.is_quad_bed_available == 1 ? true : false,
+          twoBed: item.two_bedroom_amount,
+          twoBedSelect: (item.two_bedroom_amount !== null && item.two_bedroom_amount !== undefined && Number(item.two_bedroom_amount) >= 0) ? true : false,
+          threeBed: item.three_bedroom_amount,
+          threeBedSelect: (item.three_bedroom_amount !== null && item.three_bedroom_amount !== undefined && Number(item.three_bedroom_amount) >= 0) ? true : false,
+          fourBed: item.four_bedroom_amount,
+          fourBedSelect: (item.four_bedroom_amount !== null && item.four_bedroom_amount !== undefined && Number(item.four_bedroom_amount) >= 0) ? true : false,
           occupancy: item.occupancy,
           roomImg: item.media,
           mealPlan: item.meal_plans,
