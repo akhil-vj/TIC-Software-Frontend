@@ -76,7 +76,9 @@ const StepTwo = ({ formik: parentFormik }) => {
     cutOff: 0,
     roomStartDate: SETUP.TODAY_DATE,
     roomEndDate: SETUP.TODAY_DATE,
+    singleBedSelect: false,
     singleBed: 0,
+    doubleBedSelect: false,
     doubleBed: 0,
     tripleBedSelect: false,
     tripleBed: 0,
@@ -209,30 +211,22 @@ const StepTwo = ({ formik: parentFormik }) => {
                 />
                 </div>
               </div>
-              <div className="col-6 col-sm-4 col-md-3 col-lg-2  mb-2">
-                <div className="form-group mb-3">
-                  <InputField
-                    label="Single Bed"
-                    name="singleBed"
-                    type="number"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    values={values}
-                  />
-                </div>
-              </div>
-              <div className="col-6 col-sm-4 col-md-3 col-lg-2  mb-2">
-                <div className="form-group mb-3">
-                  <InputField
-                    label="Double Bed"
-                    name="doubleBed"
-                    type="number"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    values={values}
-                  />
-                </div>
-              </div>
+              <SelectInputComponent
+                label={"Single Bed"}
+                name="singleBed"
+                values={values}
+                handleChange={handleChange}
+                handleBlur={handleBlur}
+                setFieldValue={setFieldValue}
+              />
+              <SelectInputComponent
+                label={"Double Bed"}
+                name="doubleBed"
+                values={values}
+                handleChange={handleChange}
+                handleBlur={handleBlur}
+                setFieldValue={setFieldValue}
+              />
               <SelectInputComponent
                 label={"Triple Bed"}
                 name="tripleBed"

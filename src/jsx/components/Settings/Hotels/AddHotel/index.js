@@ -163,8 +163,8 @@ const AddHotel = () => {
           formData.append(`rooms[${ind}][from_date]`, start.toLocaleDateString('en-CA'));
           formData.append(`rooms[${ind}][to_date]`, end.toLocaleDateString('en-CA'));
           formData.append(`rooms[${ind}][room_type_id]`, item.roomType?.value || "");
-          formData.append(`rooms[${ind}][single_bed_amount]`, item.singleBed);
-          formData.append(`rooms[${ind}][double_bed_amount]`, item.doubleBed);
+          formData.append(`rooms[${ind}][single_bed_amount]`, item.singleBedSelect ? (item.singleBed || 0) : 0);
+          formData.append(`rooms[${ind}][double_bed_amount]`, item.doubleBedSelect ? (item.doubleBed || 0) : 0);
           formData.append(`rooms[${ind}][triple_bed_amount]`, item.tripleBed);
           formData.append(`rooms[${ind}][is_triple_bed_available]`, item.tripleBedSelect ? 1 : 0);
           formData.append(`rooms[${ind}][extra_bed_amount]`, item.extraBed);
@@ -296,7 +296,9 @@ const AddHotel = () => {
         roomType:  {label:item.room_type_name,value:item.room_type_id},
         // roomTypeLabel: item.room_type_name,
         singleBed: item.single_bed_amount,
+        singleBedSelect: Number(item.single_bed_amount || 0) > 0,
         doubleBed: item.double_bed_amount,
+        doubleBedSelect: Number(item.double_bed_amount || 0) > 0,
         tripleBed: item.triple_bed_amount,
         tripleBedSelect: item.is_triple_bed_available == 1 ? true : false,
         extraBed: item.extra_bed_amount,
@@ -308,11 +310,11 @@ const AddHotel = () => {
         quadBed: item.quad_bed_amount,
         quadBedSelect: item.is_quad_bed_available == 1 ? true : false,
         twoBed: item.two_bedroom_amount,
-        twoBedSelect: (item.two_bedroom_amount !== null && item.two_bedroom_amount !== undefined && Number(item.two_bedroom_amount) >= 0) ? true : false,
+        twoBedSelect: Number(item.two_bedroom_amount || 0) > 0,
         threeBed: item.three_bedroom_amount,
-        threeBedSelect: (item.three_bedroom_amount !== null && item.three_bedroom_amount !== undefined && Number(item.three_bedroom_amount) >= 0) ? true : false,
+        threeBedSelect: Number(item.three_bedroom_amount || 0) > 0,
         fourBed: item.four_bedroom_amount,
-        fourBedSelect: (item.four_bedroom_amount !== null && item.four_bedroom_amount !== undefined && Number(item.four_bedroom_amount) >= 0) ? true : false,
+        fourBedSelect: Number(item.four_bedroom_amount || 0) > 0,
         occupancy: item.occupancy,
         // roomAmentity: item.amenities,
         roomImg:item.media,

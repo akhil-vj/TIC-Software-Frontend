@@ -215,7 +215,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
             newRoomRows.push({
               _id: rowId++,
               numRooms: count,
-              paxStaying: (count * baseOcc),
+              paxStaying: baseOcc,
               extraBeds: extraToAssign,
               bedType: bedType
             });
@@ -232,7 +232,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
         addRows('four_bedroom', parseInt(data.four_bedroom_count) || 0, 8);
 
         if (newRoomRows.length === 0) {
-          newRoomRows.push({ _id: 1, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double' });
+          newRoomRows.push({ _id: 1, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double' }); // paxStaying = per-room
         }
       }
 
@@ -441,13 +441,18 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                       const extraPax  = parseInt(row.extraBeds) || 0;
                       const extraCost = extraPax * extraRate;
                       const total     = roomCost + extraCost;
-                      const totalAdultsInRow = pax + extraPax;
-                      const perPax    = totalAdultsInRow > 0 ? Math.round(total / totalAdultsInRow) : 0;
+                      // paxStaying is now per-room; multiply by numRooms for total adults
+                      const totalAdultsInRow = (pax * numRooms) + extraPax;
+                      const totalPaxInRow = totalAdultsInRow + (hasChildren ? (childWithBed + childNoBed) : 0);
+                      const perPax    = totalPaxInRow > 0 ? Math.round(total / totalPaxInRow) : 0;
                       
-                      // Calculate if total pax exceeds the absolute limit
-                      const overCap   = pax > (numRooms * baseOcc) || extraPax > (numRooms * maxExtraBeds);
+                      // overCap: per-room check (pax is per room now)
+                      const adultOverCap     = pax > baseOcc;
+                      const extraNotAllowed  = extraPax > 0 && maxExtraBeds === 0;
+                      const extraOverCap     = extraPax > (numRooms * maxExtraBeds) && maxExtraBeds > 0;
+                      const overCap = adultOverCap || extraNotAllowed || extraOverCap;
                       
-                      return { roomCost, extraCost, total, perPax, overCap, base, extraRate, maxOcc, baseOcc };
+                      return { roomCost, extraCost, total, perPax, overCap, adultOverCap, extraNotAllowed, extraOverCap, base, extraRate, maxOcc, baseOcc, maxExtraBeds };
                     };
 
                     // ── grand totals ──
@@ -455,7 +460,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                     roomRows.forEach((row) => {
                       const { total } = calcRow(row);
                       grandRoomCost += total;
-                      grandPax      += (parseInt(row.paxStaying) || 1) + (parseInt(row.extraBeds) || 0);
+                      grandPax      += ((parseInt(row.paxStaying) || 1) * (parseInt(row.numRooms) || 1)) + (parseInt(row.extraBeds) || 0);
                     });
                     
                     const childWBedRate = Number(selectedRoom?.child_w_bed_amount || 0);
@@ -474,7 +479,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                     };
                     const addRow = () => {
                       const nextId = (roomRows[roomRows.length - 1]?._id || 0) + 1;
-                      setFieldValue('roomRows', [...roomRows, { _id: nextId, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double', roomTypeId: values.roomType?.value }]);
+                      setFieldValue('roomRows', [...roomRows, { _id: nextId, numRooms: 1, paxStaying: 2, extraBeds: 0, bedType: 'double', roomTypeId: values.roomType?.value }]); // paxStaying = per-room
                     };
                     const removeRow = (id) => {
                       setFieldValue('roomRows', roomRows.filter((r) => r._id !== id));
@@ -502,7 +507,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
 
                         {/* ── Room rows ── */}
                         {roomRows.map((row) => {
-                          const { roomCost, extraCost, total, perPax, overCap, base, extraRate, maxOcc, baseOcc } = calcRow(row);
+                          const { roomCost, extraCost, total, perPax, overCap, adultOverCap, extraNotAllowed, extraOverCap, base, extraRate, maxOcc, baseOcc, maxExtraBeds } = calcRow(row);
                           return (
                             <div key={row._id} style={{
                               background: '#ffffff',
@@ -542,7 +547,24 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                       <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500, margin: 0 }}>Room Type:</label>
                                       <select
                                         value={row.roomTypeId || values.roomType?.value || ''}
-                                        onChange={(e) => updateRow(row._id, 'roomTypeId', e.target.value)}
+                                        onChange={(e) => {
+                                          const newRoomTypeId = e.target.value;
+                                          const newRoomData = values.roomOption?.find(rt => rt.id == newRoomTypeId);
+                                          // Compute first valid bedType for the new room type
+                                          const validConfigs = [
+                                            { value: 'single',        show: Number(newRoomData?.single_bed_amount || 0) > 0 },
+                                            { value: 'double',        show: Number(newRoomData?.double_bed_amount || 0) > 0 },
+                                            { value: 'triple',        show: !!(newRoomData?.is_triple_bed_available) || Number(newRoomData?.triple_bed_amount || 0) > 0 },
+                                            { value: 'quad',          show: !!(newRoomData?.is_quad_bed_available) || Number(newRoomData?.quad_bed_amount || 0) > 0 },
+                                            { value: 'two_bedroom',   show: Number(newRoomData?.two_bedroom_amount || 0) > 0 },
+                                            { value: 'three_bedroom', show: Number(newRoomData?.three_bedroom_amount || 0) > 0 },
+                                            { value: 'four_bedroom',  show: Number(newRoomData?.four_bedroom_amount || 0) > 0 },
+                                          ].filter(c => c.show);
+                                          const firstBedType = validConfigs.length > 0 ? validConfigs[0].value : 'double';
+                                          setFieldValue('roomRows', roomRows.map(r =>
+                                            r._id === row._id ? { ...r, roomTypeId: newRoomTypeId, bedType: firstBedType } : r
+                                          ));
+                                        }}
                                         style={{
                                           height: '26px', borderRadius: '5px', border: '0.5px solid #d1d5db',
                                           background: '#f9fafb', fontSize: '12px', padding: '0 6px', outline: 'none',
@@ -566,13 +588,31 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                           color: '#374151', cursor: 'pointer'
                                         }}
                                       >
-                                        <option value="single">Single</option>
-                                        <option value="double">Double</option>
-                                        <option value="triple">Triple</option>
-                                        <option value="quad">Quad</option>
-                                        <option value="two_bedroom">2 Bedroom</option>
-                                        <option value="three_bedroom">3 Bedroom</option>
-                                        <option value="four_bedroom">4 Bedroom</option>
+                                      {(() => {
+                                          const rowRoomData = values.roomOption?.find(rt => rt.id == (row.roomTypeId || values.roomType?.value));
+                                          const availableConfigs = [
+                                            { value: 'single',        label: 'Single',     show: Number(rowRoomData?.single_bed_amount || 0) > 0 },
+                                            { value: 'double',        label: 'Double',     show: Number(rowRoomData?.double_bed_amount || 0) > 0 },
+                                            { value: 'triple',        label: 'Triple',     show: !!(rowRoomData?.is_triple_bed_available) || Number(rowRoomData?.triple_bed_amount || 0) > 0 },
+                                            { value: 'quad',          label: 'Quad',       show: !!(rowRoomData?.is_quad_bed_available) || Number(rowRoomData?.quad_bed_amount || 0) > 0 },
+                                            { value: 'two_bedroom',   label: '2 Bedroom',  show: Number(rowRoomData?.two_bedroom_amount || 0) > 0 },
+                                            { value: 'three_bedroom', label: '3 Bedroom',  show: Number(rowRoomData?.three_bedroom_amount || 0) > 0 },
+                                            { value: 'four_bedroom',  label: '4 Bedroom',  show: Number(rowRoomData?.four_bedroom_amount || 0) > 0 },
+                                          ].filter(c => c.show);
+                                          const options = availableConfigs.length > 0 ? availableConfigs : [
+                                            { value: 'single', label: 'Single' }, { value: 'double', label: 'Double' },
+                                            { value: 'triple', label: 'Triple' }, { value: 'quad',   label: 'Quad'   },
+                                            { value: 'two_bedroom', label: '2 Bedroom' }, { value: 'three_bedroom', label: '3 Bedroom' }, { value: 'four_bedroom', label: '4 Bedroom' },
+                                          ];
+                                          // Auto-correct bedType if current value is not in available options
+                                          const validBedType = options.some(o => o.value === row.bedType) ? row.bedType : options[0]?.value;
+                                          if (validBedType && validBedType !== row.bedType) {
+                                            setTimeout(() => updateRow(row._id, 'bedType', validBedType), 0);
+                                          }
+                                          return options.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                          ));
+                                        })()}
                                       </select>
                                     </div>
                                   </div>
@@ -610,26 +650,16 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Adults staying</label>
+                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>
+                                    Adults per room <span style={{ color: '#9ca3af' }}>(max {baseOcc})</span>
+                                  </label>
                                   <input
-                                    type="number" min="1"
+                                    type="number" min="1" max={baseOcc}
                                     value={row.paxStaying}
-                                    onChange={(e) => updateRow(row._id, 'paxStaying', e.target.value)}
-                                    style={{
-                                      height: '34px', borderRadius: '7px',
-                                      border: `0.5px solid ${overCap ? '#f87171' : '#d1d5db'}`,
-                                      background: '#f9fafb', fontSize: '13px', textAlign: 'center',
-                                      padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
+                                    onChange={(e) => {
+                                      const val = Math.min(parseInt(e.target.value) || 1, baseOcc);
+                                      updateRow(row._id, 'paxStaying', val);
                                     }}
-                                  />
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Extra adult beds</label>
-                                  <input
-                                    type="number" min="0"
-                                    value={row.extraBeds || 0}
-                                    onChange={(e) => updateRow(row._id, 'extraBeds', e.target.value)}
                                     style={{
                                       height: '34px', borderRadius: '7px',
                                       border: `0.5px solid #d1d5db`,
@@ -639,22 +669,57 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                   />
                                 </div>
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Extra bed rate</label>
-                                  <span style={{
-                                    fontSize: '11px', background: '#fef7dc', color: '#b08d2a',
-                                    borderRadius: '5px', padding: '3px 8px', textAlign: 'center',
-                                    border: '0.5px solid #e8d98a', marginTop: '2px'
-                                  }}>
-                                    {selectedRoom ? `${fmt(extraRate)} / pax` : '—'}
-                                  </span>
-                                </div>
+                                {/* Extra bed input — only shown when room supports extra beds */}
+                                {extraRate > 0 ? (
+                                  <>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                      <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>
+                                        Extra adult beds <span style={{ color: '#9ca3af' }}>(max {maxExtraBeds}/room)</span>
+                                      </label>
+                                      <input
+                                        type="number" min="0" max={parseInt(row.numRooms) * maxExtraBeds}
+                                        value={row.extraBeds || 0}
+                                        onChange={(e) => {
+                                          const maxAllowed = (parseInt(row.numRooms) || 1) * maxExtraBeds;
+                                          const val = Math.min(parseInt(e.target.value) || 0, maxAllowed);
+                                          updateRow(row._id, 'extraBeds', val);
+                                        }}
+                                        style={{
+                                          height: '34px', borderRadius: '7px',
+                                          border: `0.5px solid ${extraOverCap ? '#f87171' : '#d1d5db'}`,
+                                          background: '#f9fafb', fontSize: '13px', textAlign: 'center',
+                                          padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
+                                        }}
+                                      />
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                      <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Extra bed rate</label>
+                                      <span style={{
+                                        fontSize: '11px', background: '#fef7dc', color: '#b08d2a',
+                                        borderRadius: '5px', padding: '3px 8px', textAlign: 'center',
+                                        border: '0.5px solid #e8d98a', marginTop: '2px'
+                                      }}>
+                                        {fmt(extraRate)} / pax
+                                      </span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', opacity: 0.4 }}>
+                                    <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>Extra adult beds</label>
+                                    <span style={{
+                                      height: '34px', borderRadius: '7px', border: '0.5px solid #d1d5db',
+                                      background: '#f3f4f6', fontSize: '12px', textAlign: 'center',
+                                      padding: '0 8px', lineHeight: '34px', color: '#9ca3af'
+                                    }}>Not available</span>
+                                  </div>
+                                )}
 
                               </div>
 
-                              {overCap && (
-                                <p style={{ fontSize: '11px', color: '#dc2626', margin: '6px 0 0' }}>
-                                  ⚠ Occupancy error: Adults cannot exceed {baseOcc} per room, and extra beds cannot exceed {maxOcc - baseOcc} per room.
+                              {extraOverCap && (
+                                <p style={{ fontSize: '11px', color: '#dc2626', margin: '4px 0 0' }}>
+                                  ⚠ Max {maxOcc - baseOcc} extra bed{(maxOcc - baseOcc) > 1 ? 's' : ''} per room.
                                 </p>
                               )}
 
