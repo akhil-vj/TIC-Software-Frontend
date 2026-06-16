@@ -93,20 +93,35 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     values.planArr?.[values.planIndex]?.dayDestination?.value;
   const getItemName = (item = {}) =>
     (item.name || item.activity_name || item.vehicle_name || "").trim();
+  const filterData = (items) => {
+    if (!items) return [];
+    
+    if (selectedSubDestinationId) {
+      return items.filter(
+        (item) =>
+          item?.sub_destination_id === selectedSubDestinationId ||
+          item?.sub_destination?.id === selectedSubDestinationId
+      );
+    }
+    
+    if (destinationId) {
+      return items.filter(
+        (item) =>
+          item?.destination_id === destinationId ||
+          item?.destination?.id === destinationId
+      );
+    }
+    
+    return items;
+  };
+
   let dataList;
   if (values.categoryOptions === "Hotel") {
-    const filteredHotels = selectedSubDestinationId
-      ? hotelData?.filter(
-        (hotel) =>
-          hotel?.sub_destination_id === selectedSubDestinationId ||
-          hotel?.sub_destination?.id === selectedSubDestinationId
-      )
-      : hotelData;
-    dataList = filteredHotels;
+    dataList = filterData(hotelData);
   } else if (values.categoryOptions === "Activity") {
-    dataList = activityData;
+    dataList = filterData(activityData);
   } else {
-    dataList = transferData;
+    dataList = filterData(transferData);
   }
   const sortByName = (list = []) =>
     [...list].sort((a, b) =>
