@@ -441,7 +441,8 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                       const maxOcc = baseOcc + maxExtraBeds;
 
                       const numRooms  = parseInt(row.numRooms)  || 1;
-                      const pax       = parseInt(row.paxStaying) || 1;
+                      const pax       = parseInt(row.paxStaying) || 0;
+                      const childStaying = parseInt(row.childStaying) || 0;
                       const roomCost  = numRooms * base;
                       const extraPax  = parseInt(row.extraBeds) || 0;
                       const extraCost = extraPax * extraRate;
@@ -452,7 +453,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                       const perPax    = totalPaxInRow > 0 ? Math.round(total / totalPaxInRow) : 0;
                       
                       // overCap: per-room check (pax is per room now)
-                      const adultOverCap     = pax > baseOcc;
+                      const adultOverCap     = (pax + childStaying) > baseOcc;
                       const extraNotAllowed  = extraPax > 0 && maxExtraBeds === 0;
                       const extraOverCap     = extraPax > (numRooms * maxExtraBeds) && maxExtraBeds > 0;
                       const overCap = adultOverCap || extraNotAllowed || extraOverCap;
@@ -655,23 +656,70 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>
-                                    Adults per room <span style={{ color: '#9ca3af' }}>(max {baseOcc})</span>
-                                  </label>
-                                  <input
-                                    type="number" min="1" max={baseOcc}
-                                    value={row.paxStaying}
-                                    onChange={(e) => {
-                                      const val = Math.min(parseInt(e.target.value) || 1, baseOcc);
-                                      updateRow(row._id, 'paxStaying', val);
-                                    }}
-                                    style={{
-                                      height: '34px', borderRadius: '7px',
-                                      border: `0.5px solid #d1d5db`,
-                                      background: '#f9fafb', fontSize: '13px', textAlign: 'center',
-                                      padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
-                                    }}
-                                  />
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <label style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500, margin: 0 }}>
+                                      Pax per room
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', margin: 0, fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={!!row.showChildInput}
+                                        onChange={(e) => {
+                                          const isChecked = e.target.checked;
+                                          setFieldValue('roomRows', roomRows.map((r) => {
+                                            if (r._id === row._id) {
+                                              return { ...r, showChildInput: isChecked, childStaying: isChecked ? r.childStaying : 0 };
+                                            }
+                                            return r;
+                                          }));
+                                        }}
+                                        style={{ cursor: 'pointer', margin: 0 }}
+                                      />
+                                      +C
+                                    </label>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    <div style={{ position: 'relative', width: row.showChildInput ? '50%' : '100%', transition: 'width 0.2s' }}>
+                                      <input
+                                        type="number" min="0" max={baseOcc}
+                                        value={row.paxStaying}
+                                        title="Adults"
+                                        onChange={(e) => {
+                                          let val = parseInt(e.target.value);
+                                          if (isNaN(val)) val = 0;
+                                          updateRow(row._id, 'paxStaying', val);
+                                        }}
+                                        style={{
+                                          height: '34px', borderRadius: '7px',
+                                          border: `0.5px solid ${adultOverCap ? '#f87171' : '#d1d5db'}`,
+                                          background: '#f9fafb', fontSize: '13px', textAlign: 'center',
+                                          padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
+                                        }}
+                                      />
+                                      <span style={{ position: 'absolute', right: '6px', top: '9px', fontSize: '10px', color: '#9ca3af', pointerEvents: 'none' }}>A</span>
+                                    </div>
+                                    {row.showChildInput && (
+                                      <div style={{ position: 'relative', width: '50%' }}>
+                                        <input
+                                          type="number" min="0" max={baseOcc}
+                                          value={row.childStaying || 0}
+                                          title="Children"
+                                          onChange={(e) => {
+                                            let val = parseInt(e.target.value);
+                                            if (isNaN(val)) val = 0;
+                                            updateRow(row._id, 'childStaying', val);
+                                          }}
+                                          style={{
+                                            height: '34px', borderRadius: '7px',
+                                            border: `0.5px solid ${adultOverCap ? '#f87171' : '#d1d5db'}`,
+                                            background: '#f9fafb', fontSize: '13px', textAlign: 'center',
+                                            padding: '0 8px', outline: 'none', width: '100%', boxSizing: 'border-box'
+                                          }}
+                                        />
+                                        <span style={{ position: 'absolute', right: '6px', top: '9px', fontSize: '10px', color: '#9ca3af', pointerEvents: 'none' }}>C</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
 
                                 {/* Extra bed input — only shown when room supports extra beds */}
@@ -721,6 +769,12 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                 )}
 
                               </div>
+
+                              {adultOverCap && (
+                                <p style={{ fontSize: '11px', color: '#dc2626', margin: '6px 0 0' }}>
+                                  ⚠ Max {baseOcc} pax (Adults + Children) per room.
+                                </p>
+                              )}
 
                               {extraOverCap && (
                                 <p style={{ fontSize: '11px', color: '#dc2626', margin: '4px 0 0' }}>
