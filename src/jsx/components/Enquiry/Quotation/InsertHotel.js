@@ -180,9 +180,14 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
 
     draftEngine.clearDraft();
     
+    const updatedRoomType = primaryRoomData 
+      ? { value: primaryRoomData.id, label: primaryRoomData.room_type_name } 
+      : values.roomType;
+
     // Pass flat format back to SetupModal.js
     onClick({
       ...values,
+      roomType: updatedRoomType,
       amount: totalAmount,
       markup: values.markup || 0,
       single, double, triple, quad, extra,
