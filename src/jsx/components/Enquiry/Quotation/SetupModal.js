@@ -151,6 +151,7 @@ function SetupModal() {
           extra: entry.extra_count,
           childW: entry.child_w_count,
           childN: entry.child_n_count,
+          roomRows: entry.room_rows || null,
           date: entry.date,
           person: entry.no_of_person,
           adult: entry.adult_count,
@@ -284,6 +285,9 @@ function SetupModal() {
             formData.append(`entries[${index}][two_bedroom_count]`, checkFormValue(data.two_bedroom, 'number'))
             formData.append(`entries[${index}][three_bedroom_count]`, checkFormValue(data.three_bedroom, 'number'))
             formData.append(`entries[${index}][four_bedroom_count]`, checkFormValue(data.four_bedroom, 'number'))
+            if (data.roomRows && data.roomRows.length > 0) {
+              formData.append(`entries[${index}][room_rows]`, JSON.stringify(data.roomRows))
+            }
           }
 
           if (data.insertType === 'activity') {
