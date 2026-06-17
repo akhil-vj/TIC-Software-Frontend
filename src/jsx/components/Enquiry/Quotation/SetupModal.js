@@ -284,6 +284,9 @@ function SetupModal() {
             formData.append(`entries[${index}][two_bedroom_count]`, checkFormValue(data.two_bedroom, 'number'))
             formData.append(`entries[${index}][three_bedroom_count]`, checkFormValue(data.three_bedroom, 'number'))
             formData.append(`entries[${index}][four_bedroom_count]`, checkFormValue(data.four_bedroom, 'number'))
+            if (data.roomRows) {
+              formData.append(`entries[${index}][description]`, checkFormValue(JSON.stringify(data.roomRows)))
+            }
           }
 
           if (data.insertType === 'activity') {

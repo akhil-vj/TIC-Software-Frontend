@@ -209,7 +209,15 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
       let newRoomRows = [];
       if (data.roomRows && data.roomRows.length > 0) {
         newRoomRows = [...data.roomRows];
-      } else {
+      } else if (data.description && typeof data.description === 'string' && data.description.startsWith('[')) {
+        try {
+          newRoomRows = JSON.parse(data.description);
+        } catch (e) {
+          console.error("Failed to parse roomRows from description", e);
+        }
+      }
+      
+      if (newRoomRows.length === 0) {
         let rowId = 1;
         let remainingExtra = parseInt(data.extra) || 0;
 
