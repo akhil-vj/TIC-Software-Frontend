@@ -53,18 +53,24 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
   useEffect(() => {
     if (values.quoted_options && Array.isArray(values.quoted_options) && !customMarkupsLoaded) {
+      const isBase = values.priceIn?.value === 'base' || values.priceIn?.value === values.baseCurrency || values.priceIn?.label === values.baseCurrency;
+      if (!isBase && values.priceIn && values.priceIn.exchange_rate === undefined) {
+        return; // Wait for currency matching to resolve the exchange rate
+      }
+
       const loadedMarkups = {};
       const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
 
       values.quoted_options.forEach((opt, optIdx) => {
+        const rateToUse = parseFloat(values.exchange_rate) || parseFloat(values.priceIn?.exchange_rate) || 1;
         if (isPERMode) {
           opt.rows?.forEach(r => {
             const pCount = r.count > 0 ? r.count : 1;
-            loadedMarkups[`${optIdx}_${r.key}`] = { value: Math.round(r.markup / pCount), rate: parseFloat(values.exchange_rate) || 1 };
+            loadedMarkups[`${optIdx}_${r.key}`] = { value: Math.round(r.markup / pCount), rate: rateToUse };
           });
         } else {
           const totalMarkup = opt.rows?.reduce((sum, r) => sum + r.markup, 0) || 0;
-          loadedMarkups[`${optIdx}_total`] = { value: Math.round(totalMarkup), rate: parseFloat(values.exchange_rate) || 1 };
+          loadedMarkups[`${optIdx}_total`] = { value: Math.round(totalMarkup), rate: rateToUse };
         }
       });
 
@@ -123,15 +129,24 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   ];
 
   useEffect(() => {
-    if (values.priceIn?.value) {
+    if (values.priceIn) {
       const matchedOption = currencyOptions.find(
-        (opt) => opt.value === values.priceIn.value
+        (opt) =>
+          String(opt.value) === String(values.priceIn.value) ||
+          opt.label === values.priceIn.label ||
+          opt.to_currency === values.priceIn.label ||
+          opt.label === values.priceIn.value
       );
-      if (matchedOption && matchedOption.label !== values.priceIn.label) {
+      if (
+        matchedOption &&
+        (matchedOption.label !== values.priceIn.label ||
+          matchedOption.exchange_rate !== values.priceIn.exchange_rate ||
+          matchedOption.value !== values.priceIn.value)
+      ) {
         setFieldValue("priceIn", matchedOption);
       }
     }
-  }, [currencyOptions.length, values.priceIn?.value, values.priceIn?.label]);
+  }, [currencyOptions.length, values.priceIn?.value, values.priceIn?.label, values.priceIn?.exchange_rate]);
 
   // ─── Fix: convert amounts when PER mode is active and baseAmount is missing ──────────
   useEffect(() => {
@@ -1888,19 +1903,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                         <div className="card-body p-0 bg-white">
                           {hotelOption.map((item, ind) => {
                             if (item.amount === 0) return null;
-                            const personRows = getPersonTypeRows(item);
-                            const occupancyFactors = { single: 1, double: 2, triple: 3, extra: 1, childW: 1, childN: 1 };
-                            const isPERModeCO = values.priceOption?.value === "PER";
-
                             const rate = parseFloat(values.priceIn.exchange_rate) || 1;
+                            const personRows = getPersonTypeRows(item, includeChildTransfer, ind, customMarkups, rate);
                             const convertLocal = (val) => getRoundOfValue(val / rate);
 
                             const convertedTotal = getRoundOfValue(personRows.reduce((sum, pt) => {
                               const rowTotalConverted = convertLocal(pt.total);
-                              if (isPERModeCO) {
-                                const factor = occupancyFactors[pt.key] || 1;
-                                return sum + (rowTotalConverted * pt.count * factor);
-                              }
                               return sum + rowTotalConverted;
                             }, 0));
                             const toCurrency =
