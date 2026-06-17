@@ -55,19 +55,19 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     if (values.quoted_options && Array.isArray(values.quoted_options) && !customMarkupsLoaded) {
       const loadedMarkups = {};
       const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
-      
+
       values.quoted_options.forEach((opt, optIdx) => {
         if (isPERMode) {
-           opt.rows?.forEach(r => {
-             const pCount = r.count > 0 ? r.count : 1;
-             loadedMarkups[`${optIdx}_${r.key}`] = { value: Math.round(r.markup / pCount), rate: parseFloat(values.exchange_rate) || 1 };
-           });
+          opt.rows?.forEach(r => {
+            const pCount = r.count > 0 ? r.count : 1;
+            loadedMarkups[`${optIdx}_${r.key}`] = { value: Math.round(r.markup / pCount), rate: parseFloat(values.exchange_rate) || 1 };
+          });
         } else {
-           const totalMarkup = opt.rows?.reduce((sum, r) => sum + r.markup, 0) || 0;
-           loadedMarkups[`${optIdx}_total`] = { value: Math.round(totalMarkup), rate: parseFloat(values.exchange_rate) || 1 };
+          const totalMarkup = opt.rows?.reduce((sum, r) => sum + r.markup, 0) || 0;
+          loadedMarkups[`${optIdx}_total`] = { value: Math.round(totalMarkup), rate: parseFloat(values.exchange_rate) || 1 };
         }
       });
-      
+
       if (Object.keys(loadedMarkups).length > 0) {
         setCustomMarkups(loadedMarkups);
       }
@@ -740,7 +740,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
       let legacyGlobalMarkupShare = 0;
       const rowGrossBeforeFinalMarkup = rowNetCost + rowOriginalMarkup;
-      
+
       if (useBaseMarkup) {
         legacyGlobalMarkupShare = rowGrossBeforeFinalMarkup * Number(values.baseMarkup) * 0.01;
       } else if (useExtraMarkup) {
@@ -1162,7 +1162,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                             };
                             // Weight without occupancy multipliers - just count * rate
                             const weight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
-                            
+
                             let ratio = 1;
                             if (weight > 0) {
                               ratio = Number(item.amount || 0) / weight;
@@ -1304,11 +1304,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                       </h6>
                                       <div className="d-flex flex-column">
                                         <span className="text-muted" style={{ fontSize: "12px" }}>
-                                          {`${item.roomType?.label || item.type?.label || "Service"}${
-                                            (item.insertType === 'transfer' || item.insertType === 'car') && (item.vehicleType?.label || item.vehicle_type || item.vehicle_name)
+                                          {`${item.roomType?.label || item.type?.label || "Service"}${(item.insertType === 'transfer' || item.insertType === 'car') && (item.vehicleType?.label || item.vehicle_type || item.vehicle_name)
                                               ? ` • ${item.vehicleType?.label || item.vehicle_type || item.vehicle_name}`
                                               : ''
-                                          } • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
+                                            } • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
                                         </span>
                                         {(isHotelPer || (isTransferPer && otherBreakdowns.length > 0)) && firstBreakdown && (
                                           <span style={{ fontSize: "11px", fontWeight: 500, marginTop: "8px", color: "#64748b", display: "block" }}>
@@ -1691,8 +1690,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                       value={
                                         customMarkups[`${optIdx}_total`] !== undefined
                                           ? (typeof customMarkups[`${optIdx}_total`] === 'object'
-                                              ? (customMarkups[`${optIdx}_total`].value === "" ? "" : Math.round((Number(customMarkups[`${optIdx}_total`].value) * (customMarkups[`${optIdx}_total`].rate || rateToUse)) / rateToUse))
-                                              : customMarkups[`${optIdx}_total`])
+                                            ? (customMarkups[`${optIdx}_total`].value === "" ? "" : Math.round((Number(customMarkups[`${optIdx}_total`].value) * (customMarkups[`${optIdx}_total`].rate || rateToUse)) / rateToUse))
+                                            : customMarkups[`${optIdx}_total`])
                                           : grandMarkup
                                       }
                                       onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_total`]: { value: e.target.value, rate: rateToUse } })}
@@ -1783,8 +1782,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                       value={
                                         customMarkups[`${optIdx}_${pt.key}`] !== undefined
                                           ? (typeof customMarkups[`${optIdx}_${pt.key}`] === 'object'
-                                              ? (customMarkups[`${optIdx}_${pt.key}`].value === "" ? "" : Math.round((Number(customMarkups[`${optIdx}_${pt.key}`].value) * (customMarkups[`${optIdx}_${pt.key}`].rate || rateToUse)) / rateToUse))
-                                              : customMarkups[`${optIdx}_${pt.key}`])
+                                            ? (customMarkups[`${optIdx}_${pt.key}`].value === "" ? "" : Math.round((Number(customMarkups[`${optIdx}_${pt.key}`].value) * (customMarkups[`${optIdx}_${pt.key}`].rate || rateToUse)) / rateToUse))
+                                            : customMarkups[`${optIdx}_${pt.key}`])
                                           : Math.round(getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1))))
                                       }
                                       onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_${pt.key}`]: { value: e.target.value, rate: rateToUse } })}

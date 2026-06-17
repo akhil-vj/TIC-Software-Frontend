@@ -106,7 +106,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
   }, []);
 
   const handleSetup = () => {
-    
+
     let single = 0, double = 0, triple = 0, quad = 0, extra = 0;
     let twoBedroom = 0, threeBedroom = 0, fourBedroom = 0;
     let totalRoomCost = 0;
@@ -159,7 +159,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
 
       const extraRate = Number(roomData?.extra_bed_amount || 0);
       const extraBedsAllowed = extraRate > 0 ? physicalBedrooms : 0;
-      
+
       const extraPax = parseInt(row.extraBeds) || 0;
       totalExtraAdults += extraPax;
 
@@ -168,20 +168,20 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
 
     const childW = values.hasChildren ? safeNum(values.childWithBed) : 0;
     const childN = values.hasChildren ? safeNum(values.childNoBed) : 0;
-    
+
     extra = totalExtraAdults; // Just extra adults, childW is accounted for separately in childTotal and pricing payload
 
     const primaryRoomData = values.roomOption?.find((r) => r.id == (values.roomRows?.[0]?.roomTypeId || values.roomType?.value)) || values.roomOption?.find((r) => r.id == values.roomType?.value);
-    const childTotal = 
+    const childTotal =
       (childW * Number(primaryRoomData?.child_w_bed_amount || 0)) +
       (childN * Number(primaryRoomData?.child_n_bed_amount || 0));
 
     const totalAmount = totalRoomCost + childTotal;
 
     draftEngine.clearDraft();
-    
-    const updatedRoomType = primaryRoomData 
-      ? { value: primaryRoomData.id, label: primaryRoomData.room_type_name } 
+
+    const updatedRoomType = primaryRoomData
+      ? { value: primaryRoomData.id, label: primaryRoomData.room_type_name }
       : values.roomType;
 
     // Pass flat format back to SetupModal.js
@@ -204,7 +204,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
       const parsedData = { ...data };
       if (parsedData.startDate) parsedData.startDate = new Date(parsedData.startDate);
       if (parsedData.endDate) parsedData.endDate = new Date(parsedData.endDate);
-      
+
       // Hydrate roomRows
       let newRoomRows = [];
       if (data.roomRows && data.roomRows.length > 0) {
@@ -242,7 +242,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
       }
 
       parsedData.roomRows = newRoomRows;
-      
+
       const childW = parseInt(data.childW) || 0;
       const childN = parseInt(data.childN) || 0;
       parsedData.hasChildren = (childW > 0 || childN > 0);
@@ -396,68 +396,68 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                       optionLabel="label"
                     />
                   </div>
-{/* ── Room Allotment ── */}
+                  {/* ── Room Allotment ── */}
                   {(() => {
                     const currencyCode = getDefaultCurrency(itineraryDestination || values.destination?.label);
                     const fmt = (n) => `${currencyCode} ${(n || 0).toLocaleString()}`;
 
-                    const roomRows     = values.roomRows     || [{ _id: 1, numRooms: 1, paxStaying: 2, bedType: 'double' }];
-                    const hasChildren  = values.hasChildren  || false;
+                    const roomRows = values.roomRows || [{ _id: 1, numRooms: 1, paxStaying: 2, bedType: 'double' }];
+                    const hasChildren = values.hasChildren || false;
                     const childWithBed = values.childWithBed || 0;
-                    const childNoBed   = values.childNoBed   || 0;
+                    const childNoBed = values.childNoBed || 0;
 
                     // ── per-row calc ──
                     const calcRow = (row) => {
                       const rowRoomTypeId = row.roomTypeId || values.roomType?.value;
                       const d = values.roomOption?.find(rt => rt.id == rowRoomTypeId) || selectedRoom;
                       const bedType = row.bedType || 'double';
-                      
+
                       let base = 0, baseOcc = 2, physicalBedrooms = 1;
                       if (bedType === 'single') {
-                         base = Number(d?.single_bed_amount || 0);
-                         baseOcc = 1; physicalBedrooms = 1;
+                        base = Number(d?.single_bed_amount || 0);
+                        baseOcc = 1; physicalBedrooms = 1;
                       } else if (bedType === 'double') {
-                         base = Number(d?.double_bed_amount || 0);
-                         baseOcc = 2; physicalBedrooms = 1;
+                        base = Number(d?.double_bed_amount || 0);
+                        baseOcc = 2; physicalBedrooms = 1;
                       } else if (bedType === 'triple') {
-                         base = Number(d?.triple_bed_amount || 0);
-                         baseOcc = 3; physicalBedrooms = 1;
+                        base = Number(d?.triple_bed_amount || 0);
+                        baseOcc = 3; physicalBedrooms = 1;
                       } else if (bedType === 'quad') {
-                         base = Number(d?.quad_bed_amount || 0);
-                         baseOcc = 4; physicalBedrooms = 1;
+                        base = Number(d?.quad_bed_amount || 0);
+                        baseOcc = 4; physicalBedrooms = 1;
                       } else if (bedType === 'two_bedroom') {
-                         base = Number(d?.two_bedroom_amount || 0);
-                         baseOcc = 4; physicalBedrooms = 2;
+                        base = Number(d?.two_bedroom_amount || 0);
+                        baseOcc = 4; physicalBedrooms = 2;
                       } else if (bedType === 'three_bedroom') {
-                         base = Number(d?.three_bedroom_amount || 0);
-                         baseOcc = 6; physicalBedrooms = 3;
+                        base = Number(d?.three_bedroom_amount || 0);
+                        baseOcc = 6; physicalBedrooms = 3;
                       } else if (bedType === 'four_bedroom') {
-                         base = Number(d?.four_bedroom_amount || 0);
-                         baseOcc = 8; physicalBedrooms = 4;
+                        base = Number(d?.four_bedroom_amount || 0);
+                        baseOcc = 8; physicalBedrooms = 4;
                       }
-                      
+
                       const extraRate = Number(d?.extra_bed_amount || 0);
                       const maxExtraBeds = extraRate > 0 ? physicalBedrooms : 0;
                       const maxOcc = baseOcc + maxExtraBeds;
 
-                      const numRooms  = parseInt(row.numRooms)  || 1;
-                      const pax       = parseInt(row.paxStaying) || 0;
+                      const numRooms = parseInt(row.numRooms) || 1;
+                      const pax = parseInt(row.paxStaying) || 0;
                       const childStaying = parseInt(row.childStaying) || 0;
-                      const roomCost  = numRooms * base;
-                      const extraPax  = parseInt(row.extraBeds) || 0;
+                      const roomCost = numRooms * base;
+                      const extraPax = parseInt(row.extraBeds) || 0;
                       const extraCost = extraPax * extraRate;
-                      const total     = roomCost + extraCost;
+                      const total = roomCost + extraCost;
                       // paxStaying is now per-room; multiply by numRooms for total adults
                       const totalAdultsInRow = (pax * numRooms) + extraPax;
                       const totalPaxInRow = totalAdultsInRow + (hasChildren ? (childWithBed + childNoBed) : 0);
-                      const perPax    = totalPaxInRow > 0 ? Math.round(total / totalPaxInRow) : 0;
-                      
+                      const perPax = totalPaxInRow > 0 ? Math.round(total / totalPaxInRow) : 0;
+
                       // overCap: per-room check (pax is per room now)
-                      const adultOverCap     = (pax + childStaying) > baseOcc;
-                      const extraNotAllowed  = extraPax > 0 && maxExtraBeds === 0;
-                      const extraOverCap     = extraPax > (numRooms * maxExtraBeds) && maxExtraBeds > 0;
+                      const adultOverCap = (pax + childStaying) > baseOcc;
+                      const extraNotAllowed = extraPax > 0 && maxExtraBeds === 0;
+                      const extraOverCap = extraPax > (numRooms * maxExtraBeds) && maxExtraBeds > 0;
                       const overCap = adultOverCap || extraNotAllowed || extraOverCap;
-                      
+
                       return { roomCost, extraCost, total, perPax, overCap, adultOverCap, extraNotAllowed, extraOverCap, base, extraRate, maxOcc, baseOcc, maxExtraBeds };
                     };
 
@@ -466,16 +466,16 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                     roomRows.forEach((row) => {
                       const { total } = calcRow(row);
                       grandRoomCost += total;
-                      grandPax      += ((parseInt(row.paxStaying) || 1) * (parseInt(row.numRooms) || 1)) + (parseInt(row.extraBeds) || 0);
+                      grandPax += ((parseInt(row.paxStaying) || 1) * (parseInt(row.numRooms) || 1)) + (parseInt(row.extraBeds) || 0);
                     });
-                    
+
                     const childWBedRate = Number(selectedRoom?.child_w_bed_amount || 0);
                     const childNBedRate = Number(selectedRoom?.child_n_bed_amount || 0);
                     const childTotal = hasChildren ? (childWithBed * childWBedRate + childNoBed * childNBedRate) : 0;
-                    
+
                     const grandTotal = grandRoomCost + childTotal;
-                    const allPax     = grandPax + (hasChildren ? childWithBed + childNoBed : 0);
-                    const avgPerPax  = allPax > 0 ? Math.round(grandTotal / allPax) : 0;
+                    const allPax = grandPax + (hasChildren ? childWithBed + childNoBed : 0);
+                    const avgPerPax = allPax > 0 ? Math.round(grandTotal / allPax) : 0;
 
                     // ── row helpers ──
                     const updateRow = (id, field, val) => {
@@ -540,9 +540,9 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
 
                               {/* Top Bar: Selector on left, Badge on right */}
                               {selectedRoom && (
-                                <div style={{ 
-                                  display: 'flex', 
-                                  justifyContent: 'space-between', 
+                                <div style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
                                   alignItems: 'center',
                                   marginBottom: 10,
                                   paddingRight: roomRows.length > 1 ? '20px' : '0px'
@@ -558,13 +558,13 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                           const newRoomData = values.roomOption?.find(rt => rt.id == newRoomTypeId);
                                           // Compute first valid bedType for the new room type
                                           const validConfigs = [
-                                            { value: 'single',        show: Number(newRoomData?.single_bed_amount || 0) > 0 },
-                                            { value: 'double',        show: Number(newRoomData?.double_bed_amount || 0) > 0 },
-                                            { value: 'triple',        show: !!(newRoomData?.is_triple_bed_available) || Number(newRoomData?.triple_bed_amount || 0) > 0 },
-                                            { value: 'quad',          show: !!(newRoomData?.is_quad_bed_available) || Number(newRoomData?.quad_bed_amount || 0) > 0 },
-                                            { value: 'two_bedroom',   show: Number(newRoomData?.two_bedroom_amount || 0) > 0 },
+                                            { value: 'single', show: Number(newRoomData?.single_bed_amount || 0) > 0 },
+                                            { value: 'double', show: Number(newRoomData?.double_bed_amount || 0) > 0 },
+                                            { value: 'triple', show: !!(newRoomData?.is_triple_bed_available) || Number(newRoomData?.triple_bed_amount || 0) > 0 },
+                                            { value: 'quad', show: !!(newRoomData?.is_quad_bed_available) || Number(newRoomData?.quad_bed_amount || 0) > 0 },
+                                            { value: 'two_bedroom', show: Number(newRoomData?.two_bedroom_amount || 0) > 0 },
                                             { value: 'three_bedroom', show: Number(newRoomData?.three_bedroom_amount || 0) > 0 },
-                                            { value: 'four_bedroom',  show: Number(newRoomData?.four_bedroom_amount || 0) > 0 },
+                                            { value: 'four_bedroom', show: Number(newRoomData?.four_bedroom_amount || 0) > 0 },
                                           ].filter(c => c.show);
                                           const firstBedType = validConfigs.length > 0 ? validConfigs[0].value : 'double';
                                           setFieldValue('roomRows', roomRows.map(r =>
@@ -594,20 +594,20 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                                           color: '#374151', cursor: 'pointer'
                                         }}
                                       >
-                                      {(() => {
+                                        {(() => {
                                           const rowRoomData = values.roomOption?.find(rt => rt.id == (row.roomTypeId || values.roomType?.value));
                                           const availableConfigs = [
-                                            { value: 'single',        label: 'Single',     show: Number(rowRoomData?.single_bed_amount || 0) > 0 },
-                                            { value: 'double',        label: 'Double',     show: Number(rowRoomData?.double_bed_amount || 0) > 0 },
-                                            { value: 'triple',        label: 'Triple',     show: !!(rowRoomData?.is_triple_bed_available) || Number(rowRoomData?.triple_bed_amount || 0) > 0 },
-                                            { value: 'quad',          label: 'Quad',       show: !!(rowRoomData?.is_quad_bed_available) || Number(rowRoomData?.quad_bed_amount || 0) > 0 },
-                                            { value: 'two_bedroom',   label: '2 Bedroom',  show: Number(rowRoomData?.two_bedroom_amount || 0) > 0 },
-                                            { value: 'three_bedroom', label: '3 Bedroom',  show: Number(rowRoomData?.three_bedroom_amount || 0) > 0 },
-                                            { value: 'four_bedroom',  label: '4 Bedroom',  show: Number(rowRoomData?.four_bedroom_amount || 0) > 0 },
+                                            { value: 'single', label: 'Single', show: Number(rowRoomData?.single_bed_amount || 0) > 0 },
+                                            { value: 'double', label: 'Double', show: Number(rowRoomData?.double_bed_amount || 0) > 0 },
+                                            { value: 'triple', label: 'Triple', show: !!(rowRoomData?.is_triple_bed_available) || Number(rowRoomData?.triple_bed_amount || 0) > 0 },
+                                            { value: 'quad', label: 'Quad', show: !!(rowRoomData?.is_quad_bed_available) || Number(rowRoomData?.quad_bed_amount || 0) > 0 },
+                                            { value: 'two_bedroom', label: '2 Bedroom', show: Number(rowRoomData?.two_bedroom_amount || 0) > 0 },
+                                            { value: 'three_bedroom', label: '3 Bedroom', show: Number(rowRoomData?.three_bedroom_amount || 0) > 0 },
+                                            { value: 'four_bedroom', label: '4 Bedroom', show: Number(rowRoomData?.four_bedroom_amount || 0) > 0 },
                                           ].filter(c => c.show);
                                           const options = availableConfigs.length > 0 ? availableConfigs : [
                                             { value: 'single', label: 'Single' }, { value: 'double', label: 'Double' },
-                                            { value: 'triple', label: 'Triple' }, { value: 'quad',   label: 'Quad'   },
+                                            { value: 'triple', label: 'Triple' }, { value: 'quad', label: 'Quad' },
                                             { value: 'two_bedroom', label: '2 Bedroom' }, { value: 'three_bedroom', label: '3 Bedroom' }, { value: 'four_bedroom', label: '4 Bedroom' },
                                           ];
                                           // Auto-correct bedType if current value is not in available options
