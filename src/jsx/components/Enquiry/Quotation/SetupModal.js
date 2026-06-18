@@ -193,17 +193,17 @@ function SetupModal() {
       }, []);
       setFieldValue('planArr', checkFormValue(sortedArray))
 
-      const uniqueSubDests = Array.from(
-        new Map(
-          data.entries
-            ?.map((entry) => getSubDestinationOption(entry))
-            ?.filter(Boolean)
-            .map((sub) => [sub.value, { id: sub.value, name: sub.label }]) || []
-        ).values()
-      );
-      if (uniqueSubDests.length) {
-        setFieldValue('selectedSubDestinations', uniqueSubDests);
-      }
+      // const uniqueSubDests = Array.from(
+      //   new Map(
+      //     data.entries
+      //       ?.map((entry) => getSubDestinationOption(entry))
+      //       ?.filter(Boolean)
+      //       .map((sub) => [sub.value, { id: sub.value, name: sub.label }]) || []
+      //   ).values()
+      // );
+      // if (uniqueSubDests.length) {
+      //   setFieldValue('selectedSubDestinations', uniqueSubDests);
+      // }
     }
   }
 
