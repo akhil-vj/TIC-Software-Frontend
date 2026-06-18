@@ -89,18 +89,22 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
     values.selectedSubDestinations?.length > 0
       ? values.selectedSubDestinations
       : subDestinationData;
-  const selectedSubDestinationId =
-    values.planArr?.[values.planIndex]?.dayDestination?.value;
+  const selectedDayDestinations = values.planArr?.[values.planIndex]?.dayDestination;
+  const selectedSubDestinationIds = Array.isArray(selectedDayDestinations) 
+    ? selectedDayDestinations.map(d => d.value).filter(Boolean)
+    : selectedDayDestinations?.value ? [selectedDayDestinations.value] : [];
+
   const getItemName = (item = {}) =>
     (item.name || item.activity_name || item.vehicle_name || "").trim();
+
   const filterData = (items) => {
     if (!items) return [];
     
-    if (selectedSubDestinationId) {
+    if (selectedSubDestinationIds.length > 0) {
       return items.filter(
         (item) =>
-          item?.sub_destination_id === selectedSubDestinationId ||
-          item?.sub_destination?.id === selectedSubDestinationId
+          selectedSubDestinationIds.includes(item?.sub_destination_id) ||
+          selectedSubDestinationIds.includes(item?.sub_destination?.id)
       );
     }
     
@@ -171,7 +175,7 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
         const obj = {
           date: new Date(currentDate),
           day: currentDay,
-          dayDestination: { label: '', value: '' },
+          dayDestination: [],
           schedule: [],
         };
         scheduleArray.push(obj);
@@ -309,9 +313,9 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
           const nextDate = new Date(currentDate);
           nextDate.setDate(nextDate.getDate() + 1);
           const stayEndDate = nextDate <= endDayExclusive ? nextDate : endDayExclusive;
-          const autoDayDestination = data.dayDestination?.value
+          const autoDayDestination = data.dayDestination && (Array.isArray(data.dayDestination) ? data.dayDestination.length > 0 : data.dayDestination.value)
             ? data.dayDestination
-            : processedValue.subDestination || data.dayDestination;
+            : (processedValue.subDestination ? [processedValue.subDestination] : data.dayDestination);
           const val = { ...data, dayDestination: autoDayDestination, schedule: [...data.schedule, { ...processedValue, startDate: currentDate, endDate: stayEndDate }] }
           return val
         } else {
@@ -478,12 +482,25 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
                   <ReactSelect
                     options={allowedSubDestinationData}
                     value={item.dayDestination}
-                    onChange={(selected) => onDayDestination(key, selected)}
+                    onChange={(selected) => {
+                      if (Array.isArray(selected) && selected.length > 2) {
+                        onDayDestination(key, selected.slice(0, 2));
+                      } else {
+                        onDayDestination(key, selected);
+                      }
+                    }}
                     optionValue="id"
                     optionLabel="name"
                     chooseLabel='Select SubDestination'
                     formik={formik}
                     onBlur={handleBlur}
+                    isMulti
+                    isSearchable={!(Array.isArray(item.dayDestination) && item.dayDestination.length >= 2)}
+                    components={
+                      (Array.isArray(item.dayDestination) && item.dayDestination.length >= 2) 
+                        ? { DropdownIndicator: () => null, IndicatorSeparator: () => null, Menu: () => null } 
+                        : undefined
+                    }
                   // inputId='destination'
                   // className='custom-input'
                   // required

@@ -21,11 +21,23 @@ function ReactSelect(props) {
   // FIX: Ensure value matches the structure of data options
   // If value exists but label/value don't match data structure, find and reconstruct it
   if (value && data && data.length > 0) {
-    const valueToCompare = value[optionValue] !== undefined ? value[optionValue] : value.value;
-    const matchedOption = data.find(d => d.value === valueToCompare);
-    if (matchedOption && (!value.label || value.label !== matchedOption.label)) {
-      // Value object is incomplete or mismatched, use the matched option from data
-      value = matchedOption;
+    if (Array.isArray(value)) {
+      value = value.map(val => {
+        if (!val) return val;
+        const valueToCompare = val[optionValue] !== undefined ? val[optionValue] : val.value;
+        const matchedOption = data.find(d => d.value === valueToCompare);
+        if (matchedOption && (!val.label || val.label !== matchedOption.label)) {
+          return matchedOption;
+        }
+        return val;
+      });
+    } else {
+      const valueToCompare = value[optionValue] !== undefined ? value[optionValue] : value.value;
+      const matchedOption = data.find(d => d.value === valueToCompare);
+      if (matchedOption && (!value.label || value.label !== matchedOption.label)) {
+        // Value object is incomplete or mismatched, use the matched option from data
+        value = matchedOption;
+      }
     }
   }
   

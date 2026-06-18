@@ -176,11 +176,17 @@ function SetupModal() {
         }
         if (existingEntry) {
           existingEntry.schedule.push(obj);
-          if (!existingEntry.dayDestination && dayDestination) {
-            existingEntry.dayDestination = dayDestination;
+          if (dayDestination) {
+            if (!existingEntry.dayDestination) {
+              existingEntry.dayDestination = [dayDestination];
+            } else if (Array.isArray(existingEntry.dayDestination) && !existingEntry.dayDestination.find(d => d.value === dayDestination.value)) {
+              existingEntry.dayDestination.push(dayDestination);
+            } else if (!Array.isArray(existingEntry.dayDestination) && existingEntry.dayDestination.value !== dayDestination.value) {
+              existingEntry.dayDestination = [existingEntry.dayDestination, dayDestination];
+            }
           }
         } else {
-          acc.push({ date: entry.date, schedule: [obj], dayDestination });
+          acc.push({ date: entry.date, schedule: [obj], dayDestination: dayDestination ? [dayDestination] : [] });
         }
 
         return acc;
@@ -266,7 +272,7 @@ function SetupModal() {
           formData.append(`entries[${index}][subject_id]`, checkFormValue(data.id))
           formData.append(`entries[${index}][entry_type]`, checkFormValue(data.insertType?.toUpperCase()))
           formData.append(`entries[${index}][date]`, checkFormValue(entryDate))
-          const subDestValue = dayDestination?.value || data.subDestination?.value;
+          const subDestValue = data.subDestination?.value || (Array.isArray(dayDestination) ? dayDestination[0]?.value : dayDestination?.value);
           formData.append(`entries[${index}][sub_destination_id]`, checkFormValue(subDestValue))
           formData.append(`entries[${index}][no_of_person]`, checkFormValue(personCount, 'number'))
           formData.append(`entries[${index}][adult_count]`, checkFormValue(data.adult, 'number'))
