@@ -18,13 +18,8 @@ import { useSelector } from "react-redux";
 
 // ─── Person type definitions ─────────────────────────────────────────────────
 const PERSON_TYPES = [
-  { key: "single", label: "Person (Single Sharing)" },
-  { key: "double", label: "Person (Double Sharing)" },
-  { key: "triple", label: "Person (Triple Sharing)" },
-  { key: "quad", label: "Person (Quad Sharing)" },
-  { key: "extra", label: "Person (With Extra Bed)" },
-  { key: "childW", label: "Child with Extra Bed" },
-  { key: "childN", label: "Child without Extra Bed" },
+  { key: "adult", label: "Adult" },
+  { key: "child", label: "Child" },
 ];
 
 const CURRENCY_SYMBOLS = {
@@ -446,9 +441,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   };
 
   const createOptionInitialValue = () => [
-    { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, quad: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
-    { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, quad: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
-    { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, quad: 0, extra: 0, childW: 0, childN: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, extraTotalCost: 0, childWTotalCost: 0, childNTotalCost: 0 },
+    { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, child: 0, adultDisplay: 0, childDisplay: 0, adultTotalCost: 0, childTotalCost: 0 },
+    { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, child: 0, adultDisplay: 0, childDisplay: 0, adultTotalCost: 0, childTotalCost: 0 },
+    { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, child: 0, adultDisplay: 0, childDisplay: 0, adultTotalCost: 0, childTotalCost: 0 },
   ];
 
   // Helper to safely parse a count value — treats "", undefined, null, NaN as 0
@@ -486,55 +481,71 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           childN: Number(selectedRoom?.child_n_bed_amount || 0),
         };
         const counts = {
-          single: safeCount(item.single),
-          double: safeCount(item.double),
-          triple: safeCount(item.triple),
-          quad: safeCount(item.quad),
-          twoB: safeCount(item.two_bedroom),
-          threeB: safeCount(item.three_bedroom),
-          fourB: safeCount(item.four_bedroom),
           extra: safeCount(item.extra),
           childW: safeCount(item.childW),
           childN: safeCount(item.childN),
         };
 
-        const itemTotalWeight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.quad * rates.quad) + (counts.twoB * rates.twoB) + (counts.threeB * rates.threeB) + (counts.fourB * rates.fourB) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
+        let adultNetCost = 0;
+        let childNetCost = 0;
+        let adultCount = 0;
+        let childCount = 0;
+
+        if (item.roomRows && item.roomRows.length > 0) {
+          item.roomRows.forEach(row => {
+            const bedType = row.bedType || 'double';
+            let baseRate = rates.double;
+            if (bedType === 'single') baseRate = rates.single;
+            else if (bedType === 'triple') baseRate = rates.triple;
+            else if (bedType === 'quad') baseRate = rates.quad;
+            else if (bedType === 'two_bedroom') baseRate = rates.twoB;
+            else if (bedType === 'three_bedroom') baseRate = rates.threeB;
+            else if (bedType === 'four_bedroom') baseRate = rates.fourB;
+
+            const numRooms = parseInt(row.numRooms) || 1;
+            const pax = parseInt(row.paxStaying) || 0;
+            const childStaying = row.showChildInput ? (parseInt(row.childStaying) || 0) : 0;
+            const extraPax = parseInt(row.extraBeds) || 0;
+
+            const roomCost = numRooms * baseRate;
+            const extraCost = extraPax * rates.extra;
+            const totalCost = roomCost + extraCost;
+
+            const roomAdults = (pax * numRooms) + extraPax;
+            const roomChildren = childStaying * numRooms;
+            const roomTotalPax = roomAdults + roomChildren;
+
+            if (roomTotalPax > 0) {
+              const costPerPax = totalCost / roomTotalPax;
+              adultNetCost += roomAdults * costPerPax;
+              childNetCost += roomChildren * costPerPax;
+            }
+            adultCount += roomAdults;
+            childCount += roomChildren;
+          });
+        }
+
+        const childWCost = counts.childW * rates.childW;
+        const childNCost = counts.childN * rates.childN;
+
+        childNetCost += childWCost + childNCost;
+        childCount += counts.childW + counts.childN;
+
+        const itemTotalWeight = adultNetCost + childNetCost;
 
         let ratio = 1;
         if (itemTotalWeight > 0) {
           ratio = (Number(item.amount || 0)) / itemTotalWeight;
-        } else {
-          const totalPax = counts.single + counts.double + counts.triple + counts.quad + counts.extra + counts.childW + counts.childN;
-          if (totalPax > 0) {
-            const avg = Number(item.amount || 0) / totalPax;
-            rates.single = rates.double = rates.triple = rates.quad = rates.extra = rates.childW = rates.childN = avg;
-            ratio = 1;
-          }
         }
 
-        acc[idx].single += counts.single;
-        acc[idx].double += counts.double;
-        acc[idx].triple += counts.triple;
-        acc[idx].quad += counts.quad;
-        acc[idx].extra += counts.extra;
-        acc[idx].childW += counts.childW;
-        acc[idx].childN += counts.childN;
+        acc[idx].adult += adultCount;
+        acc[idx].child += childCount;
 
-        acc[idx].singleDisplay = Math.max(acc[idx].singleDisplay || 0, counts.single);
-        acc[idx].doubleDisplay = Math.max(acc[idx].doubleDisplay || 0, counts.double);
-        acc[idx].tripleDisplay = Math.max(acc[idx].tripleDisplay || 0, counts.triple);
-        acc[idx].quadDisplay = Math.max(acc[idx].quadDisplay || 0, counts.quad);
-        acc[idx].extraDisplay = Math.max(acc[idx].extraDisplay || 0, counts.extra);
-        acc[idx].childWDisplay = Math.max(acc[idx].childWDisplay || 0, counts.childW);
-        acc[idx].childNDisplay = Math.max(acc[idx].childNDisplay || 0, counts.childN);
+        acc[idx].adultDisplay = Math.max(acc[idx].adultDisplay || 0, adultCount);
+        acc[idx].childDisplay = Math.max(acc[idx].childDisplay || 0, childCount);
 
-        acc[idx].singleTotalCost += (counts.single * rates.single) * ratio;
-        acc[idx].doubleTotalCost += (counts.double * rates.double) * ratio;
-        acc[idx].tripleTotalCost += (counts.triple * rates.triple) * ratio;
-        acc[idx].quadTotalCost += (counts.quad * rates.quad) * ratio;
-        acc[idx].extraTotalCost += (counts.extra * rates.extra) * ratio;
-        acc[idx].childWTotalCost += (counts.childW * rates.childW) * ratio;
-        acc[idx].childNTotalCost += (counts.childN * rates.childN) * ratio;
+        acc[idx].adultTotalCost += adultNetCost * ratio;
+        acc[idx].childTotalCost += childNetCost * ratio;
       }
     }
     return acc;
@@ -734,8 +745,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     const rowsWithNet = activeTypes.map(({ pt, count, displayCount, hotelRowCostAll }) => {
       const isPerMode = values.priceOption?.value === "PER";
-      const personShareDivisors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1, adult: 1, child: 1 };
-      const sharingFactor = personShareDivisors[pt.key] || 1;
+      const sharingFactor = 1;
 
       const hotelFraction = (item.amount || 0) > 0 ? hotelRowCostAll / item.amount : 0;
       const hotelLineMarkup = Number(item.markup || 0);
@@ -743,7 +753,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       const rowHotelNet = hotelRowCostAll;
       const rowHotelMarkup = hotelLineMarkup * hotelFraction;
 
-      const isChildType = pt.key === 'childW' || pt.key === 'childN' || pt.key === 'child';
+      const isChildType = pt.key === 'child';
       const actTransferBasePerPersonType = isChildType ? actTransferBasePerChild : actTransferBasePerAdult;
       const actTransferMarkupPerPersonType = isChildType ? actTransferMarkupPerChild : actTransferMarkupPerAdult;
 
@@ -776,7 +786,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     const optionTotalNetCost = rowsWithNet.reduce((sum, r) => sum + r.netCost, 0);
 
     const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
-    const occupancyFactors = { single: 1, double: 2, triple: 3, quad: 4, twoB: 2, threeB: 3, extra: 1, childW: 1, childN: 1, adult: 1, child: 1 };
+    const occupancyFactors = { adult: 1, child: 1 };
 
     const hotelRows = rowsWithNet.map((r) => {
       let finalMarkup = r.originalMarkup;
@@ -1168,51 +1178,83 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                               childN: Number(selectedRoom?.child_n_bed_amount || 0),
                             };
                             const counts = {
-                              single: safeCount(item.single),
-                              double: safeCount(item.double),
-                              triple: safeCount(item.triple),
                               extra: safeCount(item.extra),
                               childW: safeCount(item.childW),
                               childN: safeCount(item.childN),
                             };
-                            // Weight without occupancy multipliers - just count * rate
-                            const weight = (counts.single * rates.single) + (counts.double * rates.double) + (counts.triple * rates.triple) + (counts.extra * rates.extra) + (counts.childW * rates.childW) + (counts.childN * rates.childN);
 
-                            let ratio = 1;
-                            if (weight > 0) {
-                              ratio = Number(item.amount || 0) / weight;
-                            } else {
-                              const totalRooms = counts.single + counts.double + counts.triple + counts.extra + counts.childW + counts.childN;
-                              if (totalRooms > 0) {
-                                const avg = Number(item.amount || 0) / totalRooms;
-                                rates.single = rates.double = rates.triple = rates.extra = rates.childW = rates.childN = avg;
-                              }
-                              ratio = 1;
+                            let adultNetCost = 0;
+                            let childNetCost = 0;
+                            let adultCount = 0;
+                            let childCount = 0;
+
+                            if (item.roomRows && item.roomRows.length > 0) {
+                              item.roomRows.forEach(row => {
+                                const bedType = row.bedType || 'double';
+                                let baseRate = rates.double;
+                                if (bedType === 'single') baseRate = rates.single;
+                                else if (bedType === 'triple') baseRate = rates.triple;
+                                else if (bedType === 'quad') baseRate = rates.quad;
+                                else if (bedType === 'two_bedroom') baseRate = rates.twoB;
+                                else if (bedType === 'three_bedroom') baseRate = rates.threeB;
+                                else if (bedType === 'four_bedroom') baseRate = rates.fourB;
+
+                                const numRooms = parseInt(row.numRooms) || 1;
+                                const pax = parseInt(row.paxStaying) || 0;
+                                const childStaying = row.showChildInput ? (parseInt(row.childStaying) || 0) : 0;
+                                const extraPax = parseInt(row.extraBeds) || 0;
+
+                                const roomCost = numRooms * baseRate;
+                                const extraCost = extraPax * rates.extra;
+                                const totalCost = roomCost + extraCost;
+
+                                const roomAdults = (pax * numRooms) + extraPax;
+                                const roomChildren = childStaying * numRooms;
+                                const roomTotalPax = roomAdults + roomChildren;
+
+                                if (roomTotalPax > 0) {
+                                  const costPerPax = totalCost / roomTotalPax;
+                                  adultNetCost += roomAdults * costPerPax;
+                                  childNetCost += roomChildren * costPerPax;
+                                }
+                                adultCount += roomAdults;
+                                childCount += roomChildren;
+                              });
                             }
+
+                            const childWCost = counts.childW * rates.childW;
+                            const childNCost = counts.childN * rates.childN;
+
+                            childNetCost += childWCost + childNCost;
+                            childCount += counts.childW + counts.childN;
+
+                            const totalComputedWeight = adultNetCost + childNetCost;
+                            let ratio = 1;
+                            if (totalComputedWeight > 0) {
+                              ratio = Number(item.amount || 0) / totalComputedWeight;
+                            }
+
                             const markupRatio = Number(item.amount || 0) > 0 ? (Number(item.markup || 0) / Number(item.amount || 0)) : 0;
 
-                            const types = [
-                              { k: 'single', l: 'Single', d: 1 },
-                              { k: 'double', l: 'Double Sharing', d: 2 },
-                              { k: 'triple', l: 'Triple Sharing', d: 3 },
-                              { k: 'extra', l: 'Extra Bed', d: 1 },
-                              { k: 'childW', l: 'Child With Bed', d: 1 },
-                              { k: 'childN', l: 'Child No Bed', d: 1 },
-                            ];
-
-                            breakdownData = types
-                              .filter(t => counts[t.k] > 0)
-                              .map(t => {
-                                // Calculate per-person rate: (room_rate * ratio) / occupancy_divisor
-                                const netPerPax = (rates[t.k] * ratio) / t.d;
-                                const grossPerPax = netPerPax * (1 + markupRatio);
-                                return {
-                                  key: t.k,
-                                  label: t.l,
-                                  net: displayAmount(netPerPax),
-                                  gross: displayAmount(grossPerPax)
-                                };
+                            breakdownData = [];
+                            if (adultCount > 0) {
+                              const netPerAdult = (adultNetCost * ratio) / adultCount;
+                              breakdownData.push({
+                                key: 'adult',
+                                label: 'Adult rate',
+                                net: displayAmount(netPerAdult),
+                                gross: displayAmount(netPerAdult * (1 + markupRatio))
                               });
+                            }
+                            if (childCount > 0) {
+                              const netPerChild = (childNetCost * ratio) / childCount;
+                              breakdownData.push({
+                                key: 'child',
+                                label: 'Child rate',
+                                net: displayAmount(netPerChild),
+                                gross: displayAmount(netPerChild * (1 + markupRatio))
+                              });
+                            }
                           } else if ((item.insertType === "transfer" || item.insertType === "car" || item.insertType === "activity") && isPer) {
                             const adultCount = (item.insertType === "activity" ? Number(item.adult) : Number(values.adult)) || 0;
                             const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
@@ -1320,8 +1362,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                       <div className="d-flex flex-column">
                                         <span className="text-muted" style={{ fontSize: "12px" }}>
                                           {`${item.roomType?.label || item.type?.label || "Service"}${(item.insertType === 'transfer' || item.insertType === 'car') && (item.vehicleType?.label || item.vehicle_type || item.vehicle_name)
-                                              ? ` • ${item.vehicleType?.label || item.vehicle_type || item.vehicle_name}`
-                                              : ''
+                                            ? ` • ${item.vehicleType?.label || item.vehicle_type || item.vehicle_name}`
+                                            : ''
                                             } • ${formatDate(item.startDate)} to ${formatDate(item.endDate)}`}
                                         </span>
                                         {(isHotelPer || (isTransferPer && otherBreakdowns.length > 0)) && firstBreakdown && (
