@@ -18,15 +18,9 @@ import { useSelector } from "react-redux";
 
 // ─── Person type definitions ─────────────────────────────────────────────────
 const PERSON_TYPES = [
-  { key: "single",       label: "Adult (Single Room)" },
-  { key: "double",       label: "Adult (Double Room)" },
-  { key: "triple",       label: "Adult (Triple Room)" },
-  { key: "quad",         label: "Adult (Quad Room)" },
-  { key: "two_bedroom",  label: "Adult (2-Bedroom)" },
-  { key: "three_bedroom",label: "Adult (3-Bedroom)" },
-  { key: "four_bedroom", label: "Adult (4-Bedroom)" },
-  { key: "extra",        label: "Adult (Extra Bed)" },
-  { key: "child",        label: "Child" },
+  { key: "adult", label: "Adult" },
+  { key: "extra", label: "Adult (Extra Bed)" },
+  { key: "child", label: "Child" },
 ];
 
 const CURRENCY_SYMBOLS = {
@@ -448,9 +442,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   };
 
   const createOptionInitialValue = () => [
-    { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, quad: 0, two_bedroom: 0, three_bedroom: 0, four_bedroom: 0, extra: 0, child: 0, singleDisplay: 0, doubleDisplay: 0, tripleDisplay: 0, quadDisplay: 0, two_bedroomDisplay: 0, three_bedroomDisplay: 0, four_bedroomDisplay: 0, extraDisplay: 0, childDisplay: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, two_bedroomTotalCost: 0, three_bedroomTotalCost: 0, four_bedroomTotalCost: 0, extraTotalCost: 0, childTotalCost: 0 },
-    { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, quad: 0, two_bedroom: 0, three_bedroom: 0, four_bedroom: 0, extra: 0, child: 0, singleDisplay: 0, doubleDisplay: 0, tripleDisplay: 0, quadDisplay: 0, two_bedroomDisplay: 0, three_bedroomDisplay: 0, four_bedroomDisplay: 0, extraDisplay: 0, childDisplay: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, two_bedroomTotalCost: 0, three_bedroomTotalCost: 0, four_bedroomTotalCost: 0, extraTotalCost: 0, childTotalCost: 0 },
-    { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, single: 0, double: 0, triple: 0, quad: 0, two_bedroom: 0, three_bedroom: 0, four_bedroom: 0, extra: 0, child: 0, singleDisplay: 0, doubleDisplay: 0, tripleDisplay: 0, quadDisplay: 0, two_bedroomDisplay: 0, three_bedroomDisplay: 0, four_bedroomDisplay: 0, extraDisplay: 0, childDisplay: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, two_bedroomTotalCost: 0, three_bedroomTotalCost: 0, four_bedroomTotalCost: 0, extraTotalCost: 0, childTotalCost: 0 },
+    { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, extra: 0, child: 0, adultDisplay: 0, extraDisplay: 0, childDisplay: 0, adultTotalCost: 0, extraTotalCost: 0, childTotalCost: 0 },
+    { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, extra: 0, child: 0, adultDisplay: 0, extraDisplay: 0, childDisplay: 0, adultTotalCost: 0, extraTotalCost: 0, childTotalCost: 0 },
+    { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, extra: 0, child: 0, adultDisplay: 0, extraDisplay: 0, childDisplay: 0, adultTotalCost: 0, extraTotalCost: 0, childTotalCost: 0 },
   ];
 
   // Helper to safely parse a count value — treats "", undefined, null, NaN as 0
@@ -460,7 +454,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     return Number.isFinite(n) && n > 0 ? n : 0;
   };
 
-  const hotelOption = scheduleArr.reduce((acc, { item }) => {
+  const hotelOptionRaw = scheduleArr.reduce((acc, { item }) => {
     if (item.insertType === "hotel") {
       const optLabel = item.option?.label || (typeof item.option === 'string' ? item.option : '');
       const idx =
@@ -473,7 +467,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         acc[idx].trueBaseAmount = (acc[idx].trueBaseAmount || 0) + Number(item.baseAmount !== undefined ? item.baseAmount : item.amount);
         acc[idx].markup += Number(item.markup || 0);
 
-        // Accurate weighted distribution based on hotel room rates
         const selectedRoom = item.roomOption?.find(r => r.id == item.roomType?.value);
         const rates = {
           single: Number(selectedRoom?.single_bed_amount || 0),
@@ -493,16 +486,18 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           childN: safeCount(item.childN),
         };
 
-        // Group in-room adults by bed type (so double+single show as separate rows)
-        const bedTypeGroups = {};
-        let extraNetCost = 0;
-        let extraCount = 0;
-        let childNetCost = 0;
-        let childCount = 0;
+        let hotelAdultCost = 0;
+        let hotelExtraCost = 0;
+        let hotelChildCost = 0;
+        let hotelInRoomAdults = 0;
+        let hotelExtraAdults = 0;
+        let hotelChildCount = 0;
 
         if (item.roomRows && item.roomRows.length > 0) {
+          acc[idx].bedTypes = acc[idx].bedTypes || new Set();
           item.roomRows.forEach(row => {
             const bedType = row.bedType || 'double';
+            acc[idx].bedTypes.add(bedType);
             let baseRate = rates.double;
             if (bedType === 'single') baseRate = rates.single;
             else if (bedType === 'triple') baseRate = rates.triple;
@@ -513,61 +508,80 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
             const numRooms = parseInt(row.numRooms) || 1;
             const pax = parseInt(row.paxStaying) || 0;
-            const childStaying = row.showChildInput ? (parseInt(row.childStaying) || 0) : 0;
             const extraPax = parseInt(row.extraBeds) || 0;
+            const childStaying = row.showChildInput ? (parseInt(row.childStaying) || 0) : 0;
 
             const roomCost = numRooms * baseRate;
             const inRoomAdults = pax * numRooms;
             const roomChildren = childStaying * numRooms;
             const roomOccupants = inRoomAdults + roomChildren;
 
-            if (!bedTypeGroups[bedType]) bedTypeGroups[bedType] = { netCost: 0, count: 0 };
             if (roomOccupants > 0) {
               const costPerPax = roomCost / roomOccupants;
-              bedTypeGroups[bedType].netCost += inRoomAdults * costPerPax;
-              childNetCost += roomChildren * costPerPax;
+              hotelAdultCost += inRoomAdults * costPerPax;
+              hotelChildCost += roomChildren * costPerPax;
             }
-            bedTypeGroups[bedType].count += inRoomAdults;
-            extraNetCost += extraPax * rates.extra;
-            extraCount += extraPax;
-            childCount += roomChildren;
+            hotelExtraCost += extraPax * rates.extra;
+
+            hotelInRoomAdults += inRoomAdults;
+            hotelExtraAdults += extraPax;
+            hotelChildCount += roomChildren;
           });
         }
 
         const childWCost = counts.childW * rates.childW;
         const childNCost = counts.childN * rates.childN;
-        childNetCost += childWCost + childNCost;
-        childCount += counts.childW + counts.childN;
 
-        const totalInRoomCost = Object.values(bedTypeGroups).reduce((s, g) => s + g.netCost, 0);
-        const itemTotalWeight = totalInRoomCost + extraNetCost + childNetCost;
+        hotelChildCost += childWCost + childNCost;
+        hotelChildCount += counts.childW + counts.childN;
+
+        const itemTotalWeight = hotelAdultCost + hotelExtraCost + hotelChildCost;
         let ratio = 1;
         if (itemTotalWeight > 0) {
           ratio = (Number(item.amount || 0)) / itemTotalWeight;
         }
 
-        // Accumulate per-bed-type
-        const BED_TYPES_ACC = ['single', 'double', 'triple', 'quad', 'two_bedroom', 'three_bedroom', 'four_bedroom'];
-        BED_TYPES_ACC.forEach(bt => {
-          const grp = bedTypeGroups[bt];
-          if (grp) {
-            acc[idx][bt] = (acc[idx][bt] || 0) + grp.count;
-            acc[idx][`${bt}Display`] = Math.max(acc[idx][`${bt}Display`] || 0, grp.count);
-            acc[idx][`${bt}TotalCost`] = (acc[idx][`${bt}TotalCost`] || 0) + grp.netCost * ratio;
-          }
-        });
+        const perAdultCost = hotelInRoomAdults > 0 ? (hotelAdultCost / hotelInRoomAdults) : 0;
+        const perExtraCost = hotelExtraAdults > 0 ? (hotelExtraCost / hotelExtraAdults) : perAdultCost;
 
-        acc[idx].extra = (acc[idx].extra || 0) + extraCount;
-        acc[idx].extraDisplay = Math.max(acc[idx].extraDisplay || 0, extraCount);
-        acc[idx].extraTotalCost = (acc[idx].extraTotalCost || 0) + extraNetCost * ratio;
+        acc[idx].perAdultCost = (acc[idx].perAdultCost || 0) + perAdultCost * ratio;
+        acc[idx].perExtraCost = (acc[idx].perExtraCost || 0) + perExtraCost * ratio;
+        
+        acc[idx].maxInRoomAdults = Math.max(acc[idx].maxInRoomAdults || 0, hotelInRoomAdults);
+        acc[idx].maxExtraAdults = Math.max(acc[idx].maxExtraAdults || 0, hotelExtraAdults);
+        acc[idx].maxTotalAdults = Math.max(acc[idx].maxTotalAdults || 0, hotelInRoomAdults + hotelExtraAdults);
 
-        acc[idx].child = (acc[idx].child || 0) + childCount;
-        acc[idx].childDisplay = Math.max(acc[idx].childDisplay || 0, childCount);
-        acc[idx].childTotalCost = (acc[idx].childTotalCost || 0) + childNetCost * ratio;
+        acc[idx].childTotalCost = (acc[idx].childTotalCost || 0) + hotelChildCost * ratio;
+        acc[idx].childDisplay = Math.max(acc[idx].childDisplay || 0, hotelChildCount);
       }
     }
     return acc;
   }, createOptionInitialValue());
+
+  const hotelOption = hotelOptionRaw.map(opt => {
+    const totalA = opt.maxTotalAdults || 0;
+    const extraA = opt.maxExtraAdults || 0;
+    const regularA = Math.max(0, totalA - extraA);
+
+    opt.adultDisplay = regularA;
+    opt.extraDisplay = extraA;
+    opt.adult = regularA;
+    opt.extra = extraA;
+    opt.child = opt.childDisplay;
+
+    opt.adultTotalCost = (opt.perAdultCost || 0) * regularA;
+    opt.extraTotalCost = (opt.perExtraCost || 0) * extraA;
+
+    if (opt.bedTypes && opt.bedTypes.size === 1) {
+      const bt = Array.from(opt.bedTypes)[0];
+      const BED_TYPE_LABELS = { single: 'Adult (Single Room)', double: 'Adult (Double Room)', triple: 'Adult (Triple Room)', quad: 'Adult (Quad Room)', two_bedroom: 'Adult (2-Bedroom)', three_bedroom: 'Adult (3-Bedroom)', four_bedroom: 'Adult (4-Bedroom)' };
+      opt.adultLabel = BED_TYPE_LABELS[bt] || 'Adult';
+    } else {
+      opt.adultLabel = 'Adult';
+    }
+
+    return opt;
+  });
 
   const getTotalPerPersonCosts = () => {
     let totalAdultCost = 0;
@@ -646,7 +660,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       const displayCount = safeCount(item[`${pt.key}Display`]);
       if (count <= 0) return null;
       const hotelRowCostAll = Number(item[`${pt.key}TotalCost`] || 0);
-      return { pt, count, displayCount, hotelRowCostAll };
+      const label = item[`${pt.key}Label`] || pt.label;
+      return { pt: { ...pt, label }, count, displayCount, hotelRowCostAll };
     }).filter(Boolean);
 
     let baseAdultCount = Number(values.adult) || 1;
@@ -671,7 +686,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     if (activeTypes.length === 0 && item.name === "Option 1") {
       const hotelAmount = item.amount || 0;
-      if (adultCount > 0) activeTypes.push({ pt: { key: "double", label: "Adult (Double Room)" }, count: adultCount, displayCount: adultCount, hotelRowCostAll: hotelAmount });
+      if (adultCount > 0) activeTypes.push({ pt: { key: "adult", label: item.adultLabel || "Adult" }, count: adultCount, displayCount: adultCount, hotelRowCostAll: hotelAmount });
       if (childCount > 0) activeTypes.push({ pt: { key: "child", label: "Child" }, count: childCount, displayCount: childCount, hotelRowCostAll: 0 });
     }
 
@@ -804,7 +819,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     const optionTotalNetCost = rowsWithNet.reduce((sum, r) => sum + r.netCost, 0);
 
     const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
-    const occupancyFactors = { single: 1, double: 1, triple: 1, quad: 1, two_bedroom: 1, three_bedroom: 1, four_bedroom: 1, extra: 1, child: 1 };
+    const occupancyFactors = { adult: 1, extra: 1, child: 1 };
 
     const hotelRows = rowsWithNet.map((r) => {
       let finalMarkup = r.originalMarkup;
@@ -1762,7 +1777,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
-                      const occupancyFactors = { single: 1, double: 1, triple: 1, quad: 1, two_bedroom: 1, three_bedroom: 1, four_bedroom: 1, extra: 1, child: 1, adult: 1, twoB: 1, threeB: 1, childW: 1, childN: 1 };
+                      const occupancyFactors = { adult: 1, extra: 1, child: 1 };
                       const isPERModeGT = values.priceOption?.value === "PER";
                       const grandTotal = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.total), 0)));
                       const grandMarkup = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.markup), 0)));
@@ -1866,8 +1881,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                               <td style={{ paddingLeft: "16px", color: "#333", borderRight: '0.5px solid #e2e8f0', fontWeight: 500 }}>
                                 <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                                   <span>{pt.label}</span>
-                                  {/* Only show count badge for generic adult/child rows, not for hotel room types */}
-                                  {(pt.key === "adult" || pt.key === "child") && pt.count > 0 && (
+                                  {/* Only show count badge for generic adult/child rows, not for specific hotel room types */}
+                                  {(pt.label === "Adult" || pt.label === "Child") && pt.count > 0 && (
                                     <span style={{
                                       fontSize: "11px", color: "#fff", fontWeight: 500,
                                       background: "#185FA5", borderRadius: "999px",
