@@ -298,7 +298,7 @@ const LOGIN_STYLES = `
 
 function Login(props) {
   const [email, setEmail]                         = useState("testuser");
-  const [password, setPassword]                   = useState("123456");
+  const [password, setPassword]                   = useState("test@12");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   let errorsObj = { email: "", password: "" };
   const [errors, setErrors] = useState(errorsObj);
