@@ -576,8 +576,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       const bt = Array.from(opt.bedTypes)[0];
       const BED_TYPE_LABELS = { single: 'Adult (Single Room)', double: 'Adult (Double Room)', triple: 'Adult (Triple Room)', quad: 'Adult (Quad Room)', two_bedroom: 'Adult (2-Bedroom)', three_bedroom: 'Adult (3-Bedroom)', four_bedroom: 'Adult (4-Bedroom)' };
       opt.adultLabel = BED_TYPE_LABELS[bt] || 'Adult';
+      opt.extraLabel = 'Adult (Extra Bed)';
     } else {
       opt.adultLabel = 'Adult';
+      opt.extraLabel = 'Adult';
     }
 
     return opt;
