@@ -493,8 +493,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         let hotelExtraAdults = 0;
         let hotelChildCount = 0;
 
+        acc[idx].bedTypes = acc[idx].bedTypes || new Set();
+        acc[idx].childTypes = acc[idx].childTypes || new Set();
+
         if (item.roomRows && item.roomRows.length > 0) {
-          acc[idx].bedTypes = acc[idx].bedTypes || new Set();
           item.roomRows.forEach(row => {
             const bedType = row.bedType || 'double';
             acc[idx].bedTypes.add(bedType);
@@ -526,11 +528,15 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             hotelInRoomAdults += inRoomAdults;
             hotelExtraAdults += extraPax;
             hotelChildCount += roomChildren;
+            
+            if (roomChildren > 0) acc[idx].childTypes.add('childStaying');
           });
         }
 
         const childWCost = counts.childW * rates.childW;
         const childNCost = counts.childN * rates.childN;
+        if (counts.childW > 0) acc[idx].childTypes.add('childW');
+        if (counts.childN > 0) acc[idx].childTypes.add('childN');
 
         hotelChildCost += childWCost + childNCost;
         hotelChildCount += counts.childW + counts.childN;
@@ -580,6 +586,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     } else {
       opt.adultLabel = 'Adult';
       opt.extraLabel = 'Adult';
+    }
+
+    if (opt.childTypes && opt.childTypes.size === 1) {
+      const ct = Array.from(opt.childTypes)[0];
+      const CHILD_TYPE_LABELS = { childStaying: 'Child', childW: 'Child (With Bed)', childN: 'Child (No Bed)' };
+      opt.childLabel = CHILD_TYPE_LABELS[ct] || 'Child';
+    } else {
+      opt.childLabel = 'Child';
     }
 
     return opt;
