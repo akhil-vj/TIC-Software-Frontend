@@ -1296,13 +1296,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                             BED_ORDER.forEach(bt => {
                               const grp = bedTypeGroups[bt];
                               if (grp && grp.count > 0) {
-                                // Show total room cost for this config type (not per-person)
-                                const netRoomTotal = grp.netCost * ratio;
+                                const netPerPax = (grp.netCost * ratio) / grp.count;
                                 breakdownData.push({
                                   key: bt,
                                   label: BED_TYPE_LABELS[bt] || 'Adult rate',
-                                  net: displayAmount(netRoomTotal),
-                                  gross: displayAmount(netRoomTotal * (1 + markupRatio))
+                                  net: displayAmount(netPerPax),
+                                  gross: displayAmount(netPerPax * (1 + markupRatio))
                                 });
                               }
                             });
