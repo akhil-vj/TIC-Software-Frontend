@@ -75,7 +75,18 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       }
       setCustomMarkupsLoaded(true);
     }
+  // Reset customMarkupsLoaded when quoted_options identity changes (e.g. after a save)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.quoted_options, customMarkupsLoaded, values.priceOption]);
+
+  // Reset stale markup cache whenever the saved quoted_options reference changes
+  const prevQuotedOptionsRef = React.useRef(values.quoted_options);
+  useEffect(() => {
+    if (prevQuotedOptionsRef.current !== values.quoted_options) {
+      prevQuotedOptionsRef.current = values.quoted_options;
+      setCustomMarkupsLoaded(false);
+    }
+  }, [values.quoted_options]);
   const itineraryId = values.itineraryId;
   const isEdit = !!itineraryId;
   const [readOnly, setReadOnly] = useState(isEdit);
@@ -144,57 +155,80 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     }
   }, [currencyOptions.length, values.priceIn?.value, values.priceIn?.label, values.priceIn?.exchange_rate]);
 
-  // ─── Fix: convert amounts when PER mode is active and baseAmount is missing ──────────
+  // ─── Stamp baseAmount/baseMarkup on schedule items ───────────────────────────
+  // On first load from DB, items have `base_amount` (from backend) but the
+  // frontend field is `baseAmount`. We map them here without dividing.
+  // Only if base_amount is absent (brand-new items not yet saved) do we compute it.
   useEffect(() => {
     const hasScheduleItems = values.planArr?.some(p => p.schedule?.length > 0);
     if (!hasScheduleItems) return;
 
-    // Only act when mode is PER and items are missing baseAmount (= freshly loaded from DB)
     if (values.priceOption?.value === 'PER') {
-      const needsConversion = values.planArr.some(p =>
+      const needsStamping = values.planArr.some(p =>
         p.schedule.some(s => s.baseAmount === undefined)
       );
-      if (needsConversion) {
-        const newData = values.planArr.map(item => ({
-          ...item,
-          schedule: item.schedule.map(scheduleItem => {
-            if (scheduleItem.baseAmount !== undefined) return scheduleItem;
+      if (!needsStamping) return;
 
-            const shouldDivide = scheduleItem.insertType !== 'hotel';
-            const isTransferItem = scheduleItem.insertType === 'transfer' || scheduleItem.insertType === 'car';
-            const person = scheduleItem.insertType === 'activity'
-              ? ((Number(scheduleItem.adult || 0) + Number(scheduleItem.child || 0)) || 1)
-              : isTransferItem
-                ? ((values.adult || 0) || 1)
-                : ((values.adult || 0) + (values.child || 0)) || 1;
+      const newData = values.planArr.map(item => ({
+        ...item,
+        schedule: item.schedule.map(scheduleItem => {
+          if (scheduleItem.baseAmount !== undefined) return scheduleItem;
 
+          // If the backend already sent base_amount, trust it — no division needed.
+          if (scheduleItem.base_amount !== undefined && scheduleItem.base_amount !== null) {
             return {
               ...scheduleItem,
-              baseAmount: scheduleItem.amount,
-              baseMarkup: scheduleItem.markup || 0,
-              amount: shouldDivide ? getRoundOfValue(scheduleItem.amount / person) : scheduleItem.amount,
-              markup: shouldDivide ? getRoundOfValue((scheduleItem.markup || 0) / person) : (scheduleItem.markup || 0),
+              baseAmount: Number(scheduleItem.base_amount),
+              baseMarkup: Number(scheduleItem.base_markup ?? scheduleItem.markup ?? 0),
             };
-          }),
-        }));
-        setFieldValue('planArr', newData);
-      }
+          }
+
+          // Brand-new item (never priced): derive from amount by dividing by pax.
+          const shouldDivide = scheduleItem.insertType !== 'hotel';
+          const isTransferItem = scheduleItem.insertType === 'transfer' || scheduleItem.insertType === 'car';
+          const person = scheduleItem.insertType === 'activity'
+            ? ((Number(scheduleItem.adult || 0) + Number(scheduleItem.child || 0)) || 1)
+            : isTransferItem
+              ? (((values.adult || 0) + (values.child || 0)) || 1)
+              : ((values.adult || 0) + (values.child || 0)) || 1;
+
+          return {
+            ...scheduleItem,
+            baseAmount: scheduleItem.amount,
+            baseMarkup: scheduleItem.markup || 0,
+            amount: shouldDivide ? getRoundOfValue(scheduleItem.amount / person) : scheduleItem.amount,
+            markup: shouldDivide ? getRoundOfValue((scheduleItem.markup || 0) / person) : (scheduleItem.markup || 0),
+          };
+        }),
+      }));
+      setFieldValue('planArr', newData);
     } else {
-      // TOTAL mode — just stamp baseAmount so toggles work correctly
+      // TOTAL mode — stamp baseAmount so mode-toggles work correctly
       const needsBase = values.planArr.some(p =>
         p.schedule.some(s => s.baseAmount === undefined)
       );
-      if (needsBase) {
-        const newData = values.planArr.map(item => ({
-          ...item,
-          schedule: item.schedule.map(scheduleItem => ({
+      if (!needsBase) return;
+
+      const newData = values.planArr.map(item => ({
+        ...item,
+        schedule: item.schedule.map(scheduleItem => {
+          if (scheduleItem.baseAmount !== undefined) return scheduleItem;
+
+          const trueBase = scheduleItem.base_amount !== undefined && scheduleItem.base_amount !== null
+            ? Number(scheduleItem.base_amount)
+            : scheduleItem.amount;
+          const trueMarkup = scheduleItem.base_markup !== undefined
+            ? Number(scheduleItem.base_markup)
+            : (scheduleItem.markup || 0);
+
+          return {
             ...scheduleItem,
-            baseAmount: scheduleItem.baseAmount ?? scheduleItem.amount,
-            baseMarkup: scheduleItem.baseMarkup ?? (scheduleItem.markup || 0),
-          })),
-        }));
-        setFieldValue('planArr', newData);
-      }
+            baseAmount: trueBase,
+            baseMarkup: trueMarkup,
+          };
+        }),
+      }));
+      setFieldValue('planArr', newData);
     }
   }, [values.planArr, values.priceOption?.value]);
 
@@ -415,20 +449,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     const childCount = (item.insertType === "activity" ? Number(item.child) : Number(values.child)) || 0;
     const isTransferType = item.insertType === "transfer" || item.insertType === "car";
 
-    console.log('TRANSFER:', item.name, {
-      insertType: item.insertType,
-      isTransferType,
-      amount: item.amount,
-      baseAmount: item.baseAmount,
-      valuesAdult: values.adult,
-      valuesChild: values.child,
-      adultCount,
-      childCount,
-      includeChildTransfer,
-      effectiveDivisorWouldBe: isTransferType
-        ? (includeChildTransfer ? (adultCount + childCount) : adultCount)
-        : (adultCount + childCount),
-    });
     const totalPersons = adultCount + childCount;
 
     if (totalPersons > 0 && item.amount) {
@@ -995,19 +1015,20 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       formData.append("quoted_options", JSON.stringify(visibleOptionsData));
       setFieldValue("quoted_options", visibleOptionsData);
 
-      console.log('--- SUBMITTING BILLING ---');
-      for (var pair of formData.entries()) {
-        console.log(pair[0] + ', ' + pair[1]);
-      }
-
       let entryIndex = 0;
       values.planArr?.forEach(({ schedule }) => {
         schedule.forEach((data) => {
           if (!data.entryId) return; // Skip items without entry ID
           formData.append(`entries[${entryIndex}][id]`, checkFormValue(data.entryId));
+          // Always send the canonical TOTAL amount (base_amount) to the backend.
+          // This is what the backend stores, and what it returns on the next load.
           const canonicalAmount = data.baseAmount !== undefined ? data.baseAmount : data.amount;
+          const canonicalMarkup = data.baseMarkup !== undefined ? data.baseMarkup : (data.markup || 0);
           formData.append(`entries[${entryIndex}][amount]`, checkFormValue(canonicalAmount) || 0);
           formData.append(`entries[${entryIndex}][markup]`, checkFormValue(data.markup) || 0);
+          // Send base_amount/base_markup explicitly so backend can persist them
+          formData.append(`entries[${entryIndex}][base_amount]`, checkFormValue(canonicalAmount) || 0);
+          formData.append(`entries[${entryIndex}][base_markup]`, checkFormValue(canonicalMarkup) || 0);
           entryIndex += 1;
         });
       });
