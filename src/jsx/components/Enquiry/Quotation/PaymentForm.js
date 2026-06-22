@@ -700,17 +700,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     const childCount = baseChildCount;
     const totalTripPersons = adultCount + childCount;
 
+    let actTransferBasePerAdult = 0;
+    let actTransferBasePerChild = 0;
+    let actTransferMarkupPerAdult = 0;
+    let actTransferMarkupPerChild = 0;
+
     if (activeTypes.length === 0 && item.name === "Option 1") {
       const hotelAmount = item.amount || 0;
       if (adultCount > 0) activeTypes.push({ pt: { key: "adult", label: item.adultLabel || "Adult" }, count: adultCount, displayCount: adultCount, hotelRowCostAll: hotelAmount });
       if (childCount > 0) activeTypes.push({ pt: { key: "child", label: "Child" }, count: childCount, displayCount: childCount, hotelRowCostAll: 0 });
     }
-
-    // ── Always split proportionally (same as old code) ──────────────────────
-    let adultActivityTransferBase = 0;
-    let childActivityTransferBase = 0;
-    let adultActivityTransferMarkup = 0;
-    let childActivityTransferMarkup = 0;
 
     scheduleArr.forEach(({ item: schedItem }) => {
       if (schedItem.insertType !== "hotel") {
@@ -739,54 +738,70 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           ? Number(schedItem.baseMarkup)
           : (isPerMode ? (Number(schedItem.markup || 0) * personDivisor) : Number(schedItem.markup || 0));
 
-        // 2. Split between adult and child buckets
+        // 2. Add per-person rates
         if (rawType === 'activity') {
           if (schedItem.adultCost && schedItem.childCost && (Number(schedItem.adultCost) + Number(schedItem.childCost)) > 0) {
-            const explicitAdultBase = Number(schedItem.adultCost);
-            const explicitChildBase = Number(schedItem.childCost);
-            const explicitTotal = explicitAdultBase + explicitChildBase;
+            // explicit costs for activities are per-pax rates from the database
+            const explicitAdultPax = Number(schedItem.adultCost);
+            const explicitChildPax = Number(schedItem.childCost);
+            
+            const explicitAdultTotal = explicitAdultPax * itemAdultCount;
+            const explicitChildTotal = explicitChildPax * itemChildCount;
+            const explicitTotal = explicitAdultTotal + explicitChildTotal;
+            
+            const adultMarkup = explicitTotal > 0 ? (trueMarkup * explicitAdultTotal / explicitTotal) : 0;
+            const childMarkup = explicitTotal > 0 ? (trueMarkup * explicitChildTotal / explicitTotal) : 0;
 
-            const adultMarkup = explicitTotal > 0 ? (trueMarkup * explicitAdultBase / explicitTotal) : 0;
-            const childMarkup = explicitTotal > 0 ? (trueMarkup * explicitChildBase / explicitTotal) : 0;
-
-            adultActivityTransferBase += explicitAdultBase;
-            childActivityTransferBase += explicitChildBase;
-            adultActivityTransferMarkup += adultMarkup;
-            childActivityTransferMarkup += childMarkup;
+            if (itemAdultCount > 0) {
+              actTransferBasePerAdult += explicitAdultPax;
+              actTransferMarkupPerAdult += adultMarkup / itemAdultCount;
+            }
+            if (itemChildCount > 0) {
+              actTransferBasePerChild += explicitChildPax;
+              actTransferMarkupPerChild += childMarkup / itemChildCount;
+            }
           } else {
-            const ratio = itemTotalCount > 0 ? itemAdultCount / itemTotalCount : 1;
-            adultActivityTransferBase += trueBaseAmount * ratio;
-            childActivityTransferBase += trueBaseAmount * (1 - ratio);
-            adultActivityTransferMarkup += trueMarkup * ratio;
-            childActivityTransferMarkup += trueMarkup * (1 - ratio);
+            const perPaxBase = itemTotalCount > 0 ? trueBaseAmount / itemTotalCount : 0;
+            const perPaxMarkup = itemTotalCount > 0 ? trueMarkup / itemTotalCount : 0;
+            
+            actTransferBasePerAdult += perPaxBase;
+            actTransferBasePerChild += perPaxBase;
+            actTransferMarkupPerAdult += perPaxMarkup;
+            actTransferMarkupPerChild += perPaxMarkup;
           }
         } else if (rawType === 'transfer' || rawType === 'car') {
+          const perPaxBase = totalTripPersons > 0 ? trueBaseAmount / totalTripPersons : 0;
+          const perPaxMarkup = totalTripPersons > 0 ? trueMarkup / totalTripPersons : 0;
+
           if (shouldIncludeChildTransfer) {
-            const ratio = totalTripPersons > 0 ? adultCount / totalTripPersons : 1;
-            adultActivityTransferBase += trueBaseAmount * ratio;
-            childActivityTransferBase += trueBaseAmount * (1 - ratio);
-            adultActivityTransferMarkup += trueMarkup * ratio;
-            childActivityTransferMarkup += trueMarkup * (1 - ratio);
+            actTransferBasePerAdult += perPaxBase;
+            actTransferBasePerChild += perPaxBase;
+            actTransferMarkupPerAdult += perPaxMarkup;
+            actTransferMarkupPerChild += perPaxMarkup;
           } else {
             // All to adults
-            adultActivityTransferBase += trueBaseAmount;
-            adultActivityTransferMarkup += trueMarkup;
+            const perAdultBase = adultCount > 0 ? trueBaseAmount / adultCount : 0;
+            const perAdultMarkup = adultCount > 0 ? trueMarkup / adultCount : 0;
+            actTransferBasePerAdult += perAdultBase;
+            actTransferMarkupPerAdult += perAdultMarkup;
           }
         } else {
           // General fallback
-          const ratio = totalTripPersons > 0 ? adultCount / totalTripPersons : 1;
-          adultActivityTransferBase += trueBaseAmount * ratio;
-          childActivityTransferBase += trueBaseAmount * (1 - ratio);
-          adultActivityTransferMarkup += trueMarkup * ratio;
-          childActivityTransferMarkup += trueMarkup * (1 - ratio);
+          const perPaxBase = totalTripPersons > 0 ? trueBaseAmount / totalTripPersons : 0;
+          const perPaxMarkup = totalTripPersons > 0 ? trueMarkup / totalTripPersons : 0;
+          actTransferBasePerAdult += perPaxBase;
+          actTransferBasePerChild += perPaxBase;
+          actTransferMarkupPerAdult += perPaxMarkup;
+          actTransferMarkupPerChild += perPaxMarkup;
         }
       }
     });
 
-    const actTransferBasePerAdult = adultCount > 0 ? adultActivityTransferBase / adultCount : 0;
-    const actTransferBasePerChild = childCount > 0 ? childActivityTransferBase / childCount : 0;
-    const actTransferMarkupPerAdult = adultCount > 0 ? adultActivityTransferMarkup / adultCount : 0;
-    const actTransferMarkupPerChild = childCount > 0 ? childActivityTransferMarkup / childCount : 0;
+    // If global childCount is 0, we fallback to adult's per-person rate for hypothetical child display
+    if (childCount === 0) {
+      actTransferBasePerChild = actTransferBasePerAdult;
+      actTransferMarkupPerChild = actTransferMarkupPerAdult;
+    }
 
     const useBaseMarkup = Number(values.baseMarkup) > 0;
     const useExtraMarkup = !useBaseMarkup && Number(values.extraMarkup) > 0;
