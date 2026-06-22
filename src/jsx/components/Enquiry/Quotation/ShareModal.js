@@ -101,7 +101,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     }
     const travelDate = startDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
     const destinationName = packageData.destination?.label || packageData.destinationName || "Destination";
-    const pricePerPerson = adultCount > 0 ? (grandTotal / adultCount).toFixed(0) : 0;
+    const pricePerPerson = adultCount > 0 ? Math.floor(grandTotal / adultCount) : 0;
 
     return {
       tripId, packageName, startDate, endDate, nightsCount, daysCount,
@@ -374,7 +374,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
                 perPerson = count > 0 ? rowTotal / count : 0;
               }
 
-              let line = `${displayCurrency} ${Math.round(perPerson).toLocaleString()}`;
+              let line = `${displayCurrency} ${Math.floor(perPerson).toLocaleString()}`;
               if (label.toLowerCase().includes("child") || label.toLowerCase().includes("person")) {
                 line += ` per ${label}`;
               } else {
@@ -389,15 +389,15 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
             
             const totalPax = Number(adultCount || 0) + Number(childCount || 0);
             const displayTotal = quotedOpt?.grandTotal || dynamicTotal || grandTotal;
-            text += `💰 *Total Package Cost for ${totalPax} pax: ${displayCurrency} ${Math.round(displayTotal).toLocaleString()}*\n`;
+            text += `💰 *Total Package Cost for ${totalPax} pax: ${displayCurrency} ${Math.floor(displayTotal).toLocaleString()}*\n`;
           } else {
             // No breakup rows — compute from grandTotal
             const displayTotal = quotedOpt?.grandTotal || dynamicTotal || grandTotal;
             const totalPax = Number(adultCount || 0) + Number(childCount || 0);
             if (isPERMode && adultCount > 0) {
-              text += `${displayCurrency} ${Math.round(displayTotal / adultCount).toLocaleString()} per Person\n`;
+              text += `${displayCurrency} ${Math.floor(displayTotal / adultCount).toLocaleString()} per Person\n`;
             }
-            text += `💰 *Total Package Cost for ${totalPax} pax: ${displayCurrency} ${Math.round(displayTotal).toLocaleString()}*\n`;
+            text += `💰 *Total Package Cost for ${totalPax} pax: ${displayCurrency} ${Math.floor(displayTotal).toLocaleString()}*\n`;
           }
 
           text += `\n${DIVIDER}\n\n`;
@@ -561,7 +561,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       if (values.priceBreakup) {
         text += `Per Person (Double Sharing): ${parseFloat(pricePerPerson).toLocaleString()} x ${adultCount} Pax\n`;
       }
-      text += `Grand Total: ${currencySymbol} ${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} /- (excl. VAT)\n\n`;
+      text += `Grand Total: ${currencySymbol} ${Math.floor(grandTotal).toLocaleString()} /- (excl. VAT)\n\n`;
     }
 
     if (values.itinerary && packageData.planArr) {
