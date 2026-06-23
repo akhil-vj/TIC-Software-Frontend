@@ -255,7 +255,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
               const person =
                 scheduleItem.insertType === "activity"
                   ? (Number(scheduleItem.adult || 0) + Number(scheduleItem.child || 0)) || 1
-                  : values.adult + values.child;
+                  : (scheduleItem.insertType === "transfer" || scheduleItem.insertType === "car")
+                    ? (includeChildTransfer ? ((values.adult || 0) + (values.child || 0)) : (values.adult || 0)) || 1
+                    : ((values.adult || 0) + (values.child || 0)) || 1;
 
               if (type === "amount") {
                 result.baseAmount =
@@ -1534,7 +1536,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                     <input
                                       className="form-control text-end fw-bold text-dark"
                                       type="number"
-                                      value={displayAmount(item.amount)}
+                                      value={firstBreakdown && values.priceOption?.value === "PER" ? displayAmount(firstBreakdown.net) : displayAmount(item.amount)}
                                       disabled={readOnly}
                                       onChange={(e) => handleInputChange(planArrInd, scheduleInd, e.target.value)}
                                       style={{ border: "1px solid transparent", backgroundColor: "transparent", borderRadius: "6px", transition: "all 0.2s" }}
@@ -1558,7 +1560,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 </td>
                                 <td className={`px-4 text-end fw-bold text-dark fs-15 ${isBreakdown ? "pt-1 pb-1 align-bottom" : "py-3 align-middle"}`} style={{ border: "none" }}>
                                   {!(isHotelPer || isTransferPer) ? (
-                                    getRoundOfValue(item.amount + item.markup)
+                                    firstBreakdown && values.priceOption?.value === "PER" ? displayAmount(firstBreakdown.gross) : getRoundOfValue(item.amount + item.markup)
                                   ) : (
                                     firstBreakdown && (
                                       <span className="text-dark fw-bold" style={{ fontSize: "12px" }}>
