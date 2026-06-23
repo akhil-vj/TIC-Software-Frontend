@@ -364,6 +364,7 @@ const InsertHotel = ({ showModal, setShowModal, data, onClick, editId, onClose, 
                       options={categoryData}
                       optionValue="id"
                       optionLabel="name"
+                      isDisabled={true}
                     />
                   </div>
 
