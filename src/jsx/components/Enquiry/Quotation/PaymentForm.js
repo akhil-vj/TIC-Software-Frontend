@@ -18,8 +18,8 @@ import { useSelector } from "react-redux";
 
 // ─── Person type definitions ─────────────────────────────────────────────────
 const PERSON_TYPES = [
-  { key: "adult", label: "Adult" },
-  { key: "extra", label: "Adult (Extra Bed)" },
+  { key: "adult", label: "Person" },
+  { key: "extra", label: "Person (Extra Bed)" },
   { key: "childW", label: "Child (With Bed)" },
   { key: "childN", label: "Child (No Bed)" },
   { key: "child", label: "Child" },
@@ -611,12 +611,20 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     if (opt.bedTypes && opt.bedTypes.size === 1) {
       const bt = Array.from(opt.bedTypes)[0];
-      const BED_TYPE_LABELS = { single: 'Adult (Single Room)', double: 'Adult (Double Room)', triple: 'Adult (Triple Room)', quad: 'Adult (Quad Room)', two_bedroom: 'Adult (2-Bedroom)', three_bedroom: 'Adult (3-Bedroom)', four_bedroom: 'Adult (4-Bedroom)' };
-      opt.adultLabel = BED_TYPE_LABELS[bt] || 'Adult';
-      opt.extraLabel = 'Adult (Extra Bed)';
+      const BED_TYPE_LABELS = { 
+        single: 'Person in Single Room', 
+        double: 'Person in Double sharing', 
+        triple: 'Person in Triple sharing', 
+        quad: 'Person in Quad sharing', 
+        two_bedroom: 'Person in 2-Bedroom ', 
+        three_bedroom: 'Person in 3-Bedroom', 
+        four_bedroom: 'Person in 4-Bedroom ' 
+      };
+      opt.adultLabel = BED_TYPE_LABELS[bt] || 'Person';
+      opt.extraLabel = 'Person (Extra Bed)';
     } else {
-      opt.adultLabel = 'Adult';
-      opt.extraLabel = 'Adult';
+      opt.adultLabel = 'Person';
+      opt.extraLabel = 'Person (Extra Bed)';
     }
 
     opt.childLabel = 'Child';
@@ -1282,13 +1290,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                             // Track per-bed-type cost separately so mixed configs (double + single) show separate rows
                             const BED_TYPE_LABELS = {
                               single: 'Adult (Single Room)',
-                              double: 'Adult (Double Room)',
-                              triple: 'Adult (Triple Room)',
-                              quad: 'Adult (Quad Room)',
+                              double: 'Adult (Double Sharing)',
+                              triple: 'Adult (Triple Sharing)',
+                              quad: 'Adult (Quad Sharing)',
                               two_bedroom: 'Adult (2-Bedroom)',
                               three_bedroom: 'Adult (3-Bedroom)',
                               four_bedroom: 'Adult (4-Bedroom)',
                             };
+                          
                             const bedTypeGroups = {}; // { bedType: { netCost, count } }
                             let extraNetCost = 0;
                             let extraCount = 0;
@@ -1335,11 +1344,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                             const childWCost = counts.childW * rates.childW;
                             const childNCost = counts.childN * rates.childN;
 
-                            childNetCost += childWCost + childNCost;
-                            childCount += counts.childW + counts.childN;
-
                             const totalInRoomAdultCost = Object.values(bedTypeGroups).reduce((s, g) => s + g.netCost, 0);
-                            const totalComputedWeight = totalInRoomAdultCost + extraNetCost + childNetCost;
+                            const totalComputedWeight = totalInRoomAdultCost + extraNetCost + childNetCost + childWCost + childNCost;
                             let ratio = 1;
                             if (totalComputedWeight > 0) {
                               ratio = Number(item.amount || 0) / totalComputedWeight;
@@ -1378,6 +1384,24 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 label: 'Child rate',
                                 net: displayAmount(netPerChild),
                                 gross: displayAmount(netPerChild * (1 + markupRatio))
+                              });
+                            }
+                            if (counts.childW > 0) {
+                              const netPerChildW = (childWCost * ratio) / counts.childW;
+                              breakdownData.push({
+                                key: 'childW',
+                                label: 'Child (With Bed) rate',
+                                net: displayAmount(netPerChildW),
+                                gross: displayAmount(netPerChildW * (1 + markupRatio))
+                              });
+                            }
+                            if (counts.childN > 0) {
+                              const netPerChildN = (childNCost * ratio) / counts.childN;
+                              breakdownData.push({
+                                key: 'childN',
+                                label: 'Child (Without Bed) rate',
+                                net: displayAmount(netPerChildN),
+                                gross: displayAmount(netPerChildN * (1 + markupRatio))
                               });
                             }
                           } else if ((item.insertType === "transfer" || item.insertType === "car" || item.insertType === "activity") && isPer) {
@@ -1550,26 +1574,26 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 const isLastBreakdown = i === otherBreakdowns.length - 1;
                                 return (
                                   <tr key={`${ind}_${i}`} className={`${isLastBreakdown ? "" : ""}`} style={{ backgroundColor: theme.bg, borderBottom: isLastBreakdown ? "1px solid #f1f5f9" : "none", transition: "background-color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme.hover} onMouseOut={(e) => e.currentTarget.style.backgroundColor = theme.bg}>
-                                    <td className="px-4 py-1 border-0 align-middle" style={{ border: "none" }}>
+                                    <td className="px-4 py-0 border-0 align-middle" style={{ border: "none" }}>
                                       <span className="text-dark" style={{ fontSize: "11px", fontWeight: 500, paddingLeft: "48px", color: "#64748b" }}>
                                         <i className="fa-solid fa-turn-up fa-rotate-90 me-2 opacity-50"></i>
                                         {row.label}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-1 border-0 align-middle" style={{ border: "none" }}></td>
-                                    <td className="px-4 py-1 border-0 align-middle text-end" style={{ border: "none" }}>
+                                    <td className="px-4 py-0 border-0 align-middle" style={{ border: "none" }}></td>
+                                    <td className="px-4 py-0 border-0 align-middle text-end" style={{ border: "none" }}>
                                       <input
                                         className="form-control form-control-sm text-end fw-bold text-dark"
                                         type="number"
                                         value={displayAmount(row.net)}
                                         disabled={readOnly || isTransferPer}
                                         onChange={(e) => isHotelPer ? handleHotelPaxPriceChange(planArrInd, scheduleInd, row.key, e.target.value) : null}
-                                        style={{ border: "1px solid transparent", backgroundColor: "transparent", borderRadius: "4px", width: "100%", fontSize: "12px" }}
+                                        style={{ border: "1px solid transparent", backgroundColor: "transparent", borderRadius: "4px", width: "100%", fontSize: "12px", padding: "2px 8px", minHeight: "24px" }}
                                         onFocus={(e) => { if (isHotelPer && !readOnly) { e.target.style.border = "1px solid #0d6efd"; e.target.style.backgroundColor = "#fff"; } }}
                                         onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.backgroundColor = "transparent"; handleBlur(e); }}
                                       />
                                     </td>
-                                    <td className="px-4 py-2 border-0 align-middle text-end" style={{ border: "none" }}>
+                                    <td className="px-4 py-0 border-0 align-middle text-end" style={{ border: "none" }}>
                                       <span className="text-dark fw-bold" style={{ fontSize: "12px" }}>
                                         {displayAmount(row.gross)}
                                       </span>
