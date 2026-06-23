@@ -430,7 +430,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       Object.values(mergedMap).forEach(mi => {
         const mealSuffix = mi.meal ? ` with ${mi.meal}` : "";
         const locationSuffix = mi.location ? ` at ${mi.location}` : "";
-        inclusionText += `✅ ${mi.nights} Night${mi.nights !== 1 ? "s" : ""} Accommodation (${mi.room})${mealSuffix}${locationSuffix}\n`;
+        inclusionText += `✅ ${mi.nights} Night${mi.nights !== 1 ? "s" : ""} accommodation in the above mentioned hotel${mealSuffix}${locationSuffix}\n`;
         hasInclusions = true;
       });
 
