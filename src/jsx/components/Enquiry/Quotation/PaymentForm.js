@@ -20,6 +20,8 @@ import { useSelector } from "react-redux";
 const PERSON_TYPES = [
   { key: "adult", label: "Adult" },
   { key: "extra", label: "Adult (Extra Bed)" },
+  { key: "childW", label: "Child (With Bed)" },
+  { key: "childN", label: "Child (No Bed)" },
   { key: "child", label: "Child" },
 ];
 
@@ -558,10 +560,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         if (counts.childW > 0) acc[idx].childTypes.add('childW');
         if (counts.childN > 0) acc[idx].childTypes.add('childN');
 
-        hotelChildCost += childWCost + childNCost;
-        hotelChildCount += counts.childW + counts.childN;
-
-        const itemTotalWeight = hotelAdultCost + hotelExtraCost + hotelChildCost;
+        const itemTotalWeight = hotelAdultCost + hotelExtraCost + hotelChildCost + childWCost + childNCost;
         let ratio = 1;
         if (itemTotalWeight > 0) {
           ratio = (Number(item.amount || 0)) / itemTotalWeight;
@@ -577,7 +576,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         acc[idx].maxExtraAdults = Math.max(acc[idx].maxExtraAdults || 0, hotelExtraAdults);
         acc[idx].maxTotalAdults = Math.max(acc[idx].maxTotalAdults || 0, hotelInRoomAdults + hotelExtraAdults);
 
+        acc[idx].childWTotalCost = (acc[idx].childWTotalCost || 0) + childWCost * ratio;
+        acc[idx].childNTotalCost = (acc[idx].childNTotalCost || 0) + childNCost * ratio;
         acc[idx].childTotalCost = (acc[idx].childTotalCost || 0) + hotelChildCost * ratio;
+        
+        acc[idx].childWDisplay = Math.max(acc[idx].childWDisplay || 0, counts.childW);
+        acc[idx].childNDisplay = Math.max(acc[idx].childNDisplay || 0, counts.childN);
         acc[idx].childDisplay = Math.max(acc[idx].childDisplay || 0, hotelChildCount);
       }
     }
@@ -593,6 +597,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     opt.extraDisplay = extraA;
     opt.adult = regularA;
     opt.extra = extraA;
+    
+    opt.childWDisplay = opt.childWDisplay || 0;
+    opt.childNDisplay = opt.childNDisplay || 0;
+    opt.childDisplay = opt.childDisplay || 0;
+    
+    opt.childW = opt.childWDisplay;
+    opt.childN = opt.childNDisplay;
     opt.child = opt.childDisplay;
 
     opt.adultTotalCost = (opt.perAdultCost || 0) * regularA;
@@ -608,13 +619,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       opt.extraLabel = 'Adult';
     }
 
-    if (opt.childTypes && opt.childTypes.size === 1) {
-      const ct = Array.from(opt.childTypes)[0];
-      const CHILD_TYPE_LABELS = { childStaying: 'Child', childW: 'Child (With Bed)', childN: 'Child (No Bed)' };
-      opt.childLabel = CHILD_TYPE_LABELS[ct] || 'Child';
-    } else {
-      opt.childLabel = 'Child';
-    }
+    opt.childLabel = 'Child';
+    opt.childWLabel = 'Child (With Bed)';
+    opt.childNLabel = 'Child (No Bed)';
 
     return opt;
   });
@@ -837,7 +844,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       const rowHotelNet = hotelRowCostAll;
       const rowHotelMarkup = hotelLineMarkup * hotelFraction;
 
-      const isChildType = pt.key === 'child';
+      const isChildType = pt.key === 'child' || pt.key === 'childW' || pt.key === 'childN';
       const actTransferBasePerPersonType = isChildType ? actTransferBasePerChild : actTransferBasePerAdult;
       const actTransferMarkupPerPersonType = isChildType ? actTransferMarkupPerChild : actTransferMarkupPerAdult;
 
