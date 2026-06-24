@@ -70,7 +70,7 @@ function DetailTransfer() {
           {detailData?.description && (
             <div className="mb-4">
               <h5 className="text-primary mb-3 border-bottom pb-2">Description</h5>
-              <p className="text-muted p-3 bg-light rounded">{detailData?.description}</p>
+              <div className="text-muted p-3 bg-light rounded" dangerouslySetInnerHTML={{ __html: detailData?.description }} />
             </div>
           )}
 

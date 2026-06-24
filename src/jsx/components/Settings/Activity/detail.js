@@ -45,8 +45,7 @@ function DetailActivity() {
           </div>
           <div className="mb-3">
             <h4 className="text-primary">Description:</h4>
-            <h6>{
-            detailData?.description}</h6>
+            <div dangerouslySetInnerHTML={{ __html: detailData?.description || "" }} />
           </div>
           <div className="col-12 mt-4">
                     <Table responsive className="custom-table-bordered">
