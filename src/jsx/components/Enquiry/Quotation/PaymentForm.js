@@ -77,8 +77,8 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       }
       setCustomMarkupsLoaded(true);
     }
-  // Reset customMarkupsLoaded when quoted_options identity changes (e.g. after a save)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Reset customMarkupsLoaded when quoted_options identity changes (e.g. after a save)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.quoted_options, customMarkupsLoaded, values.priceOption]);
 
   // Reset stale markup cache whenever the saved quoted_options reference changes
@@ -552,7 +552,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             hotelInRoomAdults += inRoomAdults;
             hotelExtraAdults += extraPax;
             hotelChildCount += roomChildren;
-            
+
             if (roomChildren > 0) acc[idx].childTypes.add('childStaying');
           });
         }
@@ -573,7 +573,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
         acc[idx].perAdultCost = (acc[idx].perAdultCost || 0) + perAdultCost * ratio;
         acc[idx].perExtraCost = (acc[idx].perExtraCost || 0) + perExtraCost * ratio;
-        
+
         acc[idx].maxInRoomAdults = Math.max(acc[idx].maxInRoomAdults || 0, hotelInRoomAdults);
         acc[idx].maxExtraAdults = Math.max(acc[idx].maxExtraAdults || 0, hotelExtraAdults);
         acc[idx].maxTotalAdults = Math.max(acc[idx].maxTotalAdults || 0, hotelInRoomAdults + hotelExtraAdults);
@@ -581,7 +581,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         acc[idx].childWTotalCost = (acc[idx].childWTotalCost || 0) + childWCost * ratio;
         acc[idx].childNTotalCost = (acc[idx].childNTotalCost || 0) + childNCost * ratio;
         acc[idx].childTotalCost = (acc[idx].childTotalCost || 0) + hotelChildCost * ratio;
-        
+
         acc[idx].childWDisplay = Math.max(acc[idx].childWDisplay || 0, counts.childW);
         acc[idx].childNDisplay = Math.max(acc[idx].childNDisplay || 0, counts.childN);
         acc[idx].childDisplay = Math.max(acc[idx].childDisplay || 0, hotelChildCount);
@@ -599,11 +599,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     opt.extraDisplay = extraA;
     opt.adult = regularA;
     opt.extra = extraA;
-    
+
     opt.childWDisplay = opt.childWDisplay || 0;
     opt.childNDisplay = opt.childNDisplay || 0;
     opt.childDisplay = opt.childDisplay || 0;
-    
+
     opt.childW = opt.childWDisplay;
     opt.childN = opt.childNDisplay;
     opt.child = opt.childDisplay;
@@ -613,14 +613,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     if (opt.bedTypes && opt.bedTypes.size === 1) {
       const bt = Array.from(opt.bedTypes)[0];
-      const BED_TYPE_LABELS = { 
-        single: 'Person in Single Room', 
-        double: 'Person in Double sharing', 
-        triple: 'Person in Triple sharing', 
-        quad: 'Person in Quad sharing', 
-        two_bedroom: 'Person in 2-Bedroom ', 
-        three_bedroom: 'Person in 3-Bedroom', 
-        four_bedroom: 'Person in 4-Bedroom ' 
+      const BED_TYPE_LABELS = {
+        single: 'Person in Single Room',
+        double: 'Person in Double sharing',
+        triple: 'Person in Triple sharing',
+        quad: 'Person in Quad sharing',
+        two_bedroom: 'Person in 2-Bedroom ',
+        three_bedroom: 'Person in 3-Bedroom',
+        four_bedroom: 'Person in 4-Bedroom '
       };
       opt.adultLabel = BED_TYPE_LABELS[bt] || 'Person';
       opt.extraLabel = 'Person (Extra Bed)';
@@ -778,29 +778,26 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         // 2. Add per-person rates
         if (rawType === 'activity') {
           if (schedItem.adultCost && schedItem.childCost && (Number(schedItem.adultCost) + Number(schedItem.childCost)) > 0) {
-            // explicit costs for activities are per-pax rates from the database
-            const explicitAdultPax = Number(schedItem.adultCost);
-            const explicitChildPax = Number(schedItem.childCost);
-            
-            const explicitAdultTotal = explicitAdultPax * itemAdultCount;
-            const explicitChildTotal = explicitChildPax * itemChildCount;
+            // explicit costs for activities are total rates across all pax from the database
+            const explicitAdultTotal = Number(schedItem.adultCost);
+            const explicitChildTotal = Number(schedItem.childCost);
             const explicitTotal = explicitAdultTotal + explicitChildTotal;
-            
+
             const adultMarkup = explicitTotal > 0 ? (trueMarkup * explicitAdultTotal / explicitTotal) : 0;
             const childMarkup = explicitTotal > 0 ? (trueMarkup * explicitChildTotal / explicitTotal) : 0;
 
             if (itemAdultCount > 0) {
-              actTransferBasePerAdult += explicitAdultPax;
+              actTransferBasePerAdult += explicitAdultTotal / itemAdultCount;
               actTransferMarkupPerAdult += adultMarkup / itemAdultCount;
             }
             if (itemChildCount > 0) {
-              actTransferBasePerChild += explicitChildPax;
+              actTransferBasePerChild += explicitChildTotal / itemChildCount;
               actTransferMarkupPerChild += childMarkup / itemChildCount;
             }
           } else {
             const perPaxBase = itemTotalCount > 0 ? trueBaseAmount / itemTotalCount : 0;
             const perPaxMarkup = itemTotalCount > 0 ? trueMarkup / itemTotalCount : 0;
-            
+
             actTransferBasePerAdult += perPaxBase;
             actTransferBasePerChild += perPaxBase;
             actTransferMarkupPerAdult += perPaxMarkup;
@@ -1299,7 +1296,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                               three_bedroom: 'Adult (3-Bedroom)',
                               four_bedroom: 'Adult (4-Bedroom)',
                             };
-                          
+
                             const bedTypeGroups = {}; // { bedType: { netCost, count } }
                             let extraNetCost = 0;
                             let extraCount = 0;
@@ -1863,8 +1860,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                       const occupancyFactors = { adult: 1, extra: 1, child: 1 };
                       const isPERModeGT = values.priceOption?.value === "PER";
-                      const grandTotal = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.total), 0)));
-                      const grandMarkup = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.markup), 0)));
+                      const grandTotal = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => {
+                        const pCount = pt.count * (occupancyFactors[pt.key] || 1);
+                        return sum + (convert(pt.netCost) / pCount) + (convert(pt.markup) / pCount);
+                      }, 0)));
+                      const grandMarkup = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)), 0)));
                       const vatDisplay = personRows[0]?.vat ?? 0;
                       // Number of columns: 5 with Options, 4 without
                       const totalCols = hasHotelInSchedule ? 5 : 4;
@@ -2005,9 +2005,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                               {/* VAT */}
                               <td className="text-end pe-3" style={{ borderRight: '0.5px solid #e2e8f0', color: "#374151" }}>{pt.vat} %</td>
 
-                              {/* Total per person */}
+                              {/* Total per person: net and markup converted separately, then summed */}
                               <td className="text-end pe-3 text-dark" style={{ fontWeight: 600 }}>
-                                {currSymbol} {Math.round(getRoundOfValue(convert(pt.total) / (pt.count * (occupancyFactors[pt.key] || 1))))}
+                                {currSymbol} {Math.round(getRoundOfValue(
+                                  (convert(pt.netCost) / (pt.count * (occupancyFactors[pt.key] || 1))) +
+                                  (convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)))
+                                ))}
                               </td>
                             </tr>
                           ))}
