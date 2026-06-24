@@ -64,11 +64,14 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         if (isPERMode) {
           opt.rows?.forEach(r => {
             const pCount = r.count > 0 ? r.count : 1;
-            loadedMarkups[`${optIdx}_${r.key}`] = { value: Math.round(r.markup / pCount), rate: rateToUse };
+            const mode = r.markup_mode || 'val';
+            const value = mode === 'pct' ? r.markup_percent : getRoundOfValue(r.markup / pCount);
+            loadedMarkups[`${optIdx}_${r.key}`] = { value, rate: rateToUse, mode };
           });
         } else {
-          const totalMarkup = opt.rows?.reduce((sum, r) => sum + r.markup, 0) || 0;
-          loadedMarkups[`${optIdx}_total`] = { value: Math.round(totalMarkup), rate: rateToUse };
+          const mode = opt.markup_mode || 'val';
+          const value = mode === 'pct' ? opt.markup_percent : getRoundOfValue(opt.rows?.reduce((sum, r) => sum + r.markup, 0) || 0);
+          loadedMarkups[`${optIdx}_total`] = { value, rate: rateToUse, mode };
         }
       });
 
@@ -888,16 +891,25 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     const hotelRows = rowsWithNet.map((r) => {
       let finalMarkup = r.originalMarkup;
+      let finalMarkupMode = 'val';
+      let finalMarkupPercent = null;
 
       if (isPERMode) {
         const customObj = markups[`${optIdx}_${r.pt.key}`];
         if (customObj !== undefined && customObj !== "") {
           const customVal = typeof customObj === 'object' ? customObj.value : customObj;
           const customRate = typeof customObj === 'object' ? customObj.rate : exRate;
+          const mode = typeof customObj === 'object' ? (customObj.mode || 'val') : 'val';
           if (customVal !== "") {
-            const perPersonInBase = Number(customVal) * customRate;
-            const pCount = r.displayCount * (occupancyFactors[r.pt.key] || 1);
-            finalMarkup = perPersonInBase * pCount;
+            finalMarkupMode = mode;
+            if (mode === 'pct') {
+              finalMarkupPercent = Number(customVal);
+              finalMarkup = r.netCost * (finalMarkupPercent / 100);
+            } else {
+              const perPersonInBase = Number(customVal) * customRate;
+              const pCount = r.displayCount * (occupancyFactors[r.pt.key] || 1);
+              finalMarkup = perPersonInBase * pCount;
+            }
           }
         }
       } else {
@@ -905,10 +917,18 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         if (customObj !== undefined && customObj !== "") {
           const customVal = typeof customObj === 'object' ? customObj.value : customObj;
           const customRate = typeof customObj === 'object' ? customObj.rate : exRate;
+          const mode = typeof customObj === 'object' ? (customObj.mode || 'val') : 'val';
           if (customVal !== "") {
-            const totalMarkupInBase = Number(customVal) * customRate;
-            const ratio = optionTotalNetCost > 0 ? r.netCost / optionTotalNetCost : (1 / rowsWithNet.length);
-            finalMarkup = totalMarkupInBase * ratio;
+            finalMarkupMode = mode;
+            if (mode === 'pct') {
+              finalMarkupPercent = Number(customVal);
+              const ratio = optionTotalNetCost > 0 ? r.netCost / optionTotalNetCost : (1 / rowsWithNet.length);
+              finalMarkup = optionTotalNetCost * (finalMarkupPercent / 100) * ratio;
+            } else {
+              const totalMarkupInBase = Number(customVal) * customRate;
+              const ratio = optionTotalNetCost > 0 ? r.netCost / optionTotalNetCost : (1 / rowsWithNet.length);
+              finalMarkup = totalMarkupInBase * ratio;
+            }
           }
         }
       }
@@ -917,9 +937,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         key: r.pt.key,
         label: r.pt.label,
         count: r.displayCount,
-        markup: getRoundOfValue(finalMarkup),
+        markup: finalMarkup,           // keep full precision — display layer rounds for UI
+        markup_mode: finalMarkupMode,
+        markup_percent: finalMarkupPercent,
         vat: getVatDisplay(),
-        total: getRoundOfValue(r.netCost + finalMarkup),
+        total: r.netCost + finalMarkup, // keep full precision — display layer rounds for UI
         netCost: r.netCost
       };
     });
@@ -1000,18 +1022,26 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
             count: pCount,
             perPerson: getRoundOfValue(perPerson),
             markup: convert(pt.markup),
+            markup_mode: pt.markup_mode,
+            markup_percent: pt.markup_percent,
             vat: pt.vat,
             total: getRoundOfValue(itemizedTotal)
           };
         });
 
         const newGrandTotal = mappedRows.reduce((sum, r) => sum + r.total, 0);
+        
+        // Find total mode settings from the first row (since it's an option-level setting in TOTAL mode)
+        const totalMode = pRows[0]?.markup_mode;
+        const totalPercent = pRows[0]?.markup_percent;
 
         return {
           optionName: item.name,
           grandTotal: getRoundOfValue(newGrandTotal),
           currencyCode: currentCurrencyCode,
           currencySymbol: currentCurrencySymbol,
+          markup_mode: totalMode,
+          markup_percent: totalPercent,
           rows: mappedRows
         };
       });
@@ -1860,11 +1890,11 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                       const occupancyFactors = { adult: 1, extra: 1, child: 1 };
                       const isPERModeGT = values.priceOption?.value === "PER";
-                      const grandTotal = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => {
+                      const grandTotal = getRoundOfValue(personRows.reduce((sum, pt) => {
                         const pCount = pt.count * (occupancyFactors[pt.key] || 1);
                         return sum + (convert(pt.netCost) / pCount) + (convert(pt.markup) / pCount);
-                      }, 0)));
-                      const grandMarkup = Math.round(getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)), 0)));
+                      }, 0));
+                      const grandMarkup = getRoundOfValue(personRows.reduce((sum, pt) => sum + convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)), 0));
                       const vatDisplay = personRows[0]?.vat ?? 0;
                       // Number of columns: 5 with Options, 4 without
                       const totalCols = hasHotelInSchedule ? 5 : 4;
@@ -1888,26 +1918,59 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 Package Total
                               </td>
                               <td className="text-end pe-3" style={{ borderRight: "0.5px solid #e2e8f0", color: "#374151" }}>
-                                {!readOnly ? (
-                                  <div className="d-flex align-items-center justify-content-end">
-                                    <span className="me-1">{currSymbol}</span>
+                              {!readOnly ? (() => {
+                                const totKey = `${optIdx}_total`;
+                                const totObj = customMarkups[totKey];
+                                const totMode = (typeof totObj === 'object' ? totObj?.mode : null) || 'val';
+                                const totRawVal = totObj !== undefined
+                                  ? (typeof totObj === 'object'
+                                    ? (totObj.value === '' ? '' : (
+                                        totMode === 'pct'
+                                          ? totObj.value
+                                          : getRoundOfValue((Number(totObj.value) * (totObj.rate || rateToUse)) / rateToUse)
+                                      ))
+                                    : totObj)
+                                  : grandMarkup;
+                                return (
+                                  <div className="d-flex align-items-center justify-content-end gap-1">
+                                    {/* Mode toggle */}
+                                    <div className="btn-group btn-group-sm" role="group" style={{ fontSize: '11px' }}>
+                                      <button
+                                        type="button"
+                                        className={`btn py-0 px-2 ${totMode !== 'pct' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                        style={{ fontSize: '11px', lineHeight: '1.4' }}
+                                        onClick={() => setCustomMarkups(prev => ({
+                                          ...prev,
+                                          [totKey]: { ...(typeof prev[totKey] === 'object' ? prev[totKey] : { value: grandMarkup, rate: rateToUse }), mode: 'val' }
+                                        }))}
+                                      >฿</button>
+                                      <button
+                                        type="button"
+                                        className={`btn py-0 px-2 ${totMode === 'pct' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                        style={{ fontSize: '11px', lineHeight: '1.4' }}
+                                        onClick={() => setCustomMarkups(prev => ({
+                                          ...prev,
+                                          [totKey]: { ...(typeof prev[totKey] === 'object' ? prev[totKey] : { value: '', rate: rateToUse }), mode: 'pct' }
+                                        }))}
+                                      >%</button>
+                                    </div>
                                     <input
                                       type="number"
                                       className="form-control form-control-sm text-end p-1"
-                                      style={{ width: "80px", display: "inline-block" }}
-                                      value={
-                                        customMarkups[`${optIdx}_total`] !== undefined
-                                          ? (typeof customMarkups[`${optIdx}_total`] === 'object'
-                                            ? (customMarkups[`${optIdx}_total`].value === "" ? "" : Math.round((Number(customMarkups[`${optIdx}_total`].value) * (customMarkups[`${optIdx}_total`].rate || rateToUse)) / rateToUse))
-                                            : customMarkups[`${optIdx}_total`])
-                                          : grandMarkup
-                                      }
-                                      onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_total`]: { value: e.target.value, rate: rateToUse } })}
+                                      style={{ width: '70px', display: 'inline-block' }}
+                                      placeholder={totMode === 'pct' ? '0 %' : '0'}
+                                      value={totRawVal}
+                                      onChange={(e) => setCustomMarkups(prev => ({
+                                        ...prev,
+                                        [totKey]: { ...(typeof prev[totKey] === 'object' ? prev[totKey] : {}), value: e.target.value, rate: rateToUse, mode: totMode }
+                                      }))}
                                     />
+                                    <span style={{ fontSize: '11px', color: '#666', minWidth: '12px' }}>{totMode === 'pct' ? '%' : ''}</span>
                                   </div>
-                                ) : (
-                                  <>{currSymbol} {grandMarkup}</>
-                                )}
+                                );
+                              })() : (
+                                <>{currSymbol} {grandMarkup}</>
+                              )}
                               </td>
                               <td className="text-end pe-3" style={{ borderRight: "0.5px solid #e2e8f0", color: "#374151" }}>
                                 {vatDisplay} %
@@ -1980,26 +2043,60 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                               {/* Markup */}
                               <td className="text-end pe-3" style={{ borderRight: '0.5px solid #e2e8f0', color: "#374151" }}>
-                                {!readOnly ? (
-                                  <div className="d-flex align-items-center justify-content-end">
-                                    <span className="me-1">{currSymbol}</span>
+                                {!readOnly ? (() => {
+                                const rowKey = `${optIdx}_${pt.key}`;
+                                const rowObj = customMarkups[rowKey];
+                                const rowMode = (typeof rowObj === 'object' ? rowObj?.mode : null) || 'val';
+                                const defaultMarkupVal = getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)));
+                                const rowRawVal = rowObj !== undefined
+                                  ? (typeof rowObj === 'object'
+                                    ? (rowObj.value === '' ? '' : (
+                                        rowMode === 'pct'
+                                          ? rowObj.value
+                                          : getRoundOfValue((Number(rowObj.value) * (rowObj.rate || rateToUse)) / rateToUse)
+                                      ))
+                                    : rowObj)
+                                  : defaultMarkupVal;
+                                return (
+                                  <div className="d-flex align-items-center justify-content-end gap-1">
+                                    {/* Mode toggle */}
+                                    <div className="btn-group btn-group-sm" role="group" style={{ fontSize: '11px' }}>
+                                      <button
+                                        type="button"
+                                        className={`btn py-0 px-2 ${rowMode !== 'pct' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                        style={{ fontSize: '11px', lineHeight: '1.4' }}
+                                        onClick={() => setCustomMarkups(prev => ({
+                                          ...prev,
+                                          [rowKey]: { ...(typeof prev[rowKey] === 'object' ? prev[rowKey] : { value: defaultMarkupVal, rate: rateToUse }), mode: 'val' }
+                                        }))}
+                                      >฿</button>
+                                      <button
+                                        type="button"
+                                        className={`btn py-0 px-2 ${rowMode === 'pct' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                        style={{ fontSize: '11px', lineHeight: '1.4' }}
+                                        onClick={() => setCustomMarkups(prev => ({
+                                          ...prev,
+                                          [rowKey]: { ...(typeof prev[rowKey] === 'object' ? prev[rowKey] : { value: '', rate: rateToUse }), mode: 'pct' }
+                                        }))}
+                                      >%</button>
+                                    </div>
                                     <input
                                       type="number"
                                       className="form-control form-control-sm text-end p-1"
-                                      style={{ width: "80px", display: "inline-block" }}
-                                      value={
-                                        customMarkups[`${optIdx}_${pt.key}`] !== undefined
-                                          ? (typeof customMarkups[`${optIdx}_${pt.key}`] === 'object'
-                                            ? (customMarkups[`${optIdx}_${pt.key}`].value === "" ? "" : Math.round((Number(customMarkups[`${optIdx}_${pt.key}`].value) * (customMarkups[`${optIdx}_${pt.key}`].rate || rateToUse)) / rateToUse))
-                                            : customMarkups[`${optIdx}_${pt.key}`])
-                                          : Math.round(getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1))))
-                                      }
-                                      onChange={(e) => setCustomMarkups({ ...customMarkups, [`${optIdx}_${pt.key}`]: { value: e.target.value, rate: rateToUse } })}
+                                      style={{ width: '70px', display: 'inline-block' }}
+                                      placeholder={rowMode === 'pct' ? '0 %' : '0'}
+                                      value={rowRawVal}
+                                      onChange={(e) => setCustomMarkups(prev => ({
+                                        ...prev,
+                                        [rowKey]: { ...(typeof prev[rowKey] === 'object' ? prev[rowKey] : {}), value: e.target.value, rate: rateToUse, mode: rowMode }
+                                      }))}
                                     />
+                                    <span style={{ fontSize: '11px', color: '#666', minWidth: '12px' }}>{rowMode === 'pct' ? '%' : ''}</span>
                                   </div>
-                                ) : (
-                                  <>{currSymbol} {Math.round(getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1))))}</>
-                                )}
+                                );
+                              })() : (
+                                <>{currSymbol} {getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)))}</>
+                              )}
                               </td>
 
                               {/* VAT */}
@@ -2007,10 +2104,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
                               {/* Total per person: net and markup converted separately, then summed */}
                               <td className="text-end pe-3 text-dark" style={{ fontWeight: 600 }}>
-                                {currSymbol} {Math.round(getRoundOfValue(
+                                {currSymbol} {getRoundOfValue(
                                   (convert(pt.netCost) / (pt.count * (occupancyFactors[pt.key] || 1))) +
                                   (convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)))
-                                ))}
+                                )}
                               </td>
                             </tr>
                           ))}
