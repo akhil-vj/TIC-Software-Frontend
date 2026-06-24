@@ -363,6 +363,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
 
           if (values.priceBreakup && rows.length > 0) {
             // Use quoted_options rows — mirrors blade $matchedQOpt['rows']
+            let displayGrandTotal = 0;
             rows.forEach(row => {
               const count = parseInt(row.count) || 1;
               const label = row.label || "Person";
@@ -373,6 +374,8 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
                 const rowTotal = parseFloat(row.total ?? 0) || (parseFloat(row.perPerson ?? 0) * count);
                 perPerson = count > 0 ? rowTotal / count : 0;
               }
+
+              displayGrandTotal += Math.floor(perPerson) * count;
 
               let line = `${displayCurrency} ${Math.floor(perPerson).toLocaleString()}`;
               if (label.toLowerCase().includes("child") || label.toLowerCase().includes("person")) {
@@ -388,7 +391,7 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
             });
             
             const totalPax = Number(adultCount || 0) + Number(childCount || 0);
-            const displayTotal = quotedOpt?.grandTotal || dynamicTotal || grandTotal;
+            const displayTotal = displayGrandTotal > 0 ? displayGrandTotal : (quotedOpt?.grandTotal || dynamicTotal || grandTotal);
             text += `💰 *Total Package Cost for ${totalPax} pax: ${displayCurrency} ${Math.floor(displayTotal).toLocaleString()}*\n`;
           } else {
             // No breakup rows — compute from grandTotal
