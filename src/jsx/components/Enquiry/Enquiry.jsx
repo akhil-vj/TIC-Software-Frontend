@@ -356,6 +356,8 @@ const Enquiry = () => {
     const [hoveredRow, setHoveredRow] = useState(null);
     const [page, setPage] = useState(0);
     const [sortDateDir, setSortDateDir] = useState(null); // null | 'asc' | 'desc'
+    const [sortRefDir, setSortRefDir] = useState(null); // null | 'asc' | 'desc'
+    const [sortAssignedDir, setSortAssignedDir] = useState(null); // null | 'asc' | 'desc'
 
     // Delete confirmation modal state
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -493,10 +495,26 @@ const Enquiry = () => {
                 const db = b?.start_date ? new Date(b.start_date).getTime() : 0;
                 return sortDateDir === 'asc' ? da - db : db - da;
             });
+        } else if (sortRefDir) {
+            sorted = [...filteredData].sort((a, b) => {
+                const refA = String(a?.ref_no || a?.reference_no || "").toLowerCase();
+                const refB = String(b?.ref_no || b?.reference_no || "").toLowerCase();
+                if (refA < refB) return sortRefDir === 'asc' ? -1 : 1;
+                if (refA > refB) return sortRefDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        } else if (sortAssignedDir) {
+            sorted = [...filteredData].sort((a, b) => {
+                const assignA = String(a?.assigned_to_user?.first_name || "").toLowerCase();
+                const assignB = String(b?.assigned_to_user?.first_name || "").toLowerCase();
+                if (assignA < assignB) return sortAssignedDir === 'asc' ? -1 : 1;
+                if (assignA > assignB) return sortAssignedDir === 'asc' ? 1 : -1;
+                return 0;
+            });
         }
         const start = page * pageSize;
         return sorted.slice(start, start + pageSize);
-    }, [filteredData, page, sortDateDir]);
+    }, [filteredData, page, sortDateDir, sortRefDir, sortAssignedDir]);
 
     const totalEntries = filteredData.length;
     const startEntry = totalEntries === 0 ? 0 : page * pageSize + 1;
@@ -715,13 +733,30 @@ const Enquiry = () => {
                                                 </th>
                                             )}
                                             <th style={{ textAlign: "center" }}>SI No</th>
-                                            <th>Ref No</th>
+                                            <th
+                                                style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+                                                onClick={() => {
+                                                    setSortRefDir(d => d === null ? 'asc' : d === 'asc' ? 'desc' : null);
+                                                    setSortDateDir(null);
+                                                    setSortAssignedDir(null);
+                                                }}
+                                                title="Sort by Ref No"
+                                            >
+                                                Ref No
+                                                <span style={{ marginLeft: 5, opacity: sortRefDir ? 1 : 0.35, fontSize: 11 }}>
+                                                    {sortRefDir === 'asc' ? '▲' : sortRefDir === 'desc' ? '▼' : '⇅'}
+                                                </span>
+                                            </th>
                                             <th>Package Name</th>
                                             <th style={{ textAlign: "center" }}>No of Pax</th>
                                             <th style={{ textAlign: "center" }}>Type</th>
                                             <th
                                                 style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
-                                                onClick={() => setSortDateDir(d => d === null ? 'asc' : d === 'asc' ? 'desc' : null)}
+                                                onClick={() => {
+                                                    setSortDateDir(d => d === null ? 'asc' : d === 'asc' ? 'desc' : null);
+                                                    setSortRefDir(null);
+                                                    setSortAssignedDir(null);
+                                                }}
                                                 title="Sort by Starting Date"
                                             >
                                                 Starting Date
@@ -729,7 +764,20 @@ const Enquiry = () => {
                                                     {sortDateDir === 'asc' ? '▲' : sortDateDir === 'desc' ? '▼' : '⇅'}
                                                 </span>
                                             </th>
-                                            <th style={{ textAlign: "center" }}>Assigned to</th>
+                                            <th
+                                                style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+                                                onClick={() => {
+                                                    setSortAssignedDir(d => d === null ? 'asc' : d === 'asc' ? 'desc' : null);
+                                                    setSortDateDir(null);
+                                                    setSortRefDir(null);
+                                                }}
+                                                title="Sort by Assigned To"
+                                            >
+                                                Assigned to
+                                                <span style={{ marginLeft: 5, opacity: sortAssignedDir ? 1 : 0.35, fontSize: 11 }}>
+                                                    {sortAssignedDir === 'asc' ? '▲' : sortAssignedDir === 'desc' ? '▼' : '⇅'}
+                                                </span>
+                                            </th>
                                             <th>Agent Name</th>
                                             <th style={{ textAlign: "center" }}>Action</th>
                                         </tr>
