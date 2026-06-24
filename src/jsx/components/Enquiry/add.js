@@ -611,9 +611,12 @@ const EditProfile = ({ setShowModal }) => {
                     <CustomDatePicker
                       label="Start Date"
                       selected={formik.values?.startDate}
-                      onChange={(date) =>
-                        formik.setFieldValue("startDate", date)
-                      }
+                      onChange={(date) => {
+                        formik.setFieldValue("startDate", date);
+                        if (formik.values?.endDate && date > formik.values.endDate) {
+                          formik.setFieldValue("endDate", date);
+                        }
+                      }}
                       disabled={readOnly}
                     />
                   </div>
@@ -623,6 +626,7 @@ const EditProfile = ({ setShowModal }) => {
                       selected={formik.values?.endDate}
                       onChange={(date) => formik.setFieldValue("endDate", date)}
                       disabled={readOnly}
+                      minDate={formik.values?.startDate}
                     />
                   </div>
                   <div className="col-sm-4">
