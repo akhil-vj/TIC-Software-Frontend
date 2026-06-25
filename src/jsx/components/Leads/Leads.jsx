@@ -1084,6 +1084,15 @@ const Leads = ({ setShowModal }) => {
                             className={isHovered ? "row-hovered" : ""}
                             onMouseEnter={() => setHoveredRow(globalIndex)}
                             onMouseLeave={() => setHoveredRow(null)}
+                            style={{ cursor: status.toLowerCase() === "confirmed" ? "pointer" : "default" }}
+                            onClick={(e) => {
+                              if (status.toLowerCase() === "confirmed") {
+                                // Prevent navigation if they clicked on the dropdown or a link
+                                if (!e.target.closest('.dropdown') && !e.target.closest('a')) {
+                                  navigate(`/enquiry/${item.id}/profile`);
+                                }
+                              }
+                            }}
                           >
 
                             {/* ID */}
