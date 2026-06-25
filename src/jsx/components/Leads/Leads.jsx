@@ -394,6 +394,7 @@ const Leads = ({ setShowModal }) => {
         let bValue = "";
 
         const getVal = (item, key) => {
+          if (key === 'id') return item?.ref_no || item?.id?.toString() || "";
           if (key === 'title') return item?.customer?.name || item?.agent?.name || "";
           if (key === 'source') return item?.lead_source?.name || "";
           if (key === 'requirement') return Array.isArray(item?.requirements) ? item.requirements.map(r => r?.name || r).join(", ") : (item?.requirements || "");
@@ -1039,7 +1040,9 @@ const Leads = ({ setShowModal }) => {
 
                     <thead>
                       <tr>
-                        <th style={{ textAlign: "center" }}>ID</th>
+                        <th onClick={() => handleSort('id')} style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          Ref No {getSortIcon('id')}
+                        </th>
                         <th onClick={() => handleSort('title')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                           Client / Agent {getSortIcon('title')}
                         </th>

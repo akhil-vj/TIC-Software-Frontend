@@ -31,7 +31,7 @@ const Reports = () => {
         return {
             date: dateStr,
             rawDate: dt,
-            bookingId: `ENQ-${String(e.id).padStart(3, "0")}`,
+            bookingId: e.ref_no || `ENQ-${String(e.id).padStart(3, "0")}`,
             salesStaff: staffName,
             agentClient: agentName,
             destination: dest,
@@ -52,7 +52,7 @@ const Reports = () => {
 
         // Sheet 1: Sales Entry
         const s1 = [
-            ["Date", "Booking ID", "Sales Staff", "Agent / Client", "Destination", "Package Name", "Pax", "Selling Price", "Total Sales", "Supplier Cost", "Total Cost", "Profit", "Status"],
+            ["Date", "Ref No", "Sales Staff", "Agent / Client", "Destination", "Package Name", "Pax", "Selling Price", "Total Sales", "Supplier Cost", "Total Cost", "Profit", "Status"],
             ...salesEntries.map(r => [r.date, r.bookingId, r.salesStaff, r.agentClient, r.destination, r.packageName, r.pax, r.sellingPrice, r.totalSales, r.supplierCost, r.totalCost, r.profit, r.status])
         ];
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s1), "Sales Entry");
@@ -173,7 +173,7 @@ const Reports = () => {
                                             <tr>
                                                 <th>#</th>
                                                 <th>Date</th>
-                                                <th>Booking ID</th>
+                                                <th>Ref No</th>
                                                 <th>Sales Staff</th>
                                                 <th>Agent / Client</th>
                                                 <th>Destination</th>
