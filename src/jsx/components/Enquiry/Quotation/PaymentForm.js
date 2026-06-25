@@ -82,7 +82,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
     }
     // Reset customMarkupsLoaded when quoted_options identity changes (e.g. after a save)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values.quoted_options, customMarkupsLoaded, values.priceOption]);
+  }, [values.quoted_options, customMarkupsLoaded, values.priceOption, values.priceIn, values.exchange_rate]);
 
   // Reset stale markup cache whenever the saved quoted_options reference changes
   const prevQuotedOptionsRef = React.useRef(values.quoted_options);
