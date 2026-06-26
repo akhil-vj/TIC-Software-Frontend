@@ -396,9 +396,9 @@ const Leads = ({ setShowModal }) => {
         const getVal = (item, key) => {
           if (key === 'id') return item?.ref_no || item?.id?.toString() || "";
           if (key === 'title') return item?.customer?.name || item?.agent?.name || "";
-          if (key === 'source') return item?.lead_source?.name || "";
+          if (key === 'pax') return (Number(item?.adult_count) || 0) + (Number(item?.child_count) || 0) + (Number(item?.infant_count) || 0);
           if (key === 'requirement') return Array.isArray(item?.requirements) ? item.requirements.map(r => r?.name || r).join(", ") : (item?.requirements || "");
-          if (key === 'packageDetails') return item?.sub_destinations?.map(d => d.name).join(", ") || "";
+          if (key === 'destination') return item?.destination?.name || "";
           if (key === 'assignedTo') return item?.assigned_to_user?.first_name || "";
           if (key === 'date') return item?.start_date || "";
           if (key === 'icontext') return item?.status || item?.enquiry_status || item?.current_status || item?.lead_status || "Pending";
@@ -1046,14 +1046,14 @@ const Leads = ({ setShowModal }) => {
                         <th onClick={() => handleSort('title')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                           Client / Agent {getSortIcon('title')}
                         </th>
-                        <th onClick={() => handleSort('source')} style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
-                          Lead Source {getSortIcon('source')}
+                        <th onClick={() => handleSort('pax')} style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          No of Pax {getSortIcon('pax')}
                         </th>
                         {/* <th onClick={() => handleSort('requirement')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                           Requirement {getSortIcon('requirement')}
                         </th> */}
-                        <th onClick={() => handleSort('packageDetails')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
-                          Package Details {getSortIcon('packageDetails')}
+                        <th onClick={() => handleSort('destination')} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                          Destination {getSortIcon('destination')}
                         </th>
                         <th onClick={() => handleSort('assignedTo')} style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                           Assigned To {getSortIcon('assignedTo')}
@@ -1074,12 +1074,19 @@ const Leads = ({ setShowModal }) => {
                         const isHovered = hoveredRow === globalIndex;
                         const customerName = item?.customer?.name || item?.agent?.name || "-";
                         const contactInfo = item?.customer?.email || item?.agent?.email || item?.customer?.phone || "";
-                        const leadSourceName = item?.lead_source?.name || "-";
+                        const aCount = Number(item?.adult_count) || 0;
+                        const cCount = Number(item?.child_count) || 0;
+                        const iCount = Number(item?.infant_count) || 0;
+                        const paxArr = [];
+                        if (aCount > 0) paxArr.push(`${aCount}A`);
+                        if (cCount > 0) paxArr.push(`${cCount}C`);
+                        if (iCount > 0) paxArr.push(`${iCount}I`);
+                        const paxString = paxArr.length > 0 ? paxArr.join(", ") : "-";
                         const assignedName = item?.assigned_to_user?.first_name || "-";
                         const dateStr = item?.start_date ? new Date(item.start_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "-";
                         const requirementText = Array.isArray(item?.requirements) ? item.requirements.map(r => r?.name || r).join(", ") : (item?.requirements || "-");
                         const status = statusOverrides[item?.id] || item?.status || item?.enquiry_status || item?.current_status || item?.lead_status || "Pending";
-                        const pkgDetails = item?.sub_destinations?.map(d => d.name).join(", ") || "-";
+                        const destinationName = item?.destination?.name || "-";
 
                         return (
                           <tr
@@ -1119,16 +1126,9 @@ const Leads = ({ setShowModal }) => {
                               </span>
                             </td>
 
-                            {/* Lead Source */}
-                            <td>
-                              <span style={{
-                                display: "inline-block", padding: "3px 9px", borderRadius: "12px",
-                                fontSize: "12px", fontWeight: 500, background: "#F1F5F9",
-                                color: "#475569", border: "1px solid #E2E8F0", whiteSpace: "nowrap",
-                                maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis",
-                              }} title={leadSourceName}>
-                                {leadSourceName}
-                              </span>
+                            {/* No of Pax */}
+                            <td style={{ textAlign: "center", fontWeight: 500, color: "#475569" }}>
+                              {paxString}
                             </td>
 
                             {/* Requirement */}
@@ -1136,9 +1136,9 @@ const Leads = ({ setShowModal }) => {
                               {requirementText}
                             </td> */}
 
-                            {/* Package Details */}
-                            <td className="td-truncate" title={pkgDetails} style={{ fontWeight: 500, color: "#1F2937" }}>
-                              {pkgDetails}
+                            {/* Destination */}
+                            <td className="td-truncate" title={destinationName} style={{ fontWeight: 500, color: "#1F2937" }}>
+                              {destinationName}
                             </td>
 
                             {/* Assigned To */}
