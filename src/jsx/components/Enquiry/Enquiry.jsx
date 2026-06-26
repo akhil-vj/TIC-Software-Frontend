@@ -358,6 +358,7 @@ const Enquiry = () => {
     const [sortDateDir, setSortDateDir] = useState(null); // null | 'asc' | 'desc'
     const [sortRefDir, setSortRefDir] = useState(null); // null | 'asc' | 'desc'
     const [sortAssignedDir, setSortAssignedDir] = useState(null); // null | 'asc' | 'desc'
+    const [sortCreatedDir, setSortCreatedDir] = useState(null); // null | 'asc' | 'desc'
 
     // Delete confirmation modal state
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -447,9 +448,7 @@ const Enquiry = () => {
             const matchesSearch = !term || [
                 item?.ref_no,
                 item?.reference_no,
-                packageName,
                 item?.agent?.name,
-                item?.type,
                 item?.customer?.name,
                 item?.lead_source?.name,
                 item?.assigned_to_user?.first_name,
@@ -492,10 +491,16 @@ const Enquiry = () => {
                 if (assignA > assignB) return sortAssignedDir === 'asc' ? 1 : -1;
                 return 0;
             });
+        } else if (sortCreatedDir) {
+            sorted = [...filteredData].sort((a, b) => {
+                const da = a?.created_at ? new Date(a.created_at).getTime() : 0;
+                const db = b?.created_at ? new Date(b.created_at).getTime() : 0;
+                return sortCreatedDir === 'asc' ? da - db : db - da;
+            });
         }
         const start = page * pageSize;
         return sorted.slice(start, start + pageSize);
-    }, [filteredData, page, sortDateDir, sortRefDir, sortAssignedDir]);
+    }, [filteredData, page, sortDateDir, sortRefDir, sortAssignedDir, sortCreatedDir]);
 
     const totalEntries = filteredData.length;
     const startEntry = totalEntries === 0 ? 0 : page * pageSize + 1;
@@ -690,15 +695,14 @@ const Enquiry = () => {
                                 <table className="enquiry-table">
                                     <colgroup>
                                         {isSelectionMode && <col style={{ width: "40px" }} />}
-                                        <col style={{ width: "60px" }} />
-                                        <col style={{ width: "150px" }} />
-                                        <col style={{ width: "10%" }} />
-                                        <col style={{ width: "110px" }} />
-                                        <col style={{ width: "80px" }} />
-                                        <col style={{ width: "130px" }} />
-                                        <col style={{ width: "150px" }} />
-                                        <col style={{ width: "12%" }} />
-                                        <col style={{ width: "60px" }} />
+                                        <col style={{ width: "60px" }} />    {/* SI No */}
+                                        <col style={{ width: "16%" }} />     {/* Ref No */}
+                                        <col style={{ width: "10%" }} />     {/* No of Pax */}
+                                        <col style={{ width: "14%" }} />     {/* Created Date */}
+                                        <col style={{ width: "14%" }} />     {/* Starting Date */}
+                                        <col style={{ width: "18%" }} />     {/* Assigned to */}
+                                        <col style={{ width: "auto" }} />    {/* Agent Name */}
+                                        <col style={{ width: "80px" }} />    {/* Action */}
                                     </colgroup>
                                     <thead>
                                         <tr>
@@ -720,6 +724,7 @@ const Enquiry = () => {
                                                     setSortRefDir(d => d === null ? 'asc' : d === 'asc' ? 'desc' : null);
                                                     setSortDateDir(null);
                                                     setSortAssignedDir(null);
+                                                    setSortCreatedDir(null);
                                                 }}
                                                 title="Sort by Ref No"
                                             >
@@ -728,15 +733,29 @@ const Enquiry = () => {
                                                     {sortRefDir === 'asc' ? '▲' : sortRefDir === 'desc' ? '▼' : '⇅'}
                                                 </span>
                                             </th>
-                                            <th>Package Name</th>
                                             <th style={{ textAlign: "center" }}>No of Pax</th>
-                                            <th style={{ textAlign: "center" }}>Type</th>
+                                            <th
+                                                style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+                                                onClick={() => {
+                                                    setSortCreatedDir(d => d === null ? 'asc' : d === 'asc' ? 'desc' : null);
+                                                    setSortRefDir(null);
+                                                    setSortDateDir(null);
+                                                    setSortAssignedDir(null);
+                                                }}
+                                                title="Sort by Created Date"
+                                            >
+                                                Created Date
+                                                <span style={{ marginLeft: 5, opacity: sortCreatedDir ? 1 : 0.35, fontSize: 11 }}>
+                                                    {sortCreatedDir === 'asc' ? '▲' : sortCreatedDir === 'desc' ? '▼' : '⇅'}
+                                                </span>
+                                            </th>
                                             <th
                                                 style={{ textAlign: "center", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
                                                 onClick={() => {
                                                     setSortDateDir(d => d === null ? 'asc' : d === 'asc' ? 'desc' : null);
                                                     setSortRefDir(null);
                                                     setSortAssignedDir(null);
+                                                    setSortCreatedDir(null);
                                                 }}
                                                 title="Sort by Starting Date"
                                             >
@@ -751,6 +770,7 @@ const Enquiry = () => {
                                                     setSortAssignedDir(d => d === null ? 'asc' : d === 'asc' ? 'desc' : null);
                                                     setSortDateDir(null);
                                                     setSortRefDir(null);
+                                                    setSortCreatedDir(null);
                                                 }}
                                                 title="Sort by Assigned To"
                                             >
@@ -785,6 +805,9 @@ const Enquiry = () => {
                                                 const assignedName = item?.assigned_to_user?.first_name || "-";
                                                 const dateStr = item?.start_date
                                                     ? new Date(item.start_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                                                    : "-";
+                                                const createdDateStr = item?.created_at
+                                                    ? new Date(item.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
                                                     : "-";
 
                                                 return (
@@ -825,25 +848,14 @@ const Enquiry = () => {
                                                             {refNo}
                                                         </td>
 
-                                                        {/* Package Name */}
-                                                        <td className="td-truncate" title={packageName} style={{ color: "#374151", fontWeight: 500 }}>
-                                                            {packageName}
-                                                        </td>
-
                                                         {/* No of Pax */}
                                                         <td style={{ textAlign: "center", color: "#4B5563", fontWeight: 500, fontSize: "13px" }}>
                                                             {paxDisplay}
                                                         </td>
 
-                                                        {/* Type */}
-                                                        <td style={{ textAlign: "center" }}>
-                                                            <span style={{
-                                                                display: "inline-block", padding: "3px 9px", borderRadius: "12px",
-                                                                fontSize: "12px", fontWeight: 500, background: item?.type === "B2B" ? "#F1F5F9" : "#FEF3C7",
-                                                                color: item?.type === "B2B" ? "#475569" : "#92400E", border: "1px solid #E2E8F0", whiteSpace: "nowrap",
-                                                            }}>
-                                                                {item?.type || "-"}
-                                                            </span>
+                                                        {/* Created Date */}
+                                                        <td style={{ textAlign: "center", whiteSpace: "nowrap", color: "#6B7280", fontSize: "12.5px" }}>
+                                                            {createdDateStr}
                                                         </td>
 
                                                         {/* Starting Date */}
