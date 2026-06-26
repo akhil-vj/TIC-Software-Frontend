@@ -373,25 +373,6 @@ const Enquiry = () => {
     const enquiryData = useAsync(url);
     const tableData = enquiryData?.data?.data || [];
 
-    // Fetch all itineraries to map package names to enquiries
-    const itineraryUrl = URLS.ITINERARY_URL;
-    const itineraryData = useAsync(itineraryUrl);
-    const allItineraries = itineraryData?.data?.data || [];
-
-    // Create a map of enquiry_id -> package_name (using first/latest itinerary for each enquiry)
-    const packageNameMap = useMemo(() => {
-        const map = {};
-        allItineraries.forEach((itinerary) => {
-            if (itinerary?.enquiry_id && itinerary?.package_name) {
-                // Store only if we haven't already (first itinerary)
-                if (!map[itinerary.enquiry_id]) {
-                    map[itinerary.enquiry_id] = itinerary.package_name;
-                }
-            }
-        });
-        return map;
-    }, [allItineraries]);
-
     const summaryData = useMemo(() => {
         const getStatus = (item) =>
             String(
@@ -460,8 +441,8 @@ const Enquiry = () => {
                 return String(val).toLowerCase().includes(term);
             };
 
-            // Resolve package name from packageNameMap for this enquiry
-            const packageName = packageNameMap[item?.id] || "";
+            // Resolve package name directly from backend API
+            const packageName = item?.package_name || "";
 
             const matchesSearch = !term || [
                 item?.ref_no,
@@ -482,7 +463,7 @@ const Enquiry = () => {
 
             return matchesSearch && matchesType && matchesAgent && matchesAssigned;
         });
-    }, [tableData, packageNameMap, search, filterType, filterAgent, filterAssigned]);
+    }, [tableData, search, filterType, filterAgent, filterAssigned]);
 
     // ── Pagination ──
     const pageSize = 8;
@@ -789,7 +770,7 @@ const Enquiry = () => {
                                                 const isHovered = hoveredRow === globalIdx;
                                                 const isRowSelected = selectedRows.includes(item?.id);
                                                 const refNo = item?.ref_no || item?.reference_no || "-";
-                                                const packageName = packageNameMap[item?.id] || "-";
+                                                const packageName = item?.package_name || "-";
                                                 const adultCount = Number(item?.adult_count || 0);
                                                 const childCount = Number(item?.child_count || 0);
                                                 const infantCount = Number(item?.infant_count || 0);
