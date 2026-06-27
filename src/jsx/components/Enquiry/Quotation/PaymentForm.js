@@ -48,6 +48,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   const [showMarkup, setShowMarkup] = useState(false);
   const [customMarkups, setCustomMarkups] = useState({});
   const [customMarkupsLoaded, setCustomMarkupsLoaded] = useState(false);
+  const [globalMarkupMode, setGlobalMarkupMode] = useState('val');
 
   useEffect(() => {
     if (values.quoted_options && Array.isArray(values.quoted_options) && !customMarkupsLoaded) {
@@ -65,11 +66,13 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           opt.rows?.forEach(r => {
             const pCount = r.count > 0 ? r.count : 1;
             const mode = r.markup_mode || 'val';
+            if (optIdx === 0) setGlobalMarkupMode(mode);
             const value = mode === 'pct' ? r.markup_percent : getRoundOfValue(r.markup / pCount);
             loadedMarkups[`${optIdx}_${r.key}`] = { value, rate: rateToUse, mode };
           });
         } else {
           const mode = opt.markup_mode || 'val';
+          if (optIdx === 0) setGlobalMarkupMode(mode);
           const value = mode === 'pct' ? opt.markup_percent : getRoundOfValue(opt.rows?.reduce((sum, r) => sum + r.markup, 0) || 0);
           loadedMarkups[`${optIdx}_total`] = { value, rate: rateToUse, mode };
         }
@@ -710,7 +713,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
    * Adult types (0,1) share adultCost; child types (2,3) share childCost.
    * Adjust the distribution keys here once real per-type data is available.
    */
-  const getPersonTypeRows = (item, shouldIncludeChildTransfer = false, optIdx = 0, markups = {}, exRate = 1) => {
+  const getPersonTypeRows = (item, shouldIncludeChildTransfer = false, optIdx = 0, markups = {}, exRate = 1, globalMode = 'val') => {
     let activeTypes = PERSON_TYPES.map((pt) => {
       const count = safeCount(item[pt.key]);
       const displayCount = safeCount(item[`${pt.key}Display`]);
@@ -899,7 +902,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         if (customObj !== undefined && customObj !== "") {
           const customVal = typeof customObj === 'object' ? customObj.value : customObj;
           const customRate = typeof customObj === 'object' ? customObj.rate : exRate;
-          const mode = typeof customObj === 'object' ? (customObj.mode || 'val') : 'val';
+          const mode = globalMode;
           if (customVal !== "") {
             finalMarkupMode = mode;
             if (mode === 'pct') {
@@ -917,7 +920,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         if (customObj !== undefined && customObj !== "") {
           const customVal = typeof customObj === 'object' ? customObj.value : customObj;
           const customRate = typeof customObj === 'object' ? customObj.rate : exRate;
-          const mode = typeof customObj === 'object' ? (customObj.mode || 'val') : 'val';
+          const mode = globalMode;
           if (customVal !== "") {
             finalMarkupMode = mode;
             if (mode === 'pct') {
@@ -1002,7 +1005,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
       const rate = parseFloat(values.priceIn?.exchange_rate) || 1;
       const visibleOptionsData = baseVisibleOptions.map((item, optIdx) => {
-        const pRows = getPersonTypeRows(item, includeChildTransfer, optIdx, customMarkups, rate);
+        const pRows = getPersonTypeRows(item, includeChildTransfer, optIdx, customMarkups, rate, globalMarkupMode);
         const hasConversion = rate > 0;
         const convert = (val) => hasConversion ? getRoundOfValue(val / rate) : val;
 
@@ -1865,7 +1868,22 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "120px" }}>Options</th>
                     )}
                     <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "30%" }}>Person</th>
-                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "20%" }}>Markup</th>
+                    <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "20%" }}>
+                      <div className="d-flex align-items-center justify-content-between">
+                        <span>Markup</span>
+                        {!readOnly && (
+                          <select
+                            className="form-select form-select-sm ms-2 flex-shrink-0 shadow-none"
+                            style={{ width: 'auto', fontSize: '11px', padding: '2px 20px 2px 8px', backgroundPosition: 'right 4px center', borderColor: '#cbd5e1', cursor: 'pointer', height: '24px', lineHeight: '1' }}
+                            value={globalMarkupMode}
+                            onChange={(e) => setGlobalMarkupMode(e.target.value)}
+                          >
+                            <option value="val">Value ({values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || "USD")})</option>
+                            <option value="pct">Percent (%)</option>
+                          </select>
+                        )}
+                      </div>
+                    </th>
                     <th className="py-3 px-4 text-dark" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "15%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{values.taxType?.name || "Tax"} (%)</th>
                     <th className="py-3 px-4 text-dark text-end" style={{ fontSize: "12px", fontWeight: 500, letterSpacing: "0.05em", color: "#64748b", width: "20%" }}>Total</th>
                   </tr>
@@ -1884,7 +1902,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                       const exchangeRate = parseFloat(values.priceIn?.exchange_rate) || 0;
                       const hasConversion = exchangeRate > 0;
                       const rateToUse = hasConversion ? exchangeRate : 1;
-                      const personRows = getPersonTypeRows(item, includeChildTransfer, optIdx, customMarkups, rateToUse);
+                      const personRows = getPersonTypeRows(item, includeChildTransfer, optIdx, customMarkups, rateToUse, globalMarkupMode);
                       const currSymbol = values.priceIn?.symbol || getSymbol(values.priceIn?.to_currency || values.priceIn?.label || baseCode);
                       const convert = (val) => hasConversion ? getRoundOfValue(val / exchangeRate) : val;
 
@@ -1921,11 +1939,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                               {!readOnly ? (() => {
                                 const totKey = `${optIdx}_total`;
                                 const totObj = customMarkups[totKey];
-                                const totMode = (typeof totObj === 'object' ? totObj?.mode : null) || 'val';
                                 const totRawVal = totObj !== undefined
                                   ? (typeof totObj === 'object'
                                     ? (totObj.value === '' ? '' : (
-                                        totMode === 'pct'
+                                        globalMarkupMode === 'pct'
                                           ? totObj.value
                                           : getRoundOfValue((Number(totObj.value) * (totObj.rate || rateToUse)) / rateToUse)
                                       ))
@@ -1933,39 +1950,18 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                   : grandMarkup;
                                 return (
                                   <div className="d-flex align-items-center justify-content-end gap-1">
-                                    {/* Mode toggle */}
-                                    <div className="btn-group btn-group-sm" role="group" style={{ fontSize: '11px' }}>
-                                      <button
-                                        type="button"
-                                        className={`btn py-0 px-2 ${totMode !== 'pct' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                        style={{ fontSize: '11px', lineHeight: '1.4' }}
-                                        onClick={() => setCustomMarkups(prev => ({
-                                          ...prev,
-                                          [totKey]: { ...(typeof prev[totKey] === 'object' ? prev[totKey] : { value: grandMarkup, rate: rateToUse }), mode: 'val' }
-                                        }))}
-                                      >฿</button>
-                                      <button
-                                        type="button"
-                                        className={`btn py-0 px-2 ${totMode === 'pct' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                        style={{ fontSize: '11px', lineHeight: '1.4' }}
-                                        onClick={() => setCustomMarkups(prev => ({
-                                          ...prev,
-                                          [totKey]: { ...(typeof prev[totKey] === 'object' ? prev[totKey] : { value: '', rate: rateToUse }), mode: 'pct' }
-                                        }))}
-                                      >%</button>
-                                    </div>
                                     <input
                                       type="number"
                                       className="form-control form-control-sm text-end p-1"
                                       style={{ width: '70px', display: 'inline-block' }}
-                                      placeholder={totMode === 'pct' ? '0 %' : '0'}
+                                      placeholder={globalMarkupMode === 'pct' ? '0 %' : '0'}
                                       value={totRawVal}
                                       onChange={(e) => setCustomMarkups(prev => ({
                                         ...prev,
-                                        [totKey]: { ...(typeof prev[totKey] === 'object' ? prev[totKey] : {}), value: e.target.value, rate: rateToUse, mode: totMode }
+                                        [totKey]: { value: e.target.value, rate: rateToUse, mode: globalMarkupMode }
                                       }))}
                                     />
-                                    <span style={{ fontSize: '11px', color: '#666', minWidth: '12px' }}>{totMode === 'pct' ? '%' : ''}</span>
+                                    <span style={{ fontSize: '11px', color: '#666', minWidth: '12px' }}>{globalMarkupMode === 'pct' ? '%' : ''}</span>
                                   </div>
                                 );
                               })() : (
@@ -2004,7 +2000,6 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 borderBottom: "1px solid #f1f5f9",
                               }}
                             >
-                              {/* Option label — merged cell spanning person rows + grand total row — only shown when hotel exists */}
                               {hasHotelInSchedule && ptIdx === 0 && (
                                 <td
                                   rowSpan={personRows.length + 1}
@@ -2024,11 +2019,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 </td>
                               )}
 
-                              {/* Person type label */}
                               <td style={{ paddingLeft: "16px", color: "#333", borderRight: '0.5px solid #e2e8f0', fontWeight: 500 }}>
                                 <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                                   <span>{pt.label}</span>
-                                  {/* Only show count badge for generic adult/child rows, not for specific hotel room types */}
                                   {(pt.label === "Adult" || pt.label === "Child") && pt.count > 0 && (
                                     <span style={{
                                       fontSize: "11px", color: "#fff", fontWeight: 500,
@@ -2041,17 +2034,15 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                 </span>
                               </td>
 
-                              {/* Markup */}
                               <td className="text-end pe-3" style={{ borderRight: '0.5px solid #e2e8f0', color: "#374151" }}>
                                 {!readOnly ? (() => {
                                 const rowKey = `${optIdx}_${pt.key}`;
                                 const rowObj = customMarkups[rowKey];
-                                const rowMode = (typeof rowObj === 'object' ? rowObj?.mode : null) || 'val';
                                 const defaultMarkupVal = getRoundOfValue(convert(pt.markup) / (pt.count * (occupancyFactors[pt.key] || 1)));
                                 const rowRawVal = rowObj !== undefined
                                   ? (typeof rowObj === 'object'
                                     ? (rowObj.value === '' ? '' : (
-                                        rowMode === 'pct'
+                                        globalMarkupMode === 'pct'
                                           ? rowObj.value
                                           : getRoundOfValue((Number(rowObj.value) * (rowObj.rate || rateToUse)) / rateToUse)
                                       ))
@@ -2059,39 +2050,18 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
                                   : defaultMarkupVal;
                                 return (
                                   <div className="d-flex align-items-center justify-content-end gap-1">
-                                    {/* Mode toggle */}
-                                    <div className="btn-group btn-group-sm" role="group" style={{ fontSize: '11px' }}>
-                                      <button
-                                        type="button"
-                                        className={`btn py-0 px-2 ${rowMode !== 'pct' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                        style={{ fontSize: '11px', lineHeight: '1.4' }}
-                                        onClick={() => setCustomMarkups(prev => ({
-                                          ...prev,
-                                          [rowKey]: { ...(typeof prev[rowKey] === 'object' ? prev[rowKey] : { value: defaultMarkupVal, rate: rateToUse }), mode: 'val' }
-                                        }))}
-                                      >฿</button>
-                                      <button
-                                        type="button"
-                                        className={`btn py-0 px-2 ${rowMode === 'pct' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                        style={{ fontSize: '11px', lineHeight: '1.4' }}
-                                        onClick={() => setCustomMarkups(prev => ({
-                                          ...prev,
-                                          [rowKey]: { ...(typeof prev[rowKey] === 'object' ? prev[rowKey] : { value: '', rate: rateToUse }), mode: 'pct' }
-                                        }))}
-                                      >%</button>
-                                    </div>
                                     <input
                                       type="number"
                                       className="form-control form-control-sm text-end p-1"
                                       style={{ width: '70px', display: 'inline-block' }}
-                                      placeholder={rowMode === 'pct' ? '0 %' : '0'}
+                                      placeholder={globalMarkupMode === 'pct' ? '0 %' : '0'}
                                       value={rowRawVal}
                                       onChange={(e) => setCustomMarkups(prev => ({
                                         ...prev,
-                                        [rowKey]: { ...(typeof prev[rowKey] === 'object' ? prev[rowKey] : {}), value: e.target.value, rate: rateToUse, mode: rowMode }
+                                        [rowKey]: { value: e.target.value, rate: rateToUse, mode: globalMarkupMode }
                                       }))}
                                     />
-                                    <span style={{ fontSize: '11px', color: '#666', minWidth: '12px' }}>{rowMode === 'pct' ? '%' : ''}</span>
+                                    <span style={{ fontSize: '11px', color: '#666', minWidth: '12px' }}>{globalMarkupMode === 'pct' ? '%' : ''}</span>
                                   </div>
                                 );
                               })() : (
