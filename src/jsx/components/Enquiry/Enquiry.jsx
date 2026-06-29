@@ -912,7 +912,7 @@ const Enquiry = () => {
                                                                         <Dropdown.Item onClick={() => onEdit(item?.id)}>Edit</Dropdown.Item>
                                                                     )}
                                                                     {permissionType.delete && (
-                                                                        <Dropdown.Item onClick={() => onDeleteConfirm(item?.id, packageName)}>Delete</Dropdown.Item>
+                                                                        <Dropdown.Item onClick={() => onDeleteConfirm(item?.id, refNo)}>Delete</Dropdown.Item>
                                                                     )}
                                                                 </Dropdown.Menu>
                                                             </Dropdown>
