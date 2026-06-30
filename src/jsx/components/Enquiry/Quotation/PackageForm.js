@@ -53,15 +53,12 @@ const PackageForm = ({ formik, setFormComponent, setShowModal }) => {
 
   const draftEngineUI = useFormDraft(`itineraryBuilder_UI_${values.itineraryId || 'new'}`);
   draftEngineUI.useDraftAutoSave({
-    showHotelModal, showActivityModal, showTransferModal, editData, editId, selectedModalData
+    editData, editId, selectedModalData
   }, true);
 
   useEffect(() => {
     const draftUI = draftEngineUI.getDraft();
     if (draftUI) {
-      if (draftUI.showHotelModal) setShowHotelModal(true);
-      if (draftUI.showActivityModal) setShowActivityModal(true);
-      if (draftUI.showTransferModal) setShowTransferModal(true);
       if (draftUI.editData) setEditData(draftUI.editData);
       if (draftUI.editId) setEditId(draftUI.editId);
       if (draftUI.selectedModalData) setSelectedModalData(draftUI.selectedModalData);
