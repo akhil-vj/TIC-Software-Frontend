@@ -11,8 +11,10 @@ import NoData from "../../common/NoData"
 import { useAsync } from "../../../utilis/useAsync";
 import { URLS } from "../../../../constants";
 import ConfirmationModal from "../../common/DeleteModal";
-import { axiosPut } from "../../../../services/AxiosInstance";
-import { notifyCreate, notifyError } from "../../../utilis/notifyMessage";
+import { axiosPut, axiosPost } from "../../../../services/AxiosInstance";
+import { notifyCreate, notifyError, notifyDelete } from "../../../utilis/notifyMessage";
+import { useDispatch } from "react-redux";
+import { FormAction } from "../../../../store/slices/formSlice";
 
 const options = [
   { value: "2", label: "Published" },
@@ -23,6 +25,7 @@ const options = [
 ];
 
 const Quotation = () => {
+  const dispatch = useDispatch();
   const [startDate, setStartDate] = useState(new Date());
   const [open, setOpen] = useState(false);
   const [open2, setOpen2] = useState(true);
@@ -35,6 +38,48 @@ const Quotation = () => {
   const itineraryByEnquiryUrl = `${URLS.ITINERARY_URL}?enquiry_id=${id}&ref=${refreshKey}`
   const fetchData = useAsync(itineraryByEnquiryUrl, true)
   const tableData = fetchData?.data?.data
+
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [tableData]);
+
+  const handleSelectRow = (id) => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(item => item !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === sortedTableData.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(sortedTableData.map(item => item.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const response = await axiosPost(`/api/itineraries/bulk-delete`, {
+        ids: selectedIds
+      });
+      if (response.success) {
+        notifyDelete(`${selectedIds.length} Quotation(s)`);
+        setSelectedIds([]);
+        dispatch(FormAction.setRefresh());
+      } else {
+        notifyError(response.message || "Failed to delete quotations");
+      }
+    } catch (err) {
+      notifyError(err?.response?.data?.message || "Something went wrong !");
+    }
+  };
 
   const [data, setData] = useState(
     document.querySelectorAll("#content_wrapper tbody tr"),
@@ -102,6 +147,14 @@ const Quotation = () => {
     const url = `${itineraryUrl}/${id}`
     setDeleteUrl(url)
     setDeleteName(name)
+    setIsBulkDelete(false)
+    setShowDeleteModal(true)
+  }
+
+  const onBulkDeleteTrigger = () => {
+    setDeleteUrl("")
+    setDeleteName(`${selectedIds.length} Quotation(s)`)
+    setIsBulkDelete(true)
     setShowDeleteModal(true)
   }
 
@@ -206,6 +259,16 @@ const Quotation = () => {
               <div className="cpa">
                 <i className="fas fa-list me-2"></i>Quotation List
               </div>
+              {selectedIds.length > 0 && (
+                <div className="tools d-flex align-items-center gap-2">
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={onBulkDeleteTrigger}
+                  >
+                    <i className="fa fa-trash me-2"></i>Delete Selected ({selectedIds.length})
+                  </button>
+                </div>
+              )}
             </div>
 
             <Collapse in={open2}>
@@ -219,6 +282,14 @@ const Quotation = () => {
                       <table style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead>
                           <tr style={{ background: "#01A3FF" }}>
+                            <th style={{ padding: "12px 10px", width: "40px", textAlign: "center", border: "none" }}>
+                              <input
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={sortedTableData?.length > 0 && selectedIds.length === sortedTableData.length}
+                                onChange={handleSelectAll}
+                              />
+                            </th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", textAlign: "center", border: "none", letterSpacing: "0.1px" }}>SI No</th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", border: "none", letterSpacing: "0.1px" }}>Ref No</th>
                             <th style={{ padding: "12px 10px", fontSize: "13px", fontWeight: 600, color: "#ffffff", border: "none", letterSpacing: "0.1px" }}>Package Name</th>
@@ -250,6 +321,14 @@ const Quotation = () => {
                                   onMouseLeave={(e) => e.currentTarget.style.background = isCurrent ? "transparent" : "#fafbfc"}
                                   onClick={() => navigate(`itinerary/${item.id}`)}
                                 >
+                                  <td style={{ padding: "10px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                      type="checkbox"
+                                      className="form-check-input"
+                                      checked={selectedIds.includes(item.id)}
+                                      onChange={() => handleSelectRow(item.id)}
+                                    />
+                                  </td>
                                   <td style={{ padding: "10px", textAlign: "center", fontSize: "12px", color: "#6B7280" }}>
                                     <span style={{
                                       display: "inline-block", fontWeight: 700, fontSize: "12px",
@@ -402,7 +481,7 @@ const Quotation = () => {
                                 </tr>
                               )})
                               :
-                              <NoData isLoading={fetchData.loading} colSpan={11} isTableRow={true} />
+                              <NoData isLoading={fetchData.loading} colSpan={12} isTableRow={true} />
                           }
                         </tbody>
                       </table>
@@ -472,6 +551,7 @@ const Quotation = () => {
           setShowModal={setShowDeleteModal}
           url={deleteUrl}
           name={deleteName}
+          onConfirm={isBulkDelete ? handleBulkDelete : undefined}
         />
       </div>
     </>

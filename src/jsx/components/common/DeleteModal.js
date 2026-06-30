@@ -16,6 +16,11 @@ const ConfirmationModal = (props) => {
   };
   const onPress = async () => {
     try {
+      if (props.onConfirm) {
+        await props.onConfirm();
+        setShowModal(false);
+        return;
+      }
       let response
       if (type === 'status') {
         response = await axiosPatch(url);
