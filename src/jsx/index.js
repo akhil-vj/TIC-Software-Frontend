@@ -210,6 +210,9 @@ const Markup = () => {
           </Route>
           <Route path="/app-profile" element={<AppProfile />} />
           <Route path="hotels" element={<HotelsPage />} />
+          <Route path="hotels/add" element={<HotelsPage />} />
+          <Route path="hotels/edit/:id" element={<HotelsPage />} />
+          <Route path="hotels/detail/:id" element={<HotelsPage />} />
           <Route path="hotel-settings" element={<HotelSettingsPage />} />
           <Route path="property-category" element={<HotelSettingsPage />} />
           <Route path="property-types" element={<HotelSettingsPage />} />

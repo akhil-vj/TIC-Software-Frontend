@@ -1,5 +1,5 @@
 import React, { Fragment, useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Badge } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { Stepper, Step } from "react-form-stepper";
@@ -1652,36 +1652,37 @@ const HotelDetailView = ({ hotelId, onBack }) => {
 
 // ==================== MAIN HOTELS PAGE COMPONENT ====================
 const HotelsPage = () => {
-  const [currentView, setCurrentView] = useState(() => {
-    return localStorage.getItem("hotelsPage_currentView") || "list";
-  }); // 'list', 'add', 'edit', 'detail'
-
-  const [selectedId, setSelectedId] = useState(() => {
-    return localStorage.getItem("hotelsPage_selectedId") || null;
-  });
-
-  const [viewType, setViewType] = useState("card");
+  const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    localStorage.setItem("hotelsPage_currentView", currentView);
-    if (selectedId) {
-      localStorage.setItem("hotelsPage_selectedId", selectedId);
-    } else {
-      localStorage.removeItem("hotelsPage_selectedId");
-    }
-  }, [currentView, selectedId]);
+  let currentView = "list";
+  let selectedId = null;
 
-  const handleEdit = (id) => {
-    setSelectedId(id);
-    setCurrentView(id ? "edit" : "add");
+  if (location.pathname.includes("/hotels/add")) {
+    currentView = "add";
+  } else if (location.pathname.includes("/hotels/edit/")) {
+    currentView = "edit";
+    selectedId = id;
+  } else if (location.pathname.includes("/hotels/detail/")) {
+    currentView = "detail";
+    selectedId = id;
+  }
+
+  const [viewType, setViewType] = useState("card");
+
+  const handleEdit = (hotelId) => {
+    if (hotelId) {
+      navigate(`/hotels/edit/${hotelId}`);
+    } else {
+      navigate(`/hotels/add`);
+    }
   };
 
-  // Dispatch is used for refresh, moved inside since we have access to it
   const dispatch = useDispatch();
 
-  const handleDelete = async (id, name) => {
-    const deleteUrl = `${URLS.HOTEL_URL}/${id}`;
+  const handleDelete = async (hotelId, name) => {
+    const deleteUrl = `${URLS.HOTEL_URL}/${hotelId}`;
     try {
       const response = await axiosDelete(deleteUrl);
       if (response.success) {
@@ -1693,14 +1694,12 @@ const HotelsPage = () => {
     }
   };
 
-  const handleDetail = (id) => {
-    setSelectedId(id);
-    setCurrentView("detail");
+  const handleDetail = (hotelId) => {
+    navigate(`/hotels/detail/${hotelId}`);
   };
 
   const handleBack = () => {
-    setCurrentView("list");
-    setSelectedId(null);
+    navigate(`/hotels`);
   };
 
   return (
