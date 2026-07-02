@@ -606,10 +606,10 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
       }
     }
 
-    if (values.terms) {
-      text += `TERMS & CONDITIONS:\n`;
-      text += `  • Standard cancellation and refund policies apply.\n`;
-      text += `  • All bookings are subject to availability.\n\n`;
+    if (values.terms && packageTermsHtml) {
+      const pkgTermsPlain = htmlToPlainText(packageTermsHtml);
+      text += `PACKAGE TERMS & CONDITION:\n`;
+      text += `${pkgTermsPlain}\n\n`;
     }
 
     text += `Warm Regards,\nTIC Tours Team\n`;
