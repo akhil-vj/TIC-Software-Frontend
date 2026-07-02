@@ -27,7 +27,19 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
   const [generatedText, setGeneratedText] = useState("");
   const [generatedHtml, setGeneratedHtml] = useState("");
   const [showMailSetup, setShowMailSetup] = useState(false);
+  const [packageTermsHtml, setPackageTermsHtml] = useState("");
   const emailPreviewRef = useRef(null);
+
+  // Fetch Package Terms & Condition from settings on mount
+  useEffect(() => {
+    axiosGet(URLS.PACKAGE_TERMS_URL)
+      .then((res) => {
+        if (res?.success && res?.data?.package_terms) {
+          setPackageTermsHtml(res.data.package_terms);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const formatShortDate = (dateObj) => {
     return dateObj.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -525,14 +537,13 @@ const ShareModal = ({ setShowModal, showModal, packageData }) => {
     }
 
     // ─────────────────────────────────────────
-    // EXCLUSIONS  (shown when Terms toggle ON)
+    // PACKAGE TERMS & CONDITION  (shown when Terms toggle ON)
     // ─────────────────────────────────────────
-    if (values.terms) {
-      text += `❌ *Exclusions*\n`;
-      text += `• Air Ticket & Visa\n`;
-      text += `• Insurance\n`;
-      text += `• Personal Expenses\n`;
-      text += `• Meals Not Mentioned\n\n`;
+    if (values.terms && packageTermsHtml) {
+      const pkgTermsPlain = htmlToPlainText(packageTermsHtml);
+      text += `${DIVIDER}\n\n`;
+      text += `📋 *PACKAGE TERMS & CONDITION*\n\n`;
+      text += `${pkgTermsPlain}\n\n`;
       text += `${DIVIDER}\n\n`;
     }
 
