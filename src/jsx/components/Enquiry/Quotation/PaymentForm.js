@@ -61,7 +61,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       const isPERMode = values.priceOption?.value === "PER" || values.priceOption === "PER";
 
       values.quoted_options.forEach((opt, optIdx) => {
-        const rateToUse = parseFloat(values.exchange_rate) || parseFloat(values.priceIn?.exchange_rate) || 1;
+        const rateToUse = parseFloat(opt.exchange_rate) || parseFloat(values.exchange_rate) || parseFloat(values.priceIn?.exchange_rate) || 1;
         if (isPERMode) {
           opt.rows?.forEach(r => {
             const pCount = r.count > 0 ? r.count : 1;
@@ -845,7 +845,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     const useBaseMarkup = Number(values.baseMarkup) > 0;
     const useExtraMarkup = !useBaseMarkup && Number(values.extraMarkup) > 0;
-    const extraMarkupValue = useExtraMarkup ? Number(values.extraMarkup) : 0;
+    const extraMarkupValue = useExtraMarkup ? Number(values.extraMarkup) * exRate : 0;
 
     const rowsWithNet = activeTypes.map(({ pt, count, displayCount, hotelRowCostAll }) => {
       const isPerMode = values.priceOption?.value === "PER";
@@ -1043,6 +1043,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
           grandTotal: getRoundOfValue(newGrandTotal),
           currencyCode: currentCurrencyCode,
           currencySymbol: currentCurrencySymbol,
+          exchange_rate: rate,
           markup_mode: totalMode,
           markup_percent: totalPercent,
           rows: mappedRows
@@ -1061,6 +1062,7 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
       formData.append("quoted_options", JSON.stringify(visibleOptionsData));
       setFieldValue("quoted_options", visibleOptionsData);
+      setFieldValue("exchange_rate", rate);
 
       let entryIndex = 0;
       values.planArr?.forEach(({ schedule }) => {
