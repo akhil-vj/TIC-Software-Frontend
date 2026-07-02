@@ -18,6 +18,13 @@ import { useSelector } from "react-redux";
 
 // ─── Person type definitions ─────────────────────────────────────────────────
 const PERSON_TYPES = [
+  { key: "single", label: "Person in Single Room" },
+  { key: "double", label: "Person in Double sharing" },
+  { key: "triple", label: "Person in Triple sharing" },
+  { key: "quad", label: "Person in Quad sharing" },
+  { key: "two_bedroom", label: "Person in 2-Bedroom " },
+  { key: "three_bedroom", label: "Person in 3-Bedroom" },
+  { key: "four_bedroom", label: "Person in 4-Bedroom " },
   { key: "adult", label: "Person" },
   { key: "extra", label: "Person (Extra Bed)" },
   { key: "childW", label: "Child (With Bed)" },
@@ -472,9 +479,9 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
   };
 
   const createOptionInitialValue = () => [
-    { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, extra: 0, child: 0, adultDisplay: 0, extraDisplay: 0, childDisplay: 0, adultTotalCost: 0, extraTotalCost: 0, childTotalCost: 0 },
-    { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, extra: 0, child: 0, adultDisplay: 0, extraDisplay: 0, childDisplay: 0, adultTotalCost: 0, extraTotalCost: 0, childTotalCost: 0 },
-    { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, extra: 0, child: 0, adultDisplay: 0, extraDisplay: 0, childDisplay: 0, adultTotalCost: 0, extraTotalCost: 0, childTotalCost: 0 },
+    { name: "Option 1", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, extra: 0, child: 0, adultDisplay: 0, extraDisplay: 0, childDisplay: 0, adultTotalCost: 0, extraTotalCost: 0, childTotalCost: 0, single: 0, double: 0, triple: 0, quad: 0, two_bedroom: 0, three_bedroom: 0, four_bedroom: 0, singleDisplay: 0, doubleDisplay: 0, tripleDisplay: 0, quadDisplay: 0, two_bedroomDisplay: 0, three_bedroomDisplay: 0, four_bedroomDisplay: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, two_bedroomTotalCost: 0, three_bedroomTotalCost: 0, four_bedroomTotalCost: 0 },
+    { name: "Option 2", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, extra: 0, child: 0, adultDisplay: 0, extraDisplay: 0, childDisplay: 0, adultTotalCost: 0, extraTotalCost: 0, childTotalCost: 0, single: 0, double: 0, triple: 0, quad: 0, two_bedroom: 0, three_bedroom: 0, four_bedroom: 0, singleDisplay: 0, doubleDisplay: 0, tripleDisplay: 0, quadDisplay: 0, two_bedroomDisplay: 0, three_bedroomDisplay: 0, four_bedroomDisplay: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, two_bedroomTotalCost: 0, three_bedroomTotalCost: 0, four_bedroomTotalCost: 0 },
+    { name: "Option 3", amount: 0, markup: 0, adultCost: 0, childCost: 0, adult: 0, extra: 0, child: 0, adultDisplay: 0, extraDisplay: 0, childDisplay: 0, adultTotalCost: 0, extraTotalCost: 0, childTotalCost: 0, single: 0, double: 0, triple: 0, quad: 0, two_bedroom: 0, three_bedroom: 0, four_bedroom: 0, singleDisplay: 0, doubleDisplay: 0, tripleDisplay: 0, quadDisplay: 0, two_bedroomDisplay: 0, three_bedroomDisplay: 0, four_bedroomDisplay: 0, singleTotalCost: 0, doubleTotalCost: 0, tripleTotalCost: 0, quadTotalCost: 0, two_bedroomTotalCost: 0, three_bedroomTotalCost: 0, four_bedroomTotalCost: 0 },
   ];
 
   // Helper to safely parse a count value — treats "", undefined, null, NaN as 0
@@ -523,6 +530,16 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         let hotelExtraAdults = 0;
         let hotelChildCount = 0;
 
+        const typeStats = {
+          single: { cost: 0, adults: 0 },
+          double: { cost: 0, adults: 0 },
+          triple: { cost: 0, adults: 0 },
+          quad: { cost: 0, adults: 0 },
+          two_bedroom: { cost: 0, adults: 0 },
+          three_bedroom: { cost: 0, adults: 0 },
+          four_bedroom: { cost: 0, adults: 0 },
+        };
+
         acc[idx].bedTypes = acc[idx].bedTypes || new Set();
         acc[idx].childTypes = acc[idx].childTypes || new Set();
 
@@ -550,7 +567,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
             if (roomOccupants > 0) {
               const costPerPax = roomCost / roomOccupants;
-              hotelAdultCost += inRoomAdults * costPerPax;
+              const typeAdultCost = inRoomAdults * costPerPax;
+              if (typeStats[bedType]) {
+                typeStats[bedType].cost += typeAdultCost;
+                typeStats[bedType].adults += inRoomAdults;
+              }
+              hotelAdultCost += typeAdultCost;
               hotelChildCost += roomChildren * costPerPax;
             }
             hotelExtraCost += extraPax * rates.extra;
@@ -584,6 +606,12 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
         acc[idx].maxExtraAdults = Math.max(acc[idx].maxExtraAdults || 0, hotelExtraAdults);
         acc[idx].maxTotalAdults = Math.max(acc[idx].maxTotalAdults || 0, hotelInRoomAdults + hotelExtraAdults);
 
+        Object.keys(typeStats).forEach(key => {
+          const stats = typeStats[key];
+          acc[idx][`max_${key}_adults`] = Math.max(acc[idx][`max_${key}_adults`] || 0, stats.adults);
+          acc[idx][`per_${key}_cost`] = (acc[idx][`per_${key}_cost`] || 0) + (stats.adults > 0 ? (stats.cost / stats.adults) * ratio : 0);
+        });
+
         acc[idx].childWTotalCost = (acc[idx].childWTotalCost || 0) + childWCost * ratio;
         acc[idx].childNTotalCost = (acc[idx].childNTotalCost || 0) + childNCost * ratio;
         acc[idx].childTotalCost = (acc[idx].childTotalCost || 0) + hotelChildCost * ratio;
@@ -616,6 +644,22 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
 
     opt.adultTotalCost = (opt.perAdultCost || 0) * regularA;
     opt.extraTotalCost = (opt.perExtraCost || 0) * extraA;
+
+    const bedKeys = ['single', 'double', 'triple', 'quad', 'two_bedroom', 'three_bedroom', 'four_bedroom'];
+    let hasSpecificBeds = false;
+    bedKeys.forEach(k => {
+      const count = opt[`max_${k}_adults`] || 0;
+      if (count > 0) hasSpecificBeds = true;
+      opt[`${k}Display`] = count;
+      opt[k] = count;
+      opt[`${k}TotalCost`] = (opt[`per_${k}_cost`] || 0) * count;
+    });
+
+    if (hasSpecificBeds) {
+      opt.adultDisplay = 0;
+      opt.adult = 0;
+      opt.adultTotalCost = 0;
+    }
 
     if (opt.bedTypes && opt.bedTypes.size === 1) {
       const bt = Array.from(opt.bedTypes)[0];
@@ -898,7 +942,10 @@ const PaymentForm = ({ formik, setFormComponent, setShowModal }) => {
       let finalMarkupPercent = null;
 
       if (isPERMode) {
-        const customObj = markups[`${optIdx}_${r.pt.key}`];
+        let customObj = markups[`${optIdx}_${r.pt.key}`];
+        if (customObj === undefined && r.pt.key !== 'adult' && r.pt.key !== 'child' && r.pt.key !== 'childW' && r.pt.key !== 'childN') {
+           customObj = markups[`${optIdx}_adult`];
+        }
         if (customObj !== undefined && customObj !== "") {
           const customVal = typeof customObj === 'object' ? customObj.value : customObj;
           const customRate = typeof customObj === 'object' ? customObj.rate : exRate;
